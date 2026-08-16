@@ -1,0 +1,99 @@
+{
+  "id": "akuu_setsudan",
+  "name": "亜空切断",
+  "generator": "slash",
+  "seed": 404040,
+  "size": 150,
+  "arcDeg": 250,
+  "thickness": 13,
+  "count": 2,
+  "interval": 0.17,
+  "spread": 34,
+  "palette": [
+    "#ffffff",
+    "#f0c8ff",
+    "#b06ce8",
+    "#3a1060"
+  ],
+  "impact": {
+    "size": 110,
+    "frames": 12,
+    "shards": 22,
+    "palette": [
+      "#ffffff",
+      "#f0c8ff",
+      "#a35ce0",
+      "#2a0a50"
+    ]
+  },
+  "screen": {
+    "darken": {
+      "strength": 0.62,
+      "dur": 0.45,
+      "at": "cast"
+    },
+    "lines": {
+      "color": "#d8a8ff",
+      "strength": 0.45,
+      "dur": 0.4,
+      "at": "cast",
+      "dir": "v"
+    },
+    "flash": {
+      "color": "#f4e0ff",
+      "strength": 0.92,
+      "dur": 0.16,
+      "at": "impact"
+    },
+    "shake": {
+      "power": 10,
+      "dur": 0.42,
+      "at": "impact"
+    },
+    "tint": {
+      "color": "#7a3ad0",
+      "strength": 0.34,
+      "dur": 0.55,
+      "at": "impact"
+    }
+  },
+  "sfx": {
+    "id": "sfx_akuu",
+    "wave": "noise",
+    "f0": 4200,
+    "f1": 260,
+    "curve": "exp",
+    "dur": 0.34,
+    "attack": 0.001,
+    "noise": 0,
+    "layers": 1,
+    "detune": 0,
+    "bits": 5,
+    "filter": {
+      "type": "bandpass",
+      "f0": 3400,
+      "f1": 520,
+      "q": 3.2
+    },
+    "vib": {
+      "rate": 0,
+      "depth": 0
+    },
+    "gain": 0.95,
+    "motif": true,
+    "motifRoot": 62
+  },
+  "_battle": {
+    "type": "ドラゴン",
+    "power": 44,
+    "cast": 0.42,
+    "cooldown": 5.0,
+    "tags": [
+      "近距離向き",
+      "高威力",
+      "とどめ向き",
+      "瀕死時危険"
+    ]
+  },
+  "_note": "空間そのものを裂く2連斬。近接扱いやけん相殺されん代わりに、回避力の高い相手には避けられる。"
+}

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ポケット四皇モンスター — 音ラボ</title>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0f1218;--panel:#191e27;--line:#2c3442;--text:#dfe6f0;--dim:#8b97a8;
+        --accent:#f0a020;--snd:#63d6c4;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:"DotGothic16","MS Gothic","Hiragino Kaku Gothic ProN",monospace;}
+  body{padding:10px 10px 60px;}
+  h1{font-size:14px;margin:2px 0 4px;color:var(--snd);letter-spacing:1px;}
+  .sub{font-size:10px;color:var(--dim);line-height:1.6;margin:0 0 10px;}
+  .wrap{max-width:576px;margin:0 auto;}
+  canvas{display:block;width:100%;height:auto;background:#080a0f;border:2px solid var(--line);
+    border-radius:4px;image-rendering:pixelated;}
+  .bar{display:flex;gap:5px;margin:8px 0;}
+  .bar button{flex:1;}
+  button{background:#252d3a;border:1px solid var(--line);color:var(--text);border-radius:3px;
+    padding:9px 6px;font-size:11px;font-family:inherit;cursor:pointer;}
+  button:active{background:var(--snd);color:#0f1218;}
+  button.on{background:var(--snd);color:#0f1218;border-color:var(--snd);}
+  button.go{background:#1d5a52;border-color:#2c8a7c;color:#d0f5ee;font-size:13px;padding:12px 6px;}
+  .sec{background:var(--panel);border:1px solid var(--line);border-radius:4px;margin-bottom:8px;}
+  .sec>h2{font-size:12px;margin:0;color:var(--snd);padding:10px 12px;cursor:pointer;
+    display:flex;justify-content:space-between;letter-spacing:1px;}
+  .sec>div{padding:0 12px 12px;}
+  .sec.closed>div{display:none;}
+  .ctl{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+  .ctl label{font-size:11px;color:var(--dim);width:86px;flex:none;}
+  .ctl input[type=range]{flex:1;min-width:50px;accent-color:var(--snd);}
+  .ctl .v{font-size:11px;color:var(--snd);width:56px;text-align:right;flex:none;}
+  .grid{display:grid;gap:5px;}
+  .g3{grid-template-columns:repeat(3,1fr);} .g2{grid-template-columns:repeat(2,1fr);}
+  .grid button{padding:10px 2px;font-size:10px;}
+  textarea{width:100%;height:150px;background:#0c0f15;border:1px solid var(--line);color:#9fe8d8;
+    border-radius:3px;padding:8px;font-size:10px;font-family:ui-monospace,monospace;line-height:1.45;}
+  .hint{font-size:10px;color:var(--dim);line-height:1.7;margin-top:6px;}
+  .motif{background:#101820;border:1px solid #1f3a3a;border-radius:3px;padding:9px 11px;
+    font-size:10px;color:#7fd8c8;line-height:1.7;margin-bottom:8px;}
+  .motif b{color:var(--snd);}
+  .tl{position:relative;height:44px;background:#0c0f15;border:1px solid var(--line);border-radius:3px;
+    margin:6px 0 2px;overflow:hidden;}
+  .tl .ph{position:absolute;top:0;bottom:0;border-left:1px dashed #3d4a5c;}
+  .tl .ph i{position:absolute;top:2px;left:2px;font-size:9px;color:#8b97a8;font-style:normal;
+    background:#0c0f15;padding:0 2px;white-space:nowrap;}
+  .tl .ph.p1 i{top:13px;}
+  .tl .ph.p2 i{top:24px;}
+  .tl .mk{position:absolute;bottom:3px;width:5px;height:12px;background:var(--snd);border-radius:1px;}
+  .tl .cur{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);}
+  .tl .sc{position:absolute;left:0;right:0;bottom:0;height:1px;background:#243040;}
+  .stat{font-size:10px;color:var(--dim);}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>ポケット四皇モンスター / 音ラボ</h1>
+<p class="sub">技もタブも、鳴る音とタイミングはここで全部きめる。<br>
+<b style="color:#f0a020">決めた設定は自動保存され、戦闘テストと技ラボにそのまま効く。</b></p>
+
+<div class="motif">
+  <b>■ 使いかた</b><br>
+  ① 技をえらぶ → ② <b>＋音を追加</b> → ③ どの瞬間（構え／発射／着弾）か決める<br>
+  ④ <b>ずらす</b>でその瞬間から何秒あとに鳴らすか調整 → ⑤ <b>▶ 技を再生</b>で目と耳で確認
+</div>
+
+<canvas id="cv" width="384" height="288"></canvas>
+<div class="tl" id="tl"></div>
+<div class="bar">
+  <button id="play" class="go">▶ 技を再生</button>
+  <button id="mute">音 ON</button>
+</div>
+
+<div class="sec"><h2><span>■ 技をえらぶ</span><span>▾</span></h2><div>
+  <div class="grid g3" id="moveList"></div>
+  <div class="stat" id="moveInfo" style="margin-top:8px;"></div>
+</div></div>
+
+<div class="sec"><h2><span>■ この技の音</span><span>▾</span></h2><div>
+  <div id="timeline"></div>
+  <div class="hint">
+    <b>構え</b>＝技を出すと決めた瞬間（溜めの始まり）。<br>
+    <b>発射</b>＝弾が出る・刃を振り抜く瞬間。<br>
+    <b>着弾</b>＝当たった瞬間。<br>
+    「ずらす」を使えば、発射の 0.12 秒あとに別の音を重ねる、みたいなこともできる。
+  </div>
+</div></div>
+
+<div class="sec"><h2><span>■ システムの音</span><span>▾</span></h2><div>
+  <div id="sysMap"></div>
+  <div class="hint">タブ・作戦・交代・クォーター・被弾・戦闘不能…　戦闘中に鳴る音は全部ここ。</div>
+</div></div>
+
+<div class="sec"><h2><span>■ 自前の音を足す</span><span>▾</span></h2><div>
+  <input type="file" id="upl" accept="audio/*" multiple
+    style="width:100%;font-size:11px;color:var(--dim);font-family:inherit;">
+  <div class="hint">選んだ音声ファイルは「自前の音」カテゴリに入って、技にもシステムにも割り当てられる。
+    設定JSONにも一緒に入るけん、貼り付ければ戦闘側でも鳴る。</div>
+  <div id="uplList" class="stat" style="margin-top:6px;"></div>
+</div></div>
+
+<div class="sec"><h2><span>■ 音量</span><span>▾</span></h2><div>
+  <div class="ctl"><label>全体</label>
+    <input type="range" id="mv" min="0" max="1" step="0.05" value="0.55"><span class="v" id="mvV">55%</span></div>
+</div></div>
+
+<div class="sec closed"><h2><span>■ 設定JSON</span><span>▾</span></h2><div>
+  <textarea id="json" spellcheck="false"></textarea>
+  <div class="bar" style="margin-top:8px;">
+    <button id="btnLoad">読み込む</button>
+    <button id="btnCopy">コピー</button>
+    <button id="btnDl">.json 保存</button>
+  </div>
+  <div class="bar">
+    <button id="btnAll">全選択</button>
+    <button id="btnShare">共有</button>
+    <button id="btnReset">初期設定に戻す</button>
+  </div>
+  <div class="hint">自動保存されとるけん普段は触らんでよか。
+    別の端末へ移すときだけ、これをコピーして戦闘テストの「音設定」に貼る。</div>
+</div></div>
+
+<div class="sec closed"><h2><span>■ クレジット</span><span>▾</span></h2><div>
+  <div class="hint" id="credits"></div>
+</div></div>
+</div>
+
+<script>
+/*__FX_CORE__*/
+/*__SFX_BANK__*/
+/*__MOVES__*/
+/*__ANIMS__*/
+/*__AUDIO_UI__*/
+
+/* =========================================================
+   音ラボ本体
+   ========================================================= */
+const $=id=>document.getElementById(id);
+let moveId='akuu';
+let muted=false;
+
+audioLoadSaved();
+
+/* ---- プレビュー画面（戦闘とだいたい同じ絵） ---- */
+const cv=$('cv'), ctx=cv.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+const W=384,H=288, FROM={x:150,y:170}, TO={x:262,y:104}, SELF={x:120,y:150};
+
+function placeholder(seed,size,hue){
+  const c=mkCv(size,size), g=c.getContext('2d'), rng=new RNG(seed);
+  const N=24,px=size/N;
+  const pal=[`hsl(${hue},55%,74%)`,`hsl(${hue},60%,56%)`,`hsl(${hue},66%,38%)`];
+  for(let y=0;y<N;y++) for(let x=0;x<N/2;x++){
+    const dx=(x-N/4)/(N/4), dy=(y-N/2)/(N/2);
+    if(rng.next()>=(1.0-Math.sqrt(dx*dx+dy*dy*0.8)*0.85)) continue;
+    g.fillStyle=pal[rng.int(0,2)];
+    g.fillRect(x*px,y*px,Math.ceil(px),Math.ceil(px));
+    g.fillRect((N-1-x)*px,y*px,Math.ceil(px),Math.ceil(px));
+  }
+  return c;
+}
+const spA=placeholder(918273^0x51ed,104,89), spB=placeholder(918273^0x9e37,80,231);
+const bgCv=mkCv(W,H);
+(function(){ const g=bgCv.getContext('2d'), hz=87, rng=new RNG(918273);
+  const bands=(y,h,c)=>{const st=h/c.length;
+    for(let i=0;i<c.length;i++){g.fillStyle=c[i];g.fillRect(0,Math.floor(y+i*st),W,Math.ceil(st)+1);}};
+  bands(0,hz,['#6cc7f2','#7dcff4','#8ed8f6','#a1e0f8','#b4e8fa']);
+  g.fillStyle='#1b4d78'; g.fillRect(0,hz-2,W,3);
+  bands(hz,216-hz,['#1d61a4','#2169b0','#2572bc','#297bc7','#2d84d2','#328ddb']);
+  for(let i=0;i<190;i++){ const t=rng.next();
+    g.fillStyle=t>0.55?'rgba(255,255,255,0.55)':'rgba(190,232,255,0.42)';
+    g.fillRect(Math.floor(rng.range(0,W)),Math.floor(hz+4+t*t*(216-hz-8)),Math.floor(4+t*15),1); }
+  const plat=(cx,cy,rx,ry)=>{ g.fillStyle='#3d8bb2'; g.beginPath(); g.ellipse(cx,cy,rx,ry,0,0,7); g.fill();
+    g.fillStyle='#6eb8d8'; g.beginPath(); g.ellipse(cx,cy-2,rx-3,ry-3,0,0,7); g.fill();
+    g.fillStyle='#93d3ea'; g.beginPath(); g.ellipse(cx,cy-3,rx-9,ry-6,0,0,7); g.fill(); };
+  plat(258,111,60,17); plat(120,198,78,22);
+  g.fillStyle='#0a0c11'; g.fillRect(0,216,W,H-216);
+  g.fillStyle='#161b24'; g.fillRect(4,220,W-8,H-224);
+})();
+
+const fieldTmp=mkCv(W,216), ftx=fieldTmp.getContext('2d');
+ftx.imageSmoothingEnabled=false;
+
+/* ---- 再生シーケンス：構え → 発射 → 着弾 ---- */
+let fxs=[], seq=null, hud='';
+function playMove(){
+  SND.resume();
+  const m=MOVES[moveId];
+  fxs.length=0; SCREEN.clear();
+  seq={ t:0, cast:m.cast, fired:false, hit:false, hitAt:null, marks:[] };
+  hud=m.name+'　構え…';
+  if(!muted) playMovePhase(moveId,'cast',1);
+  seq.marks.push({t:0,ph:'cast'});
+}
+function doFire(){
+  const m=MOVES[moveId];
+  const self=m.fx.generator==='aura';
+  if(!muted) playMovePhase(moveId,'fire',1);
+  seq.marks.push({t:seq.t,ph:'fire'});
+  hud=m.name+'　発射！';
+  const sh=spawnFX(m.fx, self?SELF:FROM, self?SELF:TO, builtOf(m.fx), ()=>{
+    if(!muted) playMovePhase(moveId,'impact',1);
+    seq.hit=true; seq.hitAt=seq.t; seq.marks.push({t:seq.t,ph:'impact'});
+    hud=m.name+'　着弾！';
+    if(m.fx.shatter){
+      const s2=spawnFX(m.fx.shatter,self?SELF:TO,self?SELF:TO,{},null);
+      fxs.push(s2);
+    }
+  });
+  fxs.push(sh);
+}
+
+/* ---- タイムライン表示 ---- */
+function drawTL(){
+  const el=$('tl'); const m=MOVES[moveId];
+  const list=AUDIO_CFG.moves[moveId]||[];
+  const est=m.cast+estTravel(m);
+  const late=(AUDIO_CFG.moves[moveId]||[]).reduce((a,e)=>Math.max(a,(e.off||0)),0);
+  const span=Math.max(1.0, est+late+0.5);
+  const px=t=>Math.max(0,Math.min(99,t/span*100));
+  let html='<div class="sc"></div>';
+  html+='<div class="ph p0" style="left:0%"><i>構え</i></div>';
+  html+='<div class="ph p1" style="left:'+px(m.cast)+'%"><i>発射</i></div>';
+  html+='<div class="ph p2" style="left:'+px(est)+'%"><i>着弾</i></div>';
+  for(const e of list){
+    const base = e.at==='cast'?0 : e.at==='fire'?m.cast : est;
+    html+='<div class="mk" style="left:'+px(base+(e.off||0))+'%" title="'+e.id+'"></div>';
+  }
+  if(seq) html+='<div class="cur" style="left:'+px(seq.t)+'%"></div>';
+  el.innerHTML=html;
+}
+function estTravel(m){
+  if(m.fx.generator==='beam')  return (m.fx.charge||0)+(m.fx.fire||0.1);
+  if(m.fx.generator==='slash') return 0.10;
+  if(m.fx.generator==='lightning') return 0.12;
+  if(m.fx.generator==='aura')  return 0.05;
+  const sp=(m.fx.travel&&m.fx.travel.speed)||260;
+  return Math.hypot(TO.x-FROM.x,TO.y-FROM.y)/sp;
+}
+
+/* ---- 描画ループ ---- */
+let last=performance.now(), acc=0; const STEP=1/60;
+function tick(now){
+  requestAnimationFrame(tick);
+  let dt=(now-last)/1000; last=now;
+  if(dt>0.25) dt=0.25;
+  acc+=dt;
+  while(acc>=STEP){
+    if(seq){
+      seq.t+=STEP;
+      if(!seq.fired && seq.t>=seq.cast){ seq.fired=true; doFire(); }
+      if(seq.t>seq.cast+3.2) seq=null;
+    }
+    for(const f of fxs) f.update(STEP);
+    fxs=fxs.filter(f=>!f.done);
+    SCREEN.update(STEP);
+    acc-=STEP;
+  }
+  try{
+    ftx.clearRect(0,0,W,216);
+    ftx.drawImage(bgCv,0,0);
+    ftx.drawImage(spB,258-40,111-80+6,80,80);
+    ftx.drawImage(spA,120-52,198-104+6,104,104);
+    for(const f of fxs) f.draw(ftx);
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#080a0f'; ctx.fillRect(0,0,W,216);
+    const sh=SCREEN.offset();
+    ctx.drawImage(fieldTmp,sh.x,sh.y);
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,216); ctx.clip();
+    SCREEN.drawOver(ctx,W,216); ctx.restore();
+    ctx.fillStyle='#0a0c11'; ctx.fillRect(0,216,W,H-216);
+    ctx.fillStyle='#161b24'; ctx.fillRect(4,220,W-8,H-224);
+    ctx.fillStyle='#dfe6f0'; ctx.font='12px monospace';
+    ctx.fillText(hud||'▶ を押すと技が出る', 14, 244);
+    ctx.fillStyle='#63d6c4'; ctx.font='10px monospace';
+    ctx.fillText(seq?('t = '+seq.t.toFixed(2)+'秒'):'', 14, 262);
+  }catch(e){ console.error('[音ラボ] 描画', e); }
+  drawTL();
+}
+requestAnimationFrame(tick);
+
+/* ---- 技リスト ---- */
+function buildMoveList(){
+  const h=$('moveList'); h.innerHTML='';
+  for(const id in MOVES){
+    const m=MOVES[id];
+    const b=document.createElement('button');
+    const n=(AUDIO_CFG.moves[id]||[]).length;
+    b.innerHTML=m.name+'<br><span style="color:#66707f;font-size:9px;">♪'+n+'</span>';
+    b.classList.toggle('on',id===moveId);
+    b.onclick=()=>{ moveId=id; buildMoveList(); buildTL(); showInfo(); playMove(); };
+    h.appendChild(b);
+  }
+}
+function showInfo(){
+  const m=MOVES[moveId];
+  $('moveInfo').innerHTML='<b style="color:#f0a020">'+m.name+'</b>　'+m.type+'／威力'+m.power+
+    '／構え'+m.cast.toFixed(2)+'秒／再使用'+m.cooldown.toFixed(1)+'秒　<span style="color:#66707f">('
+    +m.fx.generator+')</span>';
+}
+function buildTL(){
+  if(!AUDIO_CFG.moves[moveId]) AUDIO_CFG.moves[moveId]=[];
+  renderTimeline($('timeline'), AUDIO_CFG.moves[moveId], save);
+}
+
+/* ---- 保存 ---- */
+function cfgOut(){
+  const o=JSON.parse(JSON.stringify({master:AUDIO_CFG.master,moves:AUDIO_CFG.moves,system:AUDIO_CFG.system}));
+  const cu={}; for(const k in SND.custom) cu[k]=SND.custom[k];
+  if(Object.keys(cu).length) o.custom=cu;
+  return o;
+}
+function save(){
+  const o=cfgOut();
+  audioSave(o);
+  $('json').value=JSON.stringify(o,null,1);
+  buildMoveList();
+}
+
+/* ---- 自前の音 ---- */
+$('upl').onchange=e=>{
+  const files=[...e.target.files];
+  let n=0;
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload=async()=>{
+      const id='my_'+f.name.replace(/[^a-zA-Z0-9]/g,'_').slice(0,24)+'_'+(n++);
+      SND.resume();
+      try{ await SND.addCustom(id, f.name.replace(/\.[^.]+$/,''), r.result);
+           $('uplList').innerHTML += '・'+f.name+' → 追加した<br>'; save(); }
+      catch(err){ $('uplList').innerHTML += '・'+f.name+' → 読めんかった<br>'; }
+    };
+    r.readAsDataURL(f);
+  });
+};
+
+/* ---- ボタン ---- */
+$('play').onclick=()=>playMove();
+$('mute').onclick=e=>{ muted=!muted; e.target.textContent='音 '+(muted?'OFF':'ON');
+  e.target.classList.toggle('on',!muted); SND.resume(); };
+$('mv').oninput=e=>{ const v=parseFloat(e.target.value);
+  AUDIO_CFG.master=v; SND.setMaster(v); $('mvV').textContent=Math.round(v*100)+'%'; save(); };
+$('btnLoad').onclick=async()=>{ try{ const o=JSON.parse($('json').value);
+  if(o.custom){ for(const k in o.custom){ SND.resume();
+    await SND.addCustom(k,o.custom[k].label,o.custom[k].data); } }
+  audioApply(o); buildMoveList(); buildTL(); buildSys(); save(); alert('読み込んだ'); }
+  catch(e){ alert('JSONが読めん: '+e.message); } };
+$('btnCopy').onclick=e=>{ navigator.clipboard.writeText($('json').value);
+  e.target.textContent='コピーした'; setTimeout(()=>e.target.textContent='コピー',1200); };
+$('btnAll').onclick=()=>{ $('json').focus(); $('json').select(); };
+$('btnShare').onclick=()=>{ if(navigator.share) navigator.share({title:'四皇モン 音設定',text:$('json').value});
+  else alert('この端末は共有に対応しとらん'); };
+$('btnDl').onclick=()=>{ const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(cfgOut(),null,1)],{type:'application/json'}));
+  a.download='shioumon_audio_cfg.json'; a.click(); };
+$('btnReset').onclick=()=>{ if(!confirm('初期設定に戻す？　今の割り当ては消える')) return;
+  audioApply(JSON.parse(JSON.stringify(AUDIO_CFG_DEFAULT)));
+  buildMoveList(); buildTL(); buildSys(); save(); };
+document.querySelectorAll('.sec>h2').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('closed'));
+
+function buildSys(){ renderSysMap($('sysMap'), AUDIO_CFG.system, save); }
+
+$('credits').innerHTML='<b style="color:#f0a020">'+CREDITS.title+'</b>　'+CREDITS.note+'<br>'+
+  CREDITS.authors.map(a=>'・'+a).join('<br>')+'<br>'+CREDITS.source;
+
+/* ---- 起動 ---- */
+buildMoveList(); buildTL(); buildSys(); showInfo();
+$('mv').value=AUDIO_CFG.master; $('mvV').textContent=Math.round(AUDIO_CFG.master*100)+'%';
+$('json').value=JSON.stringify(cfgOut(),null,1);
+$('mute').classList.add('on');
+
+/* 最初のタップで音を解禁（ブラウザの制約） */
+const unlock=()=>{ SND.resume().then(n=>{ console.log('[音ラボ] デコード',n); });
+  SND.setMaster(AUDIO_CFG.master);
+  document.removeEventListener('pointerdown',unlock); };
+document.addEventListener('pointerdown',unlock);
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "id": "maboroshi_testmon",
+  "name": "テストモン",
+  "rarity": "幻",
+  "note": "戦闘フィールド最初のテストで生成された個体。手描きではなくコード生成。ポケット四皇モンスター第1号。",
+  "generator": {
+    "type": "procedural_placeholder",
+    "seed": 918273,
+    "spriteSeed": 938732,
+    "hue": 89,
+    "grid": 24,
+    "size": 120,
+    "note": "この3つの値だけで normal / attack / hurt が完全に再現できる"
+  },
+  "images": {
+    "normal": "maboroshi_testmon_normal.png",
+    "attack": "maboroshi_testmon_attack.png",
+    "hurt": "maboroshi_testmon_hurt.png"
+  },
+  "cry": null,
+  "stats": {
+    "攻撃力": 62,
+    "防御力": 45,
+    "体力": 58,
+    "素早さ": 88,
+    "回避力": 92,
+    "賢さ": 95,
+    "_comment": "暫定。幻＝読み切って避け続けるが打たれ弱い型。賢さ95は裏目にも出る（読まれる／命令が効かない）"
+  },
+  "personality": {
+    "好戦性": 30,
+    "慎重性": 85,
+    "忠実性": 15,
+    "自己保存性": 90,
+    "_comment": "暫定。賢さ95×忠実性15＝『勝手にやる。ただし強い』象限"
+  },
+  "moves": [],
+  "cost": null,
+  "_costNote": "CostCalculator 実装後に自動算出。賢さの寄与は要検討（16.2参照）",
+  "effectSeed": 918273,
+  "archivedAt": "2026-08-16",
+  "planVersion": "v3"
+}

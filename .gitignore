@@ -1,0 +1,11 @@
+node_modules/
+.shots/
+*.log
+.DS_Store
+
+# CC0効果音の元素材（29MB）。src/sfx_bank.js に焼き込み済みやけん普段は要らん。
+# tools/gen_sfx.py で音を入れ替えるときだけ、下記2つのパックをここへ展開する：
+#   ・OpenGameArt "Web Game Attack SFX (CC0)"  → assets/webgameattacksfxcc0/
+#   ・kenney.nl   "Web Game SFX (CC0)"         → assets/webgamesfxcc0kenney/
+assets/webgameattacksfxcc0/
+assets/webgamesfxcc0kenney/

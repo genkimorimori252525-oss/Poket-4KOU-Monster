@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ポケット四皇モンスター — 四皇モン制作ツール</title>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0f1218;--panel:#191e27;--line:#2c3442;--text:#dfe6f0;--dim:#8b97a8;
+        --accent:#f0a020;--mk:#7ad6a0;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:"DotGothic16","MS Gothic","Hiragino Kaku Gothic ProN",monospace;}
+  body{padding:10px 10px 60px;}
+  h1{font-size:14px;margin:2px 0 4px;color:var(--mk);letter-spacing:1px;}
+  .sub{font-size:10px;color:var(--dim);line-height:1.6;margin:0 0 10px;}
+  .wrap{max-width:576px;margin:0 auto;}
+  #stage{border:2px solid var(--line);border-radius:4px;overflow:hidden;background:#000;line-height:0;}
+  canvas{display:block;width:100%;height:auto;image-rendering:pixelated;
+    image-rendering:-moz-crisp-edges;image-rendering:crisp-edges;}
+  .bar{display:flex;gap:5px;margin:8px 0;}
+  .bar button{flex:1;}
+  button{background:#252d3a;border:1px solid var(--line);color:var(--text);border-radius:3px;
+    padding:9px 6px;font-size:11px;font-family:inherit;cursor:pointer;}
+  button:active{background:var(--mk);color:#0f1218;}
+  button.on{background:var(--mk);color:#0f1218;border-color:var(--mk);}
+  .sec{background:var(--panel);border:1px solid var(--line);border-radius:4px;margin-bottom:8px;}
+  .sec>h2{font-size:12px;margin:0;color:var(--mk);padding:10px 12px;cursor:pointer;
+    display:flex;justify-content:space-between;letter-spacing:1px;}
+  .sec>div{padding:0 12px 12px;}
+  .sec.closed>div{display:none;}
+  .ctl{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+  .ctl label{font-size:11px;color:var(--dim);width:78px;flex:none;}
+  .ctl input[type=range]{flex:1;min-width:50px;accent-color:var(--mk);}
+  .ctl .v{font-size:11px;color:var(--mk);width:50px;text-align:right;flex:none;}
+  .ctl select,.ctl input[type=text],.ctl input[type=file]{flex:1;background:#0c0f15;
+    border:1px solid var(--line);color:var(--text);border-radius:3px;padding:7px;
+    font-size:12px;font-family:inherit;min-width:0;}
+  .ctl input[type=file]{font-size:9px;color:var(--dim);}
+  .per input[type=range]{accent-color:#c07af0;} .per .v{color:#c07af0;}
+  .grid{display:grid;gap:5px;}
+  .g2{grid-template-columns:repeat(2,1fr);} .g3{grid-template-columns:repeat(3,1fr);}
+  .g4{grid-template-columns:repeat(4,1fr);}
+  .grid button{padding:9px 3px;font-size:11px;}
+  .mv{display:flex;align-items:center;gap:7px;background:#12161d;border:1px solid #232a36;
+    border-radius:3px;padding:7px 9px;margin-bottom:5px;cursor:pointer;}
+  .mv.on{background:#16281c;border-color:var(--mk);}
+  .mv .nm{font-size:12px;flex:1;} .mv .st{font-size:10px;color:var(--dim);}
+  .mv .tp{font-size:9px;border-radius:2px;padding:0 4px;color:#141820;}
+  .cost{background:#101820;border:1px solid #24404a;border-radius:3px;padding:10px 12px;
+    font-size:11px;line-height:1.8;color:#9fd8c0;margin-bottom:8px;}
+  .cost b{color:var(--mk);font-size:16px;}
+  textarea{width:100%;height:180px;background:#0c0f15;border:1px solid var(--line);color:#a8e0c0;
+    border-radius:3px;padding:8px;font-size:10px;font-family:ui-monospace,monospace;line-height:1.45;}
+  .hint{font-size:10px;color:var(--dim);line-height:1.6;margin-top:6px;}
+  .warn{font-size:10px;color:#f0a020;line-height:1.6;margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>ポケット四皇モンスター / 四皇モン制作ツール</h1>
+<p class="sub">実機と同じ384×288で、味方側（手前）と敵側（奥）の両方を同時に確認できる。</p>
+
+<div id="stage"><canvas id="cv" width="384" height="288"></canvas></div>
+<div class="bar">
+  <button id="anim0" class="on">通常</button>
+  <button id="anim1">攻撃</button>
+  <button id="anim2">被弾</button>
+  <button id="anim3">飛ぶ</button>
+</div>
+
+<div class="cost" id="costBox"></div>
+
+<div class="sec"><h2><span>■ 画像と表示サイズ</span><span>▾</span></h2><div>
+  <div class="grid g4" id="slotTabs" style="margin-bottom:9px;"></div>
+  <div class="ctl"><label id="slotLbl">通常</label><input type="file" id="imgFile" accept="image/*"></div>
+  <div id="slotCtl"></div>
+  <div style="border-top:1px solid #232a36;margin:10px 0 9px;"></div>
+  <div id="sizeCtl"></div>
+  <div class="hint">上のタブで<b style="color:#7ad6a0">画像ごとに</b>倍率と縦位置を設定できる。
+  解像度がバラバラな画像を並べても、実機での見た目を揃えられる。<br>
+  下の「全体」は4枚すべてに掛かる。味方側は104px、敵側は80pxの枠が基準。</div>
+</div></div>
+
+<div class="sec"><h2><span>■ 基本</span><span>▾</span></h2><div id="baseCtl"></div></div>
+<div class="sec"><h2><span>■ ステータス</span><span>▾</span></h2><div id="statCtl"></div></div>
+<div class="sec"><h2><span>■ 性格</span><span>▾</span></h2><div id="perCtl"></div></div>
+
+<div class="sec"><h2><span>■ 覚える技</span><span>▾</span></h2><div>
+  <div id="moveList"></div>
+  <div class="hint">最大4つまで。技の威力とクールダウンはコストへ直接効く。</div>
+</div></div>
+
+<div class="sec"><h2><span>■ 保存（自動＋スロット）</span><span>▾</span></h2><div>
+  <div id="autoState" class="hint" style="margin:0 0 8px;"></div>
+  <div class="ctl"><label>名前をつけて</label><input type="text" id="slotName" placeholder="パルキア"></div>
+  <div class="bar"><button id="slotSave" style="background:#1d5a3a;border-color:#2c8a5c;color:#d0f5e4;">この名前で保存</button></div>
+  <div id="slotList"></div>
+  <div class="hint">入力するたびに<b style="color:#7ad6a0">自動保存</b>しとる。ページを閉じても残る。<br>
+  ただし別の場所から開き直すと消えることがあるけん、大事なやつは下のJSONもコピーして残しといて。</div>
+</div></div>
+
+<div class="sec closed"><h2><span>■ JSON（四皇モンのデータ）</span><span>▾</span></h2><div>
+  <textarea id="json" spellcheck="false"></textarea>
+  <div class="bar" style="margin-top:8px;">
+    <button id="btnSel">全選択</button>
+    <button id="btnCopy">コピー</button>
+    <button id="btnShare">共有</button>
+  </div>
+  <div class="bar">
+    <button id="btnLoad">貼り付けたJSONを読み込む</button>
+    <button id="btnDl">.json</button>
+  </div>
+  <div class="warn">※ これは開発用のデータ作成ツール。<br>
+  ゲーム内の作成画面（Phase 18）には「手持ちへ追加」は存在せん。作った個体は必ず草むらへ放流して、
+  捕獲ゲームで捕まえてはじめて手持ちになる。</div>
+</div></div>
+</div>
+
+<script>
+/*__FX_CORE__*/
+/*__MOVES__*/
+/*__ANIMS__*/
+
+/* =========================================================
+   編集中の四皇モン
+   ========================================================= */
+let mon={
+  id:'new_mon', name:'なまえ', types:['ノーマル','（なし）'],
+  stats:{atk:50,def:50,hp:50,spd:50,eva:50,int:50},
+  per  :{aggr:50,caut:50,loyal:50,self:50},
+  moves:['shakunetsu'],
+  scale:1.0, dy:0,
+  img:{normal:{scale:1,dy:0},attack:{scale:1,dy:0},hurt:{scale:1,dy:0},back:{scale:1,dy:0}},
+  images:{normal:null,attack:null,hurt:null,back:null}
+};
+const imgs={normal:null,attack:null,hurt:null,back:null};
+const ph={};
+(function(){ for(const f of ['normal','attack','hurt'])
+  ph[f]=makePlaceholderC(12345,120,150,f); })();
+
+function makePlaceholderC(seed,size,hue,face){
+  const c=mkCv(size,size), g=c.getContext('2d'), rng=new RNG(seed);
+  const N=24,px=size/N;
+  const pal=[`hsl(${hue},55%,74%)`,`hsl(${hue},60%,56%)`,`hsl(${hue},66%,38%)`];
+  for(let y=0;y<N;y++) for(let x=0;x<N/2;x++){
+    const dx=(x-N/4)/(N/4), dy=(y-N/2)/(N/2);
+    if(rng.next()>=(1.0-Math.sqrt(dx*dx+dy*dy*0.8)*0.85)) continue;
+    g.fillStyle=pal[rng.int(0,2)];
+    g.fillRect(x*px,y*px,Math.ceil(px),Math.ceil(px));
+    g.fillRect((N-1-x)*px,y*px,Math.ceil(px),Math.ceil(px));
+  }
+  const ey=Math.floor(N*0.36), ex=Math.floor(N*0.26), rx=N-3-ex;
+  if(face==='hurt'){
+    g.strokeStyle='#101018'; g.lineWidth=px;
+    [[ex,ey],[rx,ey]].forEach(([x,y])=>{ g.beginPath();
+      g.moveTo(x*px,y*px); g.lineTo((x+3)*px,(y+3)*px);
+      g.moveTo((x+3)*px,y*px); g.lineTo(x*px,(y+3)*px); g.stroke(); });
+  }else{
+    g.fillStyle='#fff'; g.fillRect(ex*px,ey*px,px*3,px*3); g.fillRect(rx*px,ey*px,px*3,px*3);
+    g.fillStyle='#101018'; g.fillRect((ex+1)*px,(ey+1)*px,px*1.6,px*1.6);
+    g.fillRect((rx+0.4)*px,(ey+1)*px,px*1.6,px*1.6);
+    if(face==='attack'){ g.fillStyle='#7a1020'; g.fillRect((N/2-2)*px,(ey+5)*px,px*4,px*2); }
+  }
+  return c;
+}
+
+/* =========================================================
+   プレビュー（実機と同じ 384×288）
+   ========================================================= */
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+const W=384,H=288, FIELD_H=216;
+const LAY_A={cx:120,platY:198,size:104}, LAY_E={cx:258,platY:111,size:80};
+
+const bgCv=mkCv(W,FIELD_H);
+(function(){ const g=bgCv.getContext('2d'), hz=87, rng=new RNG(918273);
+  const bands=(y,h,c)=>{const st=h/c.length;
+    for(let i=0;i<c.length;i++){g.fillStyle=c[i];g.fillRect(0,Math.floor(y+i*st),W,Math.ceil(st)+1);}};
+  bands(0,hz,['#6cc7f2','#7dcff4','#8ed8f6','#a1e0f8','#b4e8fa']);
+  g.fillStyle='#1b4d78'; g.fillRect(0,hz-2,W,3);
+  bands(hz,FIELD_H-hz,['#1d61a4','#2169b0','#2572bc','#297bc7','#2d84d2','#328ddb']);
+  for(let i=0;i<190;i++){ const t=rng.next();
+    g.fillStyle=t>0.55?'rgba(255,255,255,0.55)':'rgba(190,232,255,0.42)';
+    g.fillRect(Math.floor(rng.range(0,W)),Math.floor(hz+4+t*t*(FIELD_H-hz-8)),Math.floor(4+t*15),1); }
+  const plat=(cx,cy,rx,ry)=>{
+    g.fillStyle='#3d8bb2'; g.beginPath(); g.ellipse(cx,cy,rx,ry,0,0,7); g.fill();
+    g.fillStyle='#6eb8d8'; g.beginPath(); g.ellipse(cx,cy-2,rx-3,ry-3,0,0,7); g.fill();
+    g.fillStyle='#93d3ea'; g.beginPath(); g.ellipse(cx,cy-3,rx-9,ry-6,0,0,7); g.fill(); };
+  plat(LAY_E.cx,LAY_E.platY,60,17); plat(LAY_A.cx,LAY_A.platY,78,22);
+})();
+
+const ANIM_KEYS=['idle','attack','hurt','fly'];
+const SLOT_JP={normal:'通常',attack:'攻撃',hurt:'被弾',back:'背面'};
+let animName='idle', animT=0;
+let slot='normal', previewKey='normal';
+function resolve(key,back){
+  if(previewKey && animName==='idle'){
+    const im=imgs[previewKey]||ph[previewKey]||ph.normal;
+    return {img:im, key:previewKey};
+  }
+  if(back && imgs.back){
+    if(key==='normal') return {img:imgs.back,key:'back'};
+    if(imgs[key]) return {img:imgs[key],key};
+    return {img:imgs.back,key:'back'};
+  }
+  if(imgs[key]) return {img:imgs[key],key};
+  if(ph[key])   return {img:ph[key],key};
+  return {img:imgs.normal||ph.normal, key:'normal'};
+}
+function drawMon(g,L,back){
+  const def=ANIMS[animName]||ANIMS.idle;
+  const s=sampleAnim(def,Math.min(1,animT));
+  const rv=resolve(s.img,back); const img=rv.img; if(!img) return;
+  const cfg=mon.img[rv.key]||{scale:1,dy:0};
+  const sc=mon.scale*(cfg.scale||1);
+  const w=L.size*sc, h=L.size*sc;
+  const dir=back?1:-1;
+  const px=L.cx+s.dx*dir, py=L.platY+6+s.dy+mon.dy+(cfg.dy||0);
+  const air=Math.min(1,Math.max(0,-s.dy)/90);
+  g.save(); g.globalAlpha=0.24*(1-air);
+  g.fillStyle='#000';
+  g.beginPath(); g.ellipse(L.cx,L.platY-3+mon.dy+(cfg.dy||0),w*0.30,h*0.10,0,0,Math.PI*2); g.fill(); g.restore();
+  g.save(); g.globalAlpha=s.alpha; g.translate(px,py);
+  g.rotate(s.rot*dir); g.scale(s.sx,s.sy);
+  g.drawImage(img,-w/2,-h,w,h); g.restore();
+}
+function frame(dt){
+  const def=ANIMS[animName]||ANIMS.idle;
+  animT+=dt/def.dur;
+  if(animT>=1){ if(def.loop) animT%=1; else { animName='idle'; animT=0; } }
+  ctx.fillStyle='#0a0c11'; ctx.fillRect(0,0,W,H);
+  ctx.drawImage(bgCv,0,0);
+  drawMon(ctx,LAY_E,false);      // 奥＝敵側（正面）
+  drawMon(ctx,LAY_A,true);       // 手前＝味方側（背面）
+  /* 枠の目安 */
+  ctx.strokeStyle='rgba(122,214,160,0.35)'; ctx.setLineDash([2,2]); ctx.lineWidth=1;
+  ctx.strokeRect(LAY_A.cx-LAY_A.size/2+0.5, LAY_A.platY-LAY_A.size+6.5, LAY_A.size, LAY_A.size);
+  ctx.strokeRect(LAY_E.cx-LAY_E.size/2+0.5, LAY_E.platY-LAY_E.size+6.5, LAY_E.size, LAY_E.size);
+  ctx.setLineDash([]);
+  /* 情報帯 */
+  ctx.fillStyle='#0a0c11'; ctx.fillRect(0,FIELD_H,W,H-FIELD_H);
+  ctx.fillStyle='#161b24'; ctx.fillRect(4,FIELD_H+4,W-8,H-FIELD_H-8);
+  ctx.fillStyle='#dfe6f0'; ctx.font='15px "DotGothic16",monospace';
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText(mon.name,14,FIELD_H+12);
+  const t2=mon.types.filter(t=>t&&t!=='（なし）');
+  let x=14;
+  ctx.font='11px "DotGothic16",monospace';
+  t2.forEach(t=>{ const w2=t.length*11+8;
+    ctx.fillStyle=TYPES[t]||'#888'; ctx.fillRect(x,FIELD_H+34,w2,14);
+    ctx.fillStyle='#141820'; ctx.fillText(t,x+4,FIELD_H+36); x+=w2+4; });
+  ctx.fillStyle='#7ad6a0'; ctx.textAlign='right'; ctx.font='14px "DotGothic16",monospace';
+  ctx.fillText('COST '+costOf(mon).cost, W-14, FIELD_H+14);
+  ctx.fillStyle='#8b97a8'; ctx.font='10px "DotGothic16",monospace';
+  const cg=mon.img[previewKey||'normal']||{scale:1,dy:0};
+  ctx.fillText('全体×'+mon.scale.toFixed(2)+'　'+SLOT_JP[previewKey||'normal']
+               +'×'+(cg.scale||1).toFixed(2), W-14, FIELD_H+36);
+}
+let last=performance.now();
+(function tick(now){
+  requestAnimationFrame(tick);
+  const dt=Math.min(0.05,Math.max(0,(now-last)/1000)); last=now;
+  try{ frame(dt); }catch(e){ console.error(e); }
+})(last);
+
+/* =========================================================
+   コントロール
+   ========================================================= */
+const $=id=>document.getElementById(id);
+const STAT_JP={atk:'攻撃力',def:'防御力',hp:'体力',spd:'素早さ',eva:'回避力',int:'賢さ'};
+const PER_JP ={aggr:'好戦性',caut:'慎重性',loyal:'忠実性',self:'自己保存'};
+
+function slider(host,label,get,set,min,max,step,fmt,cls){
+  const d=document.createElement('div'); d.className='ctl'+(cls?' '+cls:'');
+  d.innerHTML=`<label>${label}</label><input type=range min=${min} max=${max} step=${step}><span class=v></span>`;
+  const r=d.querySelector('input'), v=d.querySelector('.v');
+  const show=()=>{ r.value=get(); v.textContent=fmt?fmt(get()):get(); };
+  r.oninput=()=>{ set(step<1?parseFloat(r.value):parseInt(r.value,10)); show(); refresh(); };
+  host.appendChild(d); show();
+}
+function buildSlots(){
+  const st=$('slotTabs'); st.innerHTML='';
+  for(const k in SLOT_JP){
+    const b=document.createElement('button');
+    b.textContent=SLOT_JP[k]+(imgs[k]?'':' ·');
+    b.classList.toggle('on',slot===k);
+    b.onclick=()=>{ slot=k; previewKey=k; animName='idle'; animT=0; buildSlots(); };
+    st.appendChild(b);
+  }
+  $('slotLbl').textContent=SLOT_JP[slot];
+  const sc=$('slotCtl'); sc.innerHTML='';
+  slider(sc,SLOT_JP[slot]+'の倍率',()=>mon.img[slot].scale,v=>mon.img[slot].scale=v,
+         0.3,2.5,0.02,v=>'×'+v.toFixed(2));
+  slider(sc,SLOT_JP[slot]+'の縦位置',()=>mon.img[slot].dy,v=>mon.img[slot].dy=v,
+         -40,40,1,v=>(v>0?'+':'')+v+'px');
+}
+function buildAll(){
+  buildSlots();
+  const sz=$('sizeCtl'); sz.innerHTML='';
+  slider(sz,'全体の倍率',()=>mon.scale,v=>mon.scale=v,0.4,2.0,0.02,v=>'×'+v.toFixed(2));
+  slider(sz,'全体の縦位置',()=>mon.dy, v=>mon.dy=v,  -40,40,1,v=>(v>0?'+':'')+v+'px');
+
+  const b=$('baseCtl'); b.innerHTML='';
+  const t=document.createElement('div'); t.className='ctl';
+  t.innerHTML='<label>名前</label><input type=text>';
+  t.querySelector('input').value=mon.name;
+  t.querySelector('input').oninput=e=>{ mon.name=e.target.value; refresh(); };
+  b.appendChild(t);
+  const idr=document.createElement('div'); idr.className='ctl';
+  idr.innerHTML='<label>ID</label><input type=text>';
+  idr.querySelector('input').value=mon.id;
+  idr.querySelector('input').oninput=e=>{ mon.id=e.target.value; refresh(); };
+  b.appendChild(idr);
+  for(let i=0;i<2;i++){
+    const d=document.createElement('div'); d.className='ctl';
+    const opts=(i===1?['（なし）']:[]).concat(TYPE_LIST).map(o=>`<option>${o}</option>`).join('');
+    d.innerHTML=`<label>タイプ${i+1}</label><select>${opts}</select>`;
+    const sel=d.querySelector('select'); sel.value=mon.types[i]||'（なし）';
+    sel.style.borderLeft='6px solid '+(TYPES[sel.value]||'#2c3442');
+    sel.onchange=()=>{ mon.types[i]=sel.value;
+      sel.style.borderLeft='6px solid '+(TYPES[sel.value]||'#2c3442'); refresh(); };
+    b.appendChild(d);
+  }
+
+  const st=$('statCtl'); st.innerHTML='';
+  for(const k in STAT_JP) slider(st,STAT_JP[k],()=>mon.stats[k],v=>mon.stats[k]=v,1,100,1);
+
+  const pe=$('perCtl'); pe.innerHTML='';
+  for(const k in PER_JP) slider(pe,PER_JP[k],()=>mon.per[k],v=>mon.per[k]=v,0,100,1,null,'per');
+
+  const ml=$('moveList'); ml.innerHTML='';
+  for(const id in MOVES){
+    const m=MOVES[id];
+    const d=document.createElement('div'); d.className='mv'+(mon.moves.includes(id)?' on':'');
+    d.innerHTML=`<span class="tp" style="background:${TYPES[m.type]||'#888'}">${m.type}</span>`+
+      `<span class="nm">${m.name}</span>`+
+      `<span class="st">威力${m.power} 溜${m.cast}s CD${m.cooldown}s</span>`;
+    d.onclick=()=>{
+      const i=mon.moves.indexOf(id);
+      if(i>=0) mon.moves.splice(i,1);
+      else if(mon.moves.length<4) mon.moves.push(id);
+      buildAll(); refresh();
+    };
+    ml.appendChild(d);
+  }
+}
+function refresh(){
+  const c=costOf(mon);
+  $('costBox').innerHTML=
+    'コスト <b>'+c.cost+'</b>　'+
+    '<span style="color:#6a7484">＝ 能力 '+Math.round(c.base)+' ＋ 技 '+Math.round(c.mv)+'</span><br>'+
+    '重み付き平均 '+c.avg.toFixed(1)+'　最大HP '+Math.round(40+mon.stats.hp*1.6)+'　'+
+    '行動間隔 ×'+(1.55-mon.stats.spd/100*0.85).toFixed(2)+'　'+
+    'ひるみ率 '+Math.round(Math.max(10,Math.min(85,85-mon.stats.def/100*75)))+'%';
+  $('json').value=JSON.stringify(snapshot(),null,2);
+  autoSave();
+}
+
+/* 画像読み込み */
+const IMG_CAP=256;   // これより大きい画像は縮める（写真をそのまま入れると保存できんくなる）
+function shrink(im){
+  const m=Math.max(im.width,im.height);
+  if(m<=IMG_CAP) return im.src;
+  const k=IMG_CAP/m, c=mkCv(Math.round(im.width*k),Math.round(im.height*k));
+  const g=c.getContext('2d'); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+  g.drawImage(im,0,0,c.width,c.height);
+  return c.toDataURL('image/png');
+}
+$('imgFile').onchange=e=>{ const f=e.target.files[0]; if(!f) return;
+  const key=slot, r=new FileReader();
+  r.onload=ev=>{ const im0=new Image();
+    im0.onload=()=>{
+      const src=shrink(im0);
+      if(src===im0.src){ imgs[key]=im0; buildSlots(); refresh(); return; }
+      const im=new Image();
+      im.onload=()=>{ imgs[key]=im; buildSlots(); refresh(); }; im.src=src;
+    }; im0.src=ev.target.result; };
+  r.readAsDataURL(f); e.target.value=''; };
+/* モーション確認 */
+['anim0','anim1','anim2','anim3'].forEach((id,i)=>{
+  $(id).onclick=e=>{ animName=ANIM_KEYS[i]; animT=0; previewKey=null;
+    document.querySelectorAll('#anim0,#anim1,#anim2,#anim3').forEach(x=>x.classList.remove('on'));
+    e.target.classList.add('on'); };
+});
+/* =========================================================
+   保存：自動保存＋名前つきスロット（localStorage）
+   ========================================================= */
+const AUTO_KEY='shioumon_creator_auto', SLOT_KEY='shioumon_creator_slots';
+let lastSaved='';
+function snapshot(){
+  return {...mon, images:{
+    normal: imgs.normal?imgs.normal.src:null, attack: imgs.attack?imgs.attack.src:null,
+    hurt:   imgs.hurt  ?imgs.hurt.src  :null, back:   imgs.back  ?imgs.back.src  :null }};
+}
+function applySnapshot(o){
+  if(o.images){ for(const k in o.images){ if(o.images[k]){ const im=new Image();
+    im.onload=()=>{ imgs[k]=im; buildSlots(); }; im.src=o.images[k]; } else imgs[k]=null; } }
+  const rest={...o}; delete rest.images;
+  if(!rest.img) rest.img={normal:{scale:1,dy:0},attack:{scale:1,dy:0},
+                          hurt:{scale:1,dy:0},back:{scale:1,dy:0}};
+  Object.assign(mon,rest);
+}
+function autoSave(){
+  try{
+    const j=JSON.stringify(snapshot());
+    if(j===lastSaved) return;
+    localStorage.setItem(AUTO_KEY,j); lastSaved=j;
+    const kb=Math.round(j.length/1024);
+    $('autoState').innerHTML='<b style="color:#7ad6a0">自動保存済み</b>　'+kb+'KB　'+
+      new Date().toLocaleTimeString('ja-JP');
+  }catch(e){
+    $('autoState').innerHTML='<b style="color:#e07070">自動保存できん</b>（'+e.name+
+      '）。画像が大きすぎるかもしれん。下のJSONをコピーして残して。';
+  }
+}
+function loadSlots(){
+  try{ return JSON.parse(localStorage.getItem(SLOT_KEY)||'{}'); }catch(e){ return {}; }
+}
+function buildSlotList(){
+  const host=$('slotList'); host.innerHTML='';
+  const sl=loadSlots(); const keys=Object.keys(sl);
+  if(!keys.length){ host.innerHTML='<div class="hint" style="margin:0">まだ保存されとらん</div>'; return; }
+  keys.forEach(k=>{
+    const d=document.createElement('div'); d.className='mv';
+    d.innerHTML='<span class="nm">'+k+'</span>'+
+      '<span class="st">'+Math.round(sl[k].length/1024)+'KB</span>'+
+      '<button style="padding:5px 9px;font-size:10px">読込</button>'+
+      '<button style="padding:5px 9px;font-size:10px">削除</button>';
+    const [bl,bd]=d.querySelectorAll('button');
+    bl.onclick=()=>{ try{ applySnapshot(JSON.parse(sl[k])); buildAll(); refresh();
+      $('autoState').innerHTML='<b style="color:#7ad6a0">「'+k+'」を読み込んだ</b>'; }
+      catch(e){ alert('読めん: '+e.message); } };
+    bd.onclick=()=>{ if(!confirm('「'+k+'」を消す？')) return;
+      const s2=loadSlots(); delete s2[k];
+      localStorage.setItem(SLOT_KEY,JSON.stringify(s2)); buildSlotList(); };
+    host.appendChild(d);
+  });
+}
+$('slotSave').onclick=()=>{
+  const nm=($('slotName').value||mon.name||'無題').trim();
+  try{
+    const s2=loadSlots(); s2[nm]=JSON.stringify(snapshot());
+    localStorage.setItem(SLOT_KEY,JSON.stringify(s2));
+    buildSlotList();
+    $('autoState').innerHTML='<b style="color:#7ad6a0">「'+nm+'」で保存した</b>';
+  }catch(e){ alert('保存できん: '+e.name+'\n画像が大きすぎるかも。'); }
+};
+
+/* 書き出し：スマホでダウンロードが効かんことがあるので手段を増やす */
+$('btnSel').onclick=()=>{ const t=$('json'); t.focus(); t.select();
+  t.setSelectionRange(0,t.value.length); };
+$('btnShare').onclick=async e=>{
+  const j=$('json').value;
+  try{
+    if(navigator.canShare && navigator.canShare({files:[new File([j],'mon.json',{type:'application/json'})]})){
+      await navigator.share({files:[new File([j],(mon.id||'mon')+'.json',{type:'application/json'})]});
+    } else if(navigator.share){ await navigator.share({title:mon.name,text:j}); }
+    else { e.target.textContent='共有できん'; setTimeout(()=>e.target.textContent='共有',1500); }
+  }catch(err){}
+};
+
+$('btnLoad').onclick=()=>{ try{
+  const o=JSON.parse($('json').value);
+  applySnapshot(o); buildAll(); refresh();
+}catch(e){ alert('JSONが読めん: '+e.message); } };
+$('btnCopy').onclick=async e=>{
+  const j=$('json').value; let ok=false;
+  try{ await navigator.clipboard.writeText(j); ok=true; }catch(err){
+    const t=$('json'); t.focus(); t.select();
+    try{ ok=document.execCommand('copy'); }catch(e2){}
+  }
+  e.target.textContent=ok?'コピーした':'手動でコピーして';
+  setTimeout(()=>e.target.textContent='コピー',1600);
+};
+$('btnDl').onclick=()=>{
+  const blob=new Blob([$('json').value],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=(mon.id||'mon')+'.json';
+  document.body.appendChild(a); a.click();          // DOMに入れんと効かん環境がある
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500);
+};
+document.querySelectorAll('.sec>h2').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('closed'));
+
+/* 前回の続きから */
+(function(){
+  let restored=false;
+  try{ const j=localStorage.getItem(AUTO_KEY);
+    if(j){ applySnapshot(JSON.parse(j)); restored=true; } }catch(e){}
+  buildAll(); buildSlotList(); refresh();
+  if(restored) $('autoState').innerHTML='<b style="color:#7ad6a0">前回の続きを復元した</b>';
+})();
+</script>
+</body>
+</html>
