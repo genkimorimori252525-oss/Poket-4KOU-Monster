@@ -24,77 +24,282 @@
     padding:9px 6px;font-size:11px;font-family:inherit;cursor:pointer;}
   button:active{background:var(--mk);color:#0f1218;}
   button.on{background:var(--mk);color:#0f1218;border-color:var(--mk);}
+  button.go{background:#1d5a3a;border-color:#2c8a5c;color:#d0f5e4;}
+  button.warnbtn{background:#5a2a1a;border-color:#8a4a2c;color:#f5d4c0;}
+  button.big{padding:14px 8px;font-size:13px;letter-spacing:1px;}
   .sec{background:var(--panel);border:1px solid var(--line);border-radius:4px;margin-bottom:8px;}
   .sec>h2{font-size:12px;margin:0;color:var(--mk);padding:10px 12px;cursor:pointer;
     display:flex;justify-content:space-between;letter-spacing:1px;}
+  .sec.fx>h2{color:var(--accent);}
   .sec>div{padding:0 12px 12px;}
   .sec.closed>div{display:none;}
   .ctl{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
   .ctl label{font-size:11px;color:var(--dim);width:78px;flex:none;}
   .ctl input[type=range]{flex:1;min-width:50px;accent-color:var(--mk);}
   .ctl .v{font-size:11px;color:var(--mk);width:50px;text-align:right;flex:none;}
-  .ctl select,.ctl input[type=text],.ctl input[type=file]{flex:1;background:#0c0f15;
-    border:1px solid var(--line);color:var(--text);border-radius:3px;padding:7px;
+  .ctl select,.ctl input[type=text],.ctl input[type=file],.ctl input[type=number]{flex:1;
+    background:#0c0f15;border:1px solid var(--line);color:var(--text);border-radius:3px;padding:7px;
     font-size:12px;font-family:inherit;min-width:0;}
   .ctl input[type=file]{font-size:9px;color:var(--dim);}
   .per input[type=range]{accent-color:#c07af0;} .per .v{color:#c07af0;}
+  .sd input[type=range]{accent-color:#8fb4d8;} .sd .v{color:#8fb4d8;}
   .grid{display:grid;gap:5px;}
   .g2{grid-template-columns:repeat(2,1fr);} .g3{grid-template-columns:repeat(3,1fr);}
   .g4{grid-template-columns:repeat(4,1fr);}
+  .g5{grid-template-columns:repeat(5,1fr);}
   .grid button{padding:9px 3px;font-size:11px;}
   .mv{display:flex;align-items:center;gap:7px;background:#12161d;border:1px solid #232a36;
-    border-radius:3px;padding:7px 9px;margin-bottom:5px;cursor:pointer;}
+    border-radius:3px;padding:7px 9px;margin-bottom:5px;}
   .mv.on{background:#16281c;border-color:var(--mk);}
-  .mv .nm{font-size:12px;flex:1;} .mv .st{font-size:10px;color:var(--dim);}
-  .mv .tp{font-size:9px;border-radius:2px;padding:0 4px;color:#141820;}
+  .mv.cus{border-left:4px solid var(--accent);}
+  .mv .nm{font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    cursor:pointer;}
+  .mv .st{font-size:10px;color:var(--dim);flex:none;}
+  .mv .tp{font-size:9px;border-radius:2px;padding:0 4px;color:#141820;flex:none;}
+  .mv button{flex:none;padding:5px 8px;font-size:10px;}
   .cost{background:#101820;border:1px solid #24404a;border-radius:3px;padding:10px 12px;
     font-size:11px;line-height:1.8;color:#9fd8c0;margin-bottom:8px;}
   .cost b{color:var(--mk);font-size:16px;}
   textarea{width:100%;height:180px;background:#0c0f15;border:1px solid var(--line);color:#a8e0c0;
     border-radius:3px;padding:8px;font-size:10px;font-family:ui-monospace,monospace;line-height:1.45;}
+  textarea.sm{height:110px;color:#e8c890;}
   .hint{font-size:10px;color:var(--dim);line-height:1.6;margin-top:6px;}
-  .warn{font-size:10px;color:#f0a020;line-height:1.6;margin-top:6px;}
+  .warn{font-size:10px;color:var(--accent);line-height:1.6;margin-top:6px;}
+  .tab{background:#12161d;border:1px solid #2c3442;border-radius:3px;padding:8px 10px;
+    font-size:11px;color:var(--accent);cursor:pointer;margin-bottom:7px;user-select:none;}
+  .tab.open{background:#1d2430;border-color:var(--accent);}
+  .step{display:flex;align-items:center;gap:4px;background:#12161d;border:1px solid #232a36;
+    border-radius:3px;padding:6px;margin-bottom:5px;flex-wrap:wrap;}
+  .step .no{font-size:10px;color:var(--accent);width:20px;flex:none;text-align:right;}
+  .step select{flex:0 0 76px;background:#0c0f15;border:1px solid var(--line);color:var(--text);
+    border-radius:3px;padding:6px 2px;font-size:11px;font-family:inherit;min-width:0;}
+  .step .sl{display:flex;align-items:center;gap:4px;flex:1;min-width:112px;}
+  .step .sl span{font-size:10px;color:var(--dim);flex:none;}
+  .step .sl input{flex:1;min-width:40px;}
+  .step .sl b{font-size:10px;color:var(--mk);width:40px;text-align:right;flex:none;font-weight:normal;}
+  .step button{flex:0 0 26px;padding:5px 0;font-size:10px;}
+  .sceneBar{display:none;gap:5px;margin:8px 0;}
+  .sceneBar.show{display:flex;}
+  .sceneBar button{flex:1;}
+  /* プレビューは上に貼り付ける。スライダを触りながら絵を見られんと調整にならん */
+  #top{position:sticky;top:0;z-index:30;background:var(--bg);padding-top:2px;
+    box-shadow:0 6px 10px -6px #000;}
+  #top.mini #stage{display:flex;justify-content:center;background:#000;}
+  #top.mini #stage canvas{height:31vh;min-height:120px;max-height:200px;width:auto;max-width:100%;}
+  #top.mini .bar{margin:4px 0;}
+  #top.mini .bar button,#top.mini .bar select{padding:5px 4px;font-size:10px;}
+  .sec{scroll-margin-top:250px;}
 </style>
 </head>
 <body>
 <div class="wrap">
 <h1>ポケット四皇モンスター / 四皇モン制作ツール</h1>
-<p class="sub">実機と同じ384×288で、味方側（手前）と敵側（奥）の両方を同時に確認できる。</p>
+<p class="sub">実機と同じ384×288で、味方側（手前）と敵側（奥）の両方を同時に確認できる。<br>
+技もこの中で作れる。できあがったら草むらへ放つ。</p>
 
-<div id="stage"><canvas id="cv" width="384" height="288"></canvas></div>
-<div class="bar">
-  <button id="anim0" class="on">通常</button>
-  <button id="anim1">攻撃</button>
-  <button id="anim2">被弾</button>
-  <button id="anim3">飛ぶ</button>
+<div id="top">
+  <div id="stage"><canvas id="cv" width="384" height="288"></canvas></div>
+  <div class="bar" id="animBar">
+    <button id="anim0" class="on">通常</button>
+    <button id="anim1">攻撃</button>
+    <button id="anim2">被弾</button>
+    <button id="anim3">飛ぶ</button>
+    <button id="anim4">出現</button>
+  </div>
+  <div class="bar" id="fireBar">
+    <button id="btnFire" class="go" style="flex:0 0 56px;">▶撃つ</button>
+    <select id="fireSel" style="flex:1;background:#0c0f15;border:1px solid var(--line);color:var(--text);
+      border-radius:3px;padding:7px;font-size:11px;font-family:inherit;min-width:0;"></select>
+    <button id="btnAuto" style="flex:0 0 50px;" title="2秒おきに撃ち続ける">連射</button>
+    <button id="btnMini" style="flex:0 0 34px;" title="プレビューを小さく／大きく">⤢</button>
+    <select id="fxSpeedSel" title="エフェクトの再生速度"
+      style="flex:0 0 80px;background:#0c0f15;border:1px solid var(--line);color:var(--accent);
+      border-radius:3px;padding:7px 4px;font-size:11px;font-family:inherit;min-width:0;">
+      <option value="0.15">×0.15</option>
+      <option value="0.25">×0.25</option>
+      <option value="0.5">×0.5</option>
+      <option value="0.85" selected>等速</option>
+      <option value="2">×2</option>
+      <option value="4">×4</option>
+    </select>
+  </div>
+  <div class="sceneBar" id="sceneBar">
+    <button id="sceneSkip">とばす</button>
+    <button id="sceneClose" class="go">とじる</button>
+  </div>
 </div>
 
 <div class="cost" id="costBox"></div>
 
+<div class="sec"><h2><span>■ プレビューの相手</span><span>▾</span></h2><div>
+  <div id="foeCtl"></div>
+  <div class="hint">奥（敵側）に、<b style="color:#7ad6a0">名前を付けて保存した四皇モン</b>を立たせられる。
+  大きさや影の見比べ、技を撃ち込んだときの絵の確認に使う。<br>
+  相手は<b>見せるだけ</b>。編集しよるのはいつも手前（味方側）の1体。<br>「出現」では<b style="color:#7ad6a0">奥も一緒に鳴く</b>（それぞれ自分の「鳴くまで」で）。相手が「自分と同じ」のときは同じ声が2つ重なる。</div>
+</div></div>
+
 <div class="sec"><h2><span>■ 画像と表示サイズ</span><span>▾</span></h2><div>
-  <div class="grid g4" id="slotTabs" style="margin-bottom:9px;"></div>
+  <div class="grid g5" id="slotTabs" style="margin-bottom:9px;"></div>
   <div class="ctl"><label id="slotLbl">通常</label><input type="file" id="imgFile" accept="image/*"></div>
+  <div class="bar" style="margin-top:0;">
+    <button id="btnSameAsNormal">通常の写真にもどす</button>
+    <button id="btnClearImg">この写真を消す</button>
+  </div>
+  <div class="bar" style="margin-top:0;">
+    <button id="btnSlim">写真をぜんぶ軽くしなおす</button>
+  </div>
+  <div id="imgState" class="hint" style="margin:0 0 6px;"></div>
   <div id="slotCtl"></div>
   <div style="border-top:1px solid #232a36;margin:10px 0 9px;"></div>
   <div id="sizeCtl"></div>
-  <div class="hint">上のタブで<b style="color:#7ad6a0">画像ごとに</b>倍率と縦位置を設定できる。
-  解像度がバラバラな画像を並べても、実機での見た目を揃えられる。<br>
+  <div class="hint">上のタブで<b style="color:#7ad6a0">画像ごとに</b>倍率と縦位置を設定できる。<br>
+  <b style="color:#7ad6a0">通常の写真を入れた時点で、まだ設定しとらん攻撃・被弾・背面も同じ写真になる。</b>
+  あとから個別に入れ直せば、そっちが勝つ。<br>
+  <b style="color:#7ad6a0">味方側（手前）は、通常でも攻撃でも被弾でも飛んでも、ずっと背面の写真。</b>
+  同じ個体を、自分は背中から・相手は正面から見るけん、攻撃と被弾の写真は
+  <b>正面から見とる側にだけ</b>出る。だから味方側の大きさは「背面」の倍率で決まる。<br>
   下の「全体」は4枚すべてに掛かる。味方側は104px、敵側は80pxの枠が基準。</div>
 </div></div>
 
+<div class="sec"><h2><span>■ 影</span><span>▾</span></h2><div>
+  <div id="shadowCtl"></div>
+  <div class="hint">影は地面に置いた楕円。<b style="color:#8fb4d8">濃さを0にすれば影なし</b>にできる。<br>
+  「横の追従」は、攻撃で前に踏み込んだとき影がどれだけ付いてくるか。0で置き去り、1で足元にぴったり。</div>
+</div></div>
+
 <div class="sec"><h2><span>■ 基本</span><span>▾</span></h2><div id="baseCtl"></div></div>
+
+<div class="sec"><h2><span>■ 鳴き声</span><span>▾</span></h2><div>
+  <div id="cryCtl"></div>
+  <div class="ctl"><label>自前の音</label><input type="file" id="cryFile" accept="audio/*"></div>
+  <div class="tab" id="crySlimTab">▸ 鳴き声を軽くする（音が変わるけん手動）</div>
+  <div id="crySlimPanel" style="display:none;">
+    <div id="crySlimCtl"></div>
+    <div class="bar" style="margin-top:0;">
+      <button id="crySlim" class="go">この設定で軽くする</button>
+      <button id="cryUndo">元に戻す</button>
+    </div>
+    <div class="hint" style="margin:0;">焼き直すと<b>音は多少変わる</b>。ビットレートを上げるほど元に近いが重い。<br><b>無音カットは既定でOFF</b>。出だしや余韻を削ってしまうことがあるけん、必要なときだけ入れて。<br>軽くする前の音は覚えとるけん、気に入らんかったら「元に戻す」で戻せる。</div>
+  </div>
+  <div class="bar" style="margin-top:0;"><button id="cryDrop">読み込んだ音を捨てる</button></div>
+  <div id="cryState" class="hint" style="margin:0 0 6px;"></div>
+  <div class="hint">出現したときは<b style="color:#7ad6a0">×1.0</b>、戦闘不能になったときは<b style="color:#7ad6a0">×0.7</b>で鳴る（計画23章）。<br>
+  <b style="color:#7ad6a0">自分で録った声もそのまま使える。</b>上のボタンで選んでもよかし、
+  <b style="color:#7ad6a0">ファイルをこの画面に放り込んでもよか</b>（音声なら鳴き声、画像なら選んどるスロットへ入る）。<br>
+  読み込んだ音は四皇モンのデータに焼き込まれるけん、草むらへ放っても、JSONを渡しても付いていく。<br>
+  形式は mp3 / ogg / wav が固い。m4a・aac は端末によっては読めん。<br>
+  ただし<b>鳴き声は1秒あれば足りる</b>。長い音を入れると保存できんくなるけん、短く切ってから入れて。</div>
+</div></div>
+
+<div class="sec"><h2><span>■ 出現（召喚）</span><span>▾</span></h2><div>
+  <div id="sumCtl"></div>
+  <div class="bar"><button id="btnSummon" class="go">▶ 出現を見る</button></div>
+  <div class="tab" id="landTab">▸ 着地モーションを細かく作る</div>
+  <div id="landPanel" style="display:none;">
+    <div class="bar" style="margin-top:0;">
+      <button id="landPlay" class="go">▶ いまの並びで見る</button>
+      <button id="landLoop" style="flex:0 0 92px;">くり返す</button>
+    </div>
+    <div id="landList"></div>
+    <div class="bar"><button id="landAdd">＋ コマを足す</button>
+      <button id="landSample">見本を入れる</button></div>
+    <div id="landRepeat"></div>
+    <div class="hint">着地した<b style="color:#7ad6a0">瞬間から</b>、上から順に写真を切り替える。<br>
+    <b style="color:#7ad6a0">▶いまの並びで見る</b>は、いじった数値そのままで再生する（並びは書き換わらん）。
+    <b style="color:#7ad6a0">くり返す</b>にしとけば、スライダを触りながら変化がそのまま見える。<br>
+    <b style="color:#f0a020">「見本を入れる」は今の並びを見本で置きかえる</b>けん、
+    見たいだけのときは押さんこと（押しても一度目は確認が出る）。<br>
+    振動は<b>四皇モン本体</b>が震える（背景は動かん）。0で止まる。
+    背景を揺らしたいときは、技クリエーターの「画面演出 → 画面揺れ」。</div>
+  </div>
+  <div class="hint">トレーナー戦は<b style="color:#7ad6a0">光の柱</b>の中から降ってくる。
+  草むらは<b style="color:#7ad6a0">草をかき分けて飛び出す</b>。<br>
+  <b>草むらへ放つときは必ず草むらの出方</b>になる（野生やけん）。
+  鳴くまでの時間は出方が変わっても同じ。</div>
+</div></div>
+
 <div class="sec"><h2><span>■ ステータス</span><span>▾</span></h2><div id="statCtl"></div></div>
 <div class="sec"><h2><span>■ 性格</span><span>▾</span></h2><div id="perCtl"></div></div>
 
-<div class="sec"><h2><span>■ 覚える技</span><span>▾</span></h2><div>
+<div class="sec"><h2><span>■ 覚える技（最大4つ）</span><span>▾</span></h2><div>
   <div id="moveList"></div>
-  <div class="hint">最大4つまで。技の威力とクールダウンはコストへ直接効く。</div>
+  <div class="bar">
+    <button id="btnNewMove" style="background:#4a3510;border-color:#8a6a20;color:#f5e0c0;">＋ 新しい技を作る</button>
+  </div>
+  <div class="hint">名前を押すと覚える／外す。<b style="color:#f0a020">✎</b>を押すと下の技クリエーターが開く。<br>
+  内蔵技は書き換えられんけん、いじりたいときは<b style="color:#f0a020">複</b>で自分の技として複製する。</div>
+</div></div>
+
+<div class="sec fx closed" id="secMove"><h2><span>■ 技クリエーター</span><span>▾</span></h2><div>
+  <div id="mvNone" class="hint" style="margin:0">
+    技をえらんどらん。上の一覧で <b style="color:#f0a020">✎</b> を押すか「＋ 新しい技を作る」。</div>
+  <div id="mvEditor" style="display:none;">
+    <div class="bar" style="margin-top:0;">
+      <button id="mvFire" style="background:#1d4a63;border-color:#2c6d92;color:#cdeaf8;">▶ この技を撃つ</button>
+      <button id="mvSndOn">音 OFF</button>
+    </div>
+    <div id="mvBase"></div>
+    <div style="border-top:1px solid #232a36;margin:10px 0 9px;"></div>
+    <div style="font-size:11px;color:#f0a020;margin-bottom:6px;">エフェクトの種類</div>
+    <div id="mvGens"></div>
+    <div id="mvSeed"></div>
+    <div style="font-size:11px;color:#f0a020;margin:10px 0 6px;">パラメータ</div>
+    <div id="mvParams"></div>
+    <div style="font-size:11px;color:#f0a020;margin:10px 0 6px;">パレット</div>
+    <div id="mvPal"></div>
+    <div style="font-size:11px;color:#f0a020;margin:10px 0 6px;">着弾</div>
+    <div id="mvImpact"></div>
+    <div style="font-size:11px;color:#f0a020;margin:10px 0 6px;">四皇モン本体の動き</div>
+    <div id="mvMotion"></div>
+    <div style="font-size:11px;color:#f0a020;margin:10px 0 6px;">演出素材（重ねるエフェクト）</div>
+    <div id="mvSub"></div>
+    <div style="font-size:11px;color:#f0a020;margin:10px 0 6px;">画面演出（背景変化）</div>
+    <div id="mvScreen"></div>
+    <div style="font-size:11px;color:#f0a020;margin:10px 0 6px;">音（構え／発射／着弾）</div>
+    <div id="mvSnd"></div>
+    <div style="font-size:11px;color:#f0a020;margin:10px 0 6px;">生成フレーム（原寸）</div>
+    <div class="ml-frames" id="mvFrames"></div>
+    <div style="font-size:11px;color:#f0a020;margin:10px 0 6px;">技ラボとのやりとり（JSON）</div>
+    <textarea id="mvJson" class="sm" spellcheck="false"></textarea>
+    <div class="bar">
+      <button id="mvJsonLoad">貼ったJSONを読む</button>
+      <button id="mvJsonCopy">コピー</button>
+    </div>
+    <div class="bar">
+      <button id="mvClose">この技を閉じる</button>
+      <button id="mvDel" class="warnbtn">この技を消す</button>
+    </div>
+  </div>
+  <div style="border-top:1px solid #232a36;margin:10px 0 9px;"></div>
+  <div style="font-size:11px;color:#f0a020;margin-bottom:6px;">■ 技の保存（別の四皇モンでも使える）</div>
+  <div id="mvLib"></div>
+  <div class="bar"><button id="mvStarter">ネタ帳の技を棚に入れる</button></div>
+  <div id="mvStarterState" class="hint" style="margin:0 0 6px;"></div>
+  <div class="hint">保存した技は<b style="color:#f0a020">技ラボとも共通</b>。
+  読み込むと、いま作りよる四皇モンに<b>新しい技として足される</b>（元の技は消えん）。<br>
+  エフェクト・素材・戦闘の数値・音まで丸ごと入っとる。</div>
+</div></div>
+
+<div class="sec"><h2><span>■ 草むらへ放つ</span><span>▾</span></h2><div>
+  <div id="relCheck" class="hint" style="margin:0 0 8px;"></div>
+  <div class="bar"><button id="btnRelease" class="go big">草むらへ放つ</button></div>
+  <div id="sceneSfxCtl"></div>
+  <div style="border-top:1px solid #232a36;margin:10px 0 9px;"></div>
+  <div style="font-size:11px;color:#7ad6a0;margin-bottom:6px;">いま草むらに居る四皇モン</div>
+  <div id="wildList"></div>
+  <div class="bar"><button id="btnWildCopy">草むらのJSONをコピー</button></div>
+  <div class="warn">作った個体を直接手持ちにはできん（計画21.2の絶対ルール）。<br>
+  草むらへ放って野生化させて、捕獲ゲームで捕まえてはじめて手持ちになる。</div>
 </div></div>
 
 <div class="sec"><h2><span>■ 保存（自動＋スロット）</span><span>▾</span></h2><div>
   <div id="autoState" class="hint" style="margin:0 0 8px;"></div>
+  <div id="boundState" class="hint" style="margin:0 0 8px;"></div>
   <div class="ctl"><label>名前をつけて</label><input type="text" id="slotName" placeholder="パルキア"></div>
-  <div class="bar"><button id="slotSave" style="background:#1d5a3a;border-color:#2c8a5c;color:#d0f5e4;">この名前で保存</button></div>
+  <div class="bar">
+    <button id="slotSave" class="go">名前を付けて保存</button>
+    <button id="slotOver">上書き保存</button>
+  </div>
   <div id="slotList"></div>
   <div class="hint">入力するたびに<b style="color:#7ad6a0">自動保存</b>しとる。ページを閉じても残る。<br>
   ただし別の場所から開き直すと消えることがあるけん、大事なやつは下のJSONもコピーして残しといて。</div>
@@ -111,34 +316,89 @@
     <button id="btnLoad">貼り付けたJSONを読み込む</button>
     <button id="btnDl">.json</button>
   </div>
-  <div class="warn">※ これは開発用のデータ作成ツール。<br>
-  ゲーム内の作成画面（Phase 18）には「手持ちへ追加」は存在せん。作った個体は必ず草むらへ放流して、
-  捕獲ゲームで捕まえてはじめて手持ちになる。</div>
+  <div class="hint">技クリエーターで作った技も、鳴き声も、影の設定も全部このJSONに入っとる。</div>
+</div></div>
+
+<div class="sec"><h2><span>■ 初めから作りなおす</span><span>▾</span></h2><div>
+  <div class="bar" style="margin-top:0;"><button id="btnReset" class="warnbtn big">まっさらな四皇モンにする</button></div>
+  <div class="hint">いま編集しとる内容だけを初期化する。<b style="color:#7ad6a0">名前つき保存と草むらの中身は消えん。</b><br>
+  大量生産するときは「草むらへ放つ → ここで初期化 → 次の1体」の順がはやい。</div>
 </div></div>
 </div>
 
 <script>
 /*__FX_CORE__*/
+/*__SFX_BANK__*/
 /*__MOVES__*/
 /*__ANIMS__*/
+/*__AUDIO_UI__*/
+/*__MOVELAB__*/
+/*__STARTER__*/
 
 /* =========================================================
-   編集中の四皇モン
+   0. 状態
+   描画ループが読む変数は、例外なくここで宣言する。
+   （過去に previewKey を後ろで宣言して TDZ エラーを踏んどる）
    ========================================================= */
-let mon={
+const $=id=>document.getElementById(id);
+const W=384, H=288, FIELD_H=216;
+const LAY_A={cx:120,platY:198,size:104};      // 手前＝味方側（背面）
+const LAY_E={cx:258,platY:111,size:80};       // 奥＝敵側（正面）
+const SLOT_KEYS=['normal','attack','hurt','back','summon'];
+const SLOT_JP={normal:'通常',attack:'攻撃',hurt:'被弾',back:'背面',summon:'召喚'};
+const ANIM_KEYS=['idle','attack','hurt','fly','appear'];
+const STAT_JP={atk:'攻撃力',def:'防御力',hp:'体力',spd:'素早さ',eva:'回避力',int:'賢さ'};
+const PER_JP ={aggr:'好戦性',caut:'慎重性',loyal:'忠実性',self:'自己保存'};
+/* 内蔵技。編集すると mon.customMoves に「同じIDの上書き」が入る。
+   元データはここに取っといて、上書きを消したら元に戻す。 */
+const BUILTIN_MOVE_IDS=Object.keys(MOVES);
+const BUILTIN_MOVES=JSON.parse(JSON.stringify(MOVES));
+const isBuiltinId=id=>BUILTIN_MOVE_IDS.includes(id);
+
+function DEFAULT_MON(){ return {
   id:'new_mon', name:'なまえ', types:['ノーマル','（なし）'],
   stats:{atk:50,def:50,hp:50,spd:50,eva:50,int:50},
   per  :{aggr:50,caut:50,loyal:50,self:50},
   moves:['shakunetsu'],
+  customMoves:[],
+  cry:{id:null,vol:1,rate:1},
   scale:1.0, dy:0,
-  img:{normal:{scale:1,dy:0},attack:{scale:1,dy:0},hurt:{scale:1,dy:0},back:{scale:1,dy:0}},
-  images:{normal:null,attack:null,hurt:null,back:null}
-};
-const imgs={normal:null,attack:null,hurt:null,back:null};
-const ph={};
-(function(){ for(const f of ['normal','attack','hurt'])
-  ph[f]=makePlaceholderC(12345,120,150,f); })();
+  idleMotion:true,                    // 待機中にゆらゆら動くか
+  /* 出現（召喚）まわり。
+     style … トレーナー戦は光の柱（trainer）、草むらは草から飛び出す（wild）
+     cryDelay … 出はじめてから鳴くまでの秒。出方が変わっても鳴くタイミングは変えん
+     land … 着地した瞬間から流す「コマ割り」。空なら何もせん（普通の着地） */
+  summon:{ style:'trainer', cryDelay:0.5, land:[] },
+  shadow:{scale:1,flat:1,dx:0,dy:0,alpha:0.24,follow:0.6},
+  img:{normal:{scale:1,dy:0},attack:{scale:1,dy:0},hurt:{scale:1,dy:0},
+       back:{scale:1,dy:0},summon:{scale:1,dy:0}}
+};}
 
+let mon=DEFAULT_MON();
+const imgs   ={normal:null,attack:null,hurt:null,back:null,summon:null};
+const derived={normal:false,attack:false,hurt:false,back:false,summon:false}; // 通常からの複製か
+let slot='normal', previewKey='normal';
+let sideA={anim:'idle',t:0}, sideE={anim:'idle',t:0};
+let fxs=[];
+let scene=null;                       // 草むら放流の演出
+let editMove=null, editBuilt={};      // 技クリエーターで開いとる技
+let mvSndOn=false;
+let autoFire=false, autoT=0;          // 自動連射（スライダを触りながら見るため）
+let fxSpeed=0.85;                     // プレビューの再生速度（等速＝0.85）
+let cryTimer=null, cryTimerE=null;
+let cryBackup=null;                   // 軽くする前の音（元に戻す用）
+let weakPreview=false;                // 体力1/3以下の見た目を試すスイッチ（保存せん）
+let clock=0;                          // 振動の位相に使う
+let landLoop=false, landLoopT=0;      // 着地モーションのくり返し再生
+const ph={};                          // 仮の姿
+
+/* 画面SE（鳴き声以外の演出音）。sfx_bank.js は自動生成なので触らず、こっちに持つ */
+const SCENE_SFX_KEY='shioumon_scene_sfx_v1';
+let SCENE_SFX={ appear:{id:null,vol:0.9,rate:1}, grass:{id:null,vol:0.8,rate:1} };
+
+/* =========================================================
+   1. 仮の姿（画像を入れる前の見た目）
+   ========================================================= */
 function makePlaceholderC(seed,size,hue,face){
   const c=mkCv(size,size), g=c.getContext('2d'), rng=new RNG(seed);
   const N=24,px=size/N;
@@ -151,7 +411,11 @@ function makePlaceholderC(seed,size,hue,face){
     g.fillRect((N-1-x)*px,y*px,Math.ceil(px),Math.ceil(px));
   }
   const ey=Math.floor(N*0.36), ex=Math.floor(N*0.26), rx=N-3-ex;
-  if(face==='hurt'){
+  if(face==='back'){
+    /* 背中側。顔は見えん。背骨の筋だけ入れる */
+    g.fillStyle='rgba(20,24,32,0.30)';
+    g.fillRect(Math.floor(N/2*px-px),Math.floor(ey*px),Math.ceil(px*2),Math.ceil(px*9));
+  }else if(face==='hurt'){
     g.strokeStyle='#101018'; g.lineWidth=px;
     [[ex,ey],[rx,ey]].forEach(([x,y])=>{ g.beginPath();
       g.moveTo(x*px,y*px); g.lineTo((x+3)*px,(y+3)*px);
@@ -164,14 +428,16 @@ function makePlaceholderC(seed,size,hue,face){
   }
   return c;
 }
+for(const f of ['normal','attack','hurt','back']) ph[f]=makePlaceholderC(12345,120,150,f);
 
 /* =========================================================
-   プレビュー（実機と同じ 384×288）
+   2. プレビュー画面（実機と同じ 384×288）
    ========================================================= */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 ctx.imageSmoothingEnabled=false;
-const W=384,H=288, FIELD_H=216;
-const LAY_A={cx:120,platY:198,size:104}, LAY_E={cx:258,platY:111,size:80};
+const fieldTmp=mkCv(W,FIELD_H), ftx=fieldTmp.getContext('2d');
+ftx.imageSmoothingEnabled=false;
+const tintCv=mkCv(160,160), tintCtx=tintCv.getContext('2d');
 
 const bgCv=mkCv(W,FIELD_H);
 (function(){ const g=bgCv.getContext('2d'), hz=87, rng=new RNG(918273);
@@ -190,54 +456,226 @@ const bgCv=mkCv(W,FIELD_H);
   plat(LAY_E.cx,LAY_E.platY,60,17); plat(LAY_A.cx,LAY_A.platY,78,22);
 })();
 
-const ANIM_KEYS=['idle','attack','hurt','fly'];
-const SLOT_JP={normal:'通常',attack:'攻撃',hurt:'被弾',back:'背面'};
-let animName='idle', animT=0;
-let slot='normal', previewKey='normal';
-function resolve(key,back){
-  if(previewKey && animName==='idle'){
+/* 描く相手。S={mon, imgs}。自分は SELF、相手側は保存した四皇モンにも差し替えられる */
+const SELF={ get mon(){ return mon; }, imgs };
+let foeName=null, foe=null;                 // 相手に据えた保存個体（null＝自分と同じ）
+const subjE=()=>foe||SELF;                  // 奥＝敵側の中身
+
+function resolve(key,back,st,S){
+  S=S||SELF;
+  const imgs=S.imgs;
+  if(previewKey && st.anim==='idle'){
     const im=imgs[previewKey]||ph[previewKey]||ph.normal;
     return {img:im, key:previewKey};
   }
-  if(back && imgs.back){
-    if(key==='normal') return {img:imgs.back,key:'back'};
-    if(imgs[key]) return {img:imgs[key],key};
-    return {img:imgs.back,key:'back'};
-  }
+  /* 味方側（手前）は何をしとっても背面写真。
+     同じ個体を、自分は背中から・相手は正面から見る。攻撃／被弾の写真は
+     「正面から見とる側」にだけ出る。ここを混ぜると、味方側だけ攻撃の瞬間に
+     絵と倍率（mon.img.attack）が入れ替わって、大きさがガクッと変わる。 */
+  if(back) return {img:imgs.back||imgs.normal||ph.back||ph.normal, key:'back'};
   if(imgs[key]) return {img:imgs[key],key};
   if(ph[key])   return {img:ph[key],key};
   return {img:imgs.normal||ph.normal, key:'normal'};
 }
-function drawMon(g,L,back){
-  const def=ANIMS[animName]||ANIMS.idle;
-  const s=sampleAnim(def,Math.min(1,animT));
-  const rv=resolve(s.img,back); const img=rv.img; if(!img) return;
-  const cfg=mon.img[rv.key]||{scale:1,dy:0};
-  const sc=mon.scale*(cfg.scale||1);
+
+/* 白点滅（被弾）。画像の形のまま白く塗る */
+function drawFlash(g,img,w,h,amt,alpha){
+  const tw=Math.max(1,Math.min(512,Math.round(w))), th=Math.max(1,Math.min(512,Math.round(h)));
+  if(tintCv.width<tw)  tintCv.width=tw;
+  if(tintCv.height<th) tintCv.height=th;
+  tintCtx.imageSmoothingEnabled=false;
+  tintCtx.globalCompositeOperation='source-over';
+  tintCtx.clearRect(0,0,tintCv.width,tintCv.height);
+  tintCtx.drawImage(img,0,0,tw,th);
+  tintCtx.globalCompositeOperation='source-atop';
+  tintCtx.fillStyle='#ffffff'; tintCtx.fillRect(0,0,tw,th);
+  tintCtx.globalCompositeOperation='source-over';
+  g.globalAlpha=alpha*Math.min(1,amt);
+  g.drawImage(tintCv,0,0,tw,th,-w/2,-h,w,h);
+}
+
+/* 影。地面に置く楕円。位置・大きさ・濃さ・追従を四皇モンのデータで持つ */
+function drawShadow(g,cx,groundY,w,h,air,alpha,dxFollow,S){
+  const sh=((S||SELF).mon.shadow)||{};
+  const a=(sh.alpha==null?0.24:sh.alpha)*(1-air)*alpha;
+  if(a<=0.004) return;
+  const ss=sh.scale==null?1:sh.scale, fl=sh.flat==null?1:sh.flat;
+  const fx=(sh.follow==null?0.6:sh.follow)*(dxFollow||0);
+  const rx=Math.max(0.5,w*0.30*ss), ry=Math.max(0.5,h*0.10*ss*fl);
+  g.save(); g.globalAlpha=a; g.fillStyle='#000';
+  g.beginPath(); g.ellipse(cx+fx+(sh.dx||0), groundY+(sh.dy||0), rx, ry, 0, 0, Math.PI*2);
+  g.fill(); g.restore();
+}
+
+function drawMon(g,L,back,st,S){
+  S=S||SELF;
+  const M=S.mon, imgs=S.imgs;
+  const def=ANIMS[st.anim]||ANIMS.idle;
+  /* 待機を切っとる個体は、待機中だけ最初のコマで止める（他のモーションは動く） */
+  const frozen=(st.anim==='idle' && M.idleMotion===false);
+  const s=sampleAnim(def, frozen?0:Math.min(1,st.t));
+  /* 着地モーション中は、指定した写真をそのまま出す（背面の決まりより優先）。
+     ここは鴨川が1コマずつ決めた並びやけん、勝手に差し替えたら意味がない。 */
+  const lstep=(st.seqT!=null)?landStepAt(st.seqT,S):null;
+  const rv = lstep
+    ? {img:imgs[lstep.img]||ph[lstep.img]||imgs.normal||ph.normal, key:lstep.img||'normal'}
+    : resolve(s.img,back,st,S);
+  const img=rv.img; if(!img) return;
+  const cfg=M.img[rv.key]||{scale:1,dy:0};
+  const sc=M.scale*(cfg.scale||1);
   const w=L.size*sc, h=L.size*sc;
   const dir=back?1:-1;
-  const px=L.cx+s.dx*dir, py=L.platY+6+s.dy+mon.dy+(cfg.dy||0);
+  /* 着地モーションの振動は「四皇モン本体」が震える。背景は動かさん
+     （背景を揺らすのは技の画面演出 screen.shake の役目） */
+  let vx=0, vy=0;
+  if(lstep && (+lstep.shake||0)>0){
+    const amp=+lstep.shake, tk=Math.floor(clock*46);
+    vx=Math.round((hash3(tk,17,1)-0.5)*2*amp);
+    vy=Math.round((hash3(tk,17,2)-0.5)*2*amp*0.6);
+  }
+  const px=L.cx+s.dx*dir+vx, py=L.platY+6+s.dy+M.dy+(cfg.dy||0)+vy;
   const air=Math.min(1,Math.max(0,-s.dy)/90);
-  g.save(); g.globalAlpha=0.24*(1-air);
-  g.fillStyle='#000';
-  g.beginPath(); g.ellipse(L.cx,L.platY-3+mon.dy+(cfg.dy||0),w*0.30,h*0.10,0,0,Math.PI*2); g.fill(); g.restore();
+  /* 光の柱はトレーナー戦の出方だけ。草むら（appearWild）には出さん */
+  if(st.anim==='appear') drawSummon(g,L.cx,L.platY-3,w,Math.min(1,st.t));
+  /* 残像。横跳び・回避・ジャンプは残像込みで作っとるけん、
+     ここが無いと制作ツールだけ瞬間移動して見える（実戦とズレる） */
+  if(!st.trail) st.trail=[];
+  if(s.ghost>0.01){
+    st.trail.push({px,py,sx:s.sx,sy:s.sy,rot:s.rot,img});
+    if(st.trail.length>5) st.trail.shift();
+    for(let i=0;i<st.trail.length-1;i++){
+      const t=st.trail[i], a=(i+1)/st.trail.length*0.30*s.ghost;
+      g.save(); g.globalAlpha=a;
+      g.translate(t.px,t.py); g.rotate(t.rot*dir); g.scale(t.sx,t.sy);
+      g.drawImage(t.img,-w/2,-h,w,h); g.restore();
+    }
+  } else if(st.trail.length) st.trail.length=0;
+  drawShadow(g,L.cx,L.platY-3,w,h,air,s.alpha,s.dx*dir,S);
   g.save(); g.globalAlpha=s.alpha; g.translate(px,py);
   g.rotate(s.rot*dir); g.scale(s.sx,s.sy);
-  g.drawImage(img,-w/2,-h,w,h); g.restore();
+  g.drawImage(img,-w/2,-h,w,h);
+  if(s.flash>0.01) drawFlash(g,img,w,h,s.flash,s.alpha);
+  g.restore();
 }
-function frame(dt){
-  const def=ANIMS[animName]||ANIMS.idle;
-  animT+=dt/def.dur;
-  if(animT>=1){ if(def.loop) animT%=1; else { animName='idle'; animT=0; } }
-  ctx.fillStyle='#0a0c11'; ctx.fillRect(0,0,W,H);
-  ctx.drawImage(bgCv,0,0);
-  drawMon(ctx,LAY_E,false);      // 奥＝敵側（正面）
-  drawMon(ctx,LAY_A,true);       // 手前＝味方側（背面）
+
+/* ---- 着地モーション（mon.summon.land）----
+   着地した瞬間から、指定した写真を順に出す。振動もコマごとに持つ。 */
+function landList(S){ const M=(S||SELF).mon;
+  return (M.summon&&Array.isArray(M.summon.land))?M.summon.land:[]; }
+function landTotal(S){ return landList(S).reduce((a,s)=>a+(+s.dur||0),0); }
+function landStepAt(t,S){
+  let acc=0;
+  for(const s of landList(S)){ acc+=(+s.dur||0); if(t<acc) return s; }
+  return null;
+}
+function appearAnimName(S){ const M=(S||SELF).mon;
+  return (M.summon&&M.summon.style==='wild')?'appearWild':'appear'; }
+
+/* ---- 技ごとの「本体の動き」（fx.motions）----
+   どの動きを・いつ・何秒かけてさせるか。durOv でアニメを伸び縮みさせる。 */
+let pendingMotions=[];
+function playMotion(st,anim,dur){
+  if(!ANIMS[anim]) return;
+  st.anim=anim; st.t=0; st.seqT=null;
+  st.durOv=(+dur>0)?+dur:null;
+}
+function scheduleMotions(sp,phase,st){
+  const ts=Math.max(0.05,Math.min(4,+((sp&&sp.timeScale))||1));
+  const list=(sp&&Array.isArray(sp.motions))?sp.motions:null;
+  if(!list||!list.length){                       // 何も決めとらん技は今までどおり
+    if(phase==='fire') playMotion(st,'attack',ANIMS.attack.dur);
+    return;
+  }
+  for(const m of list){
+    if((m.at||'fire')!==phase) continue;
+    const d=Math.max(0,+m.off||0);
+    if(d<=0) playMotion(st,m.anim,(+m.dur||0.75)/ts);
+    else pendingMotions.push({t:d/ts,anim:m.anim,dur:(+m.dur||0.75)/ts,st});
+  }
+}
+function tickMotions(dt){
+  if(!pendingMotions.length) return;
+  for(const p of pendingMotions) p.t-=dt;
+  const due=pendingMotions.filter(p=>p.t<=0);
+  pendingMotions=pendingMotions.filter(p=>p.t>0);
+  for(const p of due) playMotion(p.st,p.anim,p.dur);
+}
+
+function stepAnim(st,dt,S){
+  S=S||SELF;
+  const def=ANIMS[st.anim]||ANIMS.idle;
+  /* 体力が1/3以下やと待機の動きが落ちる（弱っとる感じ） */
+  const k=(st.anim==='idle'&&weakPreview)?0.85:1;
+  const before=st.t;
+  const D=(st.durOv&&st.durOv>0)?st.durOv:def.dur;
+  st.t+=dt*k/D;
+  /* 着地した瞬間にコマ割りを流し始める */
+  if(def.landAt!=null && before<def.landAt && st.t>=def.landAt && landTotal(S)>0) st.seqT=0;
+  if(st.seqT!=null){ st.seqT+=dt; if(st.seqT>=landTotal(S)) st.seqT=null; }
+  if(st.t>=1){
+    if(def.loop) st.t%=1;
+    else if(def.hold) st.t=1;
+    else { st.anim='idle'; st.t=0; st.durOv=null; }
+  }
+}
+/* 出現させる（両側）。鳴き声は cryDelay 秒あとに1回だけ。
+   noCry=true はくり返し再生用（何度も鳴くとうるさいけん黙らせる） */
+function playAppear(noCry){
+  pendingMotions.length=0;
+  const na=appearAnimName(SELF), ne=appearAnimName(subjE());
+  sideA.anim=na; sideA.t=0; sideA.seqT=null; sideA.durOv=null;
+  sideE.anim=ne; sideE.t=0; sideE.seqT=null; sideE.durOv=null;
+  previewKey=null;
+  if(noCry){ cryTimer=null; cryTimerE=null; }
+  else{
+    /* 手前も奥も、それぞれ自分の「鳴くまで」で鳴く。
+       毎回ぴったり同じやと機械っぽいけん ±0.15秒 散らす（手前と奥で別のズレ） */
+    const dOf=S=>{ const s=(S.mon||{}).summon; return (s&&s.cryDelay!=null)?+s.cryDelay:0.5; };
+    const seed=Math.floor(performance.now());
+    cryTimer =cryDelayWith(dOf(SELF),    seed);
+    cryTimerE=cryDelayWith(dOf(subjE()), seed+7919);
+    SND.resume();
+  }
+}
+
+function drawPreview(dt){
+  dt*=fxSpeed;                        // スロー／倍速はここ1か所で効かせる
+  clock+=dt;
+  if(cryTimer!=null){ cryTimer-=dt; if(cryTimer<=0){ cryTimer=null; playCry(1.0,SELF); } }
+  if(cryTimerE!=null){ cryTimerE-=dt; if(cryTimerE<=0){ cryTimerE=null; playCry(1.0,subjE()); } }
+  tickMotions(dt);
+  if(landLoop){                       // いじった数値そのままで、そのまま流し続ける
+    landLoopT-=dt;
+    if(landLoopT<=0){
+      landLoopT=(ANIMS[appearAnimName(SELF)].dur||1.15)+landTotal(SELF)+0.8;
+      playAppear(true);
+    }
+  }
+  if(autoFire){
+    autoT-=dt;
+    if(autoT<=0){ const id=editMove?editMove.id:$('fireSel').value; autoT=2.0; if(id) fireMove(id); }
+  }
+  stepAnim(sideA,dt,SELF); stepAnim(sideE,dt,subjE());
+  SCREEN.update(dt);
+  ftx.clearRect(0,0,W,FIELD_H);
+  ftx.drawImage(bgCv,0,0);
+  drawMon(ftx,LAY_E,false,sideE,subjE());   // 奥＝敵側（正面。保存個体に差し替え可）
+  drawMon(ftx,LAY_A,true ,sideA,SELF);      // 手前＝味方側（背面）
+  for(const s of fxs) s.update(dt);
+  for(const s of fxs) s.draw(ftx);
+  fxs=fxs.filter(s=>s.state!=='dead');
   /* 枠の目安 */
-  ctx.strokeStyle='rgba(122,214,160,0.35)'; ctx.setLineDash([2,2]); ctx.lineWidth=1;
-  ctx.strokeRect(LAY_A.cx-LAY_A.size/2+0.5, LAY_A.platY-LAY_A.size+6.5, LAY_A.size, LAY_A.size);
-  ctx.strokeRect(LAY_E.cx-LAY_E.size/2+0.5, LAY_E.platY-LAY_E.size+6.5, LAY_E.size, LAY_E.size);
-  ctx.setLineDash([]);
+  ftx.strokeStyle='rgba(122,214,160,0.35)'; ftx.setLineDash([2,2]); ftx.lineWidth=1;
+  ftx.strokeRect(LAY_A.cx-LAY_A.size/2+0.5, LAY_A.platY-LAY_A.size+6.5, LAY_A.size, LAY_A.size);
+  ftx.strokeRect(LAY_E.cx-LAY_E.size/2+0.5, LAY_E.platY-LAY_E.size+6.5, LAY_E.size, LAY_E.size);
+  ftx.setLineDash([]);
+
+  const off=SCREEN.offset();          // 背景の揺れは技の画面演出だけ（掟どおり）
+  ctx.fillStyle='#0a0c11'; ctx.fillRect(0,0,W,FIELD_H);
+  ctx.drawImage(fieldTmp,off.x,off.y);
+  ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,FIELD_H); ctx.clip();
+  SCREEN.drawOver(ctx,W,FIELD_H); ctx.restore();
+
   /* 情報帯 */
   ctx.fillStyle='#0a0c11'; ctx.fillRect(0,FIELD_H,W,H-FIELD_H);
   ctx.fillStyle='#161b24'; ctx.fillRect(4,FIELD_H+4,W-8,H-FIELD_H-8);
@@ -253,65 +691,1216 @@ function frame(dt){
   ctx.fillStyle='#7ad6a0'; ctx.textAlign='right'; ctx.font='14px "DotGothic16",monospace';
   ctx.fillText('COST '+costOf(mon).cost, W-14, FIELD_H+14);
   ctx.fillStyle='#8b97a8'; ctx.font='10px "DotGothic16",monospace';
-  const cg=mon.img[previewKey||'normal']||{scale:1,dy:0};
-  ctx.fillText('全体×'+mon.scale.toFixed(2)+'　'+SLOT_JP[previewKey||'normal']
+  const pk=previewKey||'normal';
+  const cg=mon.img[pk]||{scale:1,dy:0};
+  ctx.fillText('全体×'+mon.scale.toFixed(2)+'　'+SLOT_JP[pk]
                +'×'+(cg.scale||1).toFixed(2), W-14, FIELD_H+36);
 }
+
+/* ---- 描画ループ。先に次を予約してから描く（1回の例外でループを殺さん） ---- */
 let last=performance.now();
-(function tick(now){
+function tick(now){
   requestAnimationFrame(tick);
   const dt=Math.min(0.05,Math.max(0,(now-last)/1000)); last=now;
-  try{ frame(dt); }catch(e){ console.error(e); }
-})(last);
+  try{ if(scene) drawScene(dt); else drawPreview(dt); }
+  catch(e){ console.error('draw error',e); }
+}
+requestAnimationFrame(tick);
 
 /* =========================================================
-   コントロール
+   3. 草むらへ放つ演出
    ========================================================= */
-const $=id=>document.getElementById(id);
-const STAT_JP={atk:'攻撃力',def:'防御力',hp:'体力',spd:'素早さ',eva:'回避力',int:'賢さ'};
-const PER_JP ={aggr:'好戦性',caut:'慎重性',loyal:'忠実性',self:'自己保存'};
+const GRASS={};
+(function(){
+  const g0=mkCv(W,FIELD_H), g=g0.getContext('2d'), rng=new RNG(20260816);
+  const hz=74;
+  const bands=(y,h,c)=>{const st=h/c.length;
+    for(let i=0;i<c.length;i++){g.fillStyle=c[i];g.fillRect(0,Math.floor(y+i*st),W,Math.ceil(st)+1);}};
+  bands(0,hz,['#79cdf5','#8ad5f7','#9cddf9','#b0e5fa','#c8eefb']);
+  /* 遠くの木立（丸い樹冠を重ねる。四角く並べるとビル街に見える） */
+  const canopy=(cx,cy,r,c1,c2)=>{
+    g.fillStyle=c2; g.beginPath(); g.ellipse(cx,cy,r,r*0.82,0,0,Math.PI*2); g.fill();
+    g.fillStyle=c1; g.beginPath(); g.ellipse(cx-r*0.22,cy-r*0.26,r*0.62,r*0.5,0,0,Math.PI*2); g.fill();
+  };
+  for(let i=0;i<46;i++){                       // 奥（かすんだ色）
+    const x=-10+i*(W+20)/45, r=7+rng.range(0,5);
+    canopy(x,hz-r*0.5,r,'#4e9a5a','#3f8a4c');
+  }
+  for(let i=0;i<34;i++){                       // 手前（濃い）
+    const x=-14+rng.range(0,W+28), r=9+rng.range(0,7);
+    canopy(x,hz-r*0.15,r,'#3a8546','#2c6b39');
+  }
+  g.fillStyle='#245c31'; g.fillRect(0,hz+2,W,5);
+  g.fillStyle='#2f7038'; g.fillRect(0,hz+7,W,2);
+  /* 地面 */
+  bands(hz+4,FIELD_H-hz-4,['#5fbb52','#57b24b','#4fa945','#4aa040','#43963a','#3d8c35']);
+  /* 地面の模様 */
+  for(let i=0;i<260;i++){
+    const y=hz+8+rng.range(0,FIELD_H-hz-10);
+    const dark=(y-hz)/(FIELD_H-hz);
+    g.fillStyle=rng.next()>0.5?'rgba(255,255,255,0.10)':'rgba(20,60,25,'+(0.10+dark*0.10).toFixed(2)+')';
+    g.fillRect(Math.floor(rng.range(0,W)),Math.floor(y),Math.floor(3+rng.range(0,10)),1);
+  }
+  /* 奥の草むら（動かん層） */
+  for(let i=0;i<70;i++){
+    const x=rng.range(0,W), y=hz+10+rng.range(0,40), s=2+rng.range(0,2);
+    g.fillStyle=rng.next()>0.5?'#2f7a37':'#37893e';
+    g.fillRect(Math.floor(x),Math.floor(y),Math.ceil(s),Math.ceil(s*2));
+  }
+  GRASS.bg=g0;
+  /* 手前で揺れる草。mon はこの後ろへ沈む */
+  GRASS.tufts=[];
+  for(let i=0;i<150;i++){
+    const y=140+rng.range(0,FIELD_H-140);
+    GRASS.tufts.push({
+      x:rng.range(-10,W+10), y:y,
+      h:10+((y-140)/(FIELD_H-140))*16+rng.range(0,7),
+      ph:rng.range(0,6.28), sp:1.6+rng.range(0,1.1),
+      blades:2+rng.int(0,2),
+      col:['#2e7d38','#357f3a','#3f9243','#2a6f32'][rng.int(0,3)]
+    });
+  }
+  GRASS.tufts.sort((a,b)=>a.y-b.y);
+})();
 
-function slider(host,label,get,set,min,max,step,fmt,cls){
+function drawTuft(g,t,sway){
+  g.strokeStyle=t.col; g.lineWidth=2; g.lineCap='butt';
+  for(let b=0;b<t.blades;b++){
+    const bx=t.x+(b-(t.blades-1)/2)*3;
+    const lean=sway*(1+b*0.25);
+    g.beginPath();
+    g.moveTo(Math.round(bx),Math.round(t.y));
+    g.quadraticCurveTo(Math.round(bx+lean*0.4),Math.round(t.y-t.h*0.6),
+                       Math.round(bx+lean),Math.round(t.y-t.h));
+    g.stroke();
+  }
+}
+
+function startRelease(){
+  scene={ t:0, done:false, saved:false, cried:false, rustles:[], msg:0,
+          cryAt:cryDelayWith((mon.summon&&mon.summon.cryDelay)||0, Math.floor(performance.now())) };
+  SCREEN.clear(); fxs.length=0; pendingMotions.length=0; setAuto(false); setLandLoop(false);
+  document.getElementById('sceneBar').classList.add('show');
+  document.getElementById('animBar').style.display='none';
+  document.getElementById('fireBar').style.display='none';
+  document.getElementById('sceneClose').disabled=true;
+  document.getElementById('stage').scrollIntoView({block:'start'});
+  SND.resume();
+}
+function endRelease(){
+  scene=null;
+  document.getElementById('sceneBar').classList.remove('show');
+  document.getElementById('animBar').style.display='';
+  document.getElementById('fireBar').style.display='';
+  buildWildList(); paintReleaseCheck();
+}
+function playSceneSfx(k,rateMul){
+  const e=SCENE_SFX[k]; if(!e||!e.id) return;
+  SND.play(e.id,{vol:e.vol==null?1:e.vol, rate:(e.rate==null?1:e.rate)*(rateMul||1)});
+}
+/* 自前の鳴き声は四皇モンのデータ側（mon.cry.data）に持つ。
+   バンクは自動生成やけん触らん。読み込むたびに SoundBank へ登録し直す。 */
+/* S を省いたら自分。相手（奥）の鳴き声もここを通す */
+function registerMonCry(S){
+  const c=((S||SELF).mon||{}).cry;
+  if(!c||!c.id||!c.data) return;
+  SND.custom[c.id]={label:c.label||'鳴き声',cat:'custom',src:'ユーザー追加',data:c.data};
+  if(SND.ctx && !SND.buf[c.id]) SND.decodeOne(c.id).catch(e=>console.warn('鳴き声デコード失敗',e));
+}
+function playCry(rateMul,S){
+  S=S||SELF;
+  const c=(S.mon||{}).cry; if(!c||!c.id) return;
+  SND.resume();
+  const opt={vol:c.vol==null?1:c.vol, rate:(c.rate==null?1:c.rate)*(rateMul||1)};
+  if(!SND.buf[c.id] && c.data){
+    registerMonCry(S);
+    SND.decodeOne(c.id).then(()=>SND.play(c.id,opt)).catch(()=>{});
+    return;
+  }
+  SND.play(c.id,opt);
+}
+
+/* 演出の時間割（秒） */
+/* 出現は ANIMS.appear（1.15秒）を丸ごと使う。settle はそれより後ろに置く */
+const REL={ appear:0.30, settle:1.60, hop0:1.60, hopDur:0.34, hops:3,
+            dive:2.95, gone:3.45, text:3.7, fin:4.9 };
+const REL_FROM={x:150,y:170}, REL_TO={x:292,y:196};
+
+function drawScene(dt){
+  scene.t+=dt;
+  const T=scene.t;
+  const g=ftx;
+  g.clearRect(0,0,W,FIELD_H);
+  g.drawImage(GRASS.bg,0,0);
+
+  /* --- 位置と姿勢 ---
+     gy は「地面のy」。跳ねる高さ（hop）とは分けて持つ。
+     混ぜると草の前後判定がジャンプのたびに入れ替わってチラつく。 */
+  let mx=REL_FROM.x, gy=REL_FROM.y, hop=0, sx=1, sy=1, alpha=1, sink=0, pop=1;
+  /* 草むらは野生やけん、光の柱は出さん。草をかき分けて飛び出す */
+  const WA=ANIMS.appearWild;
+  let summonU=-1;
+  if(T<REL.appear){ pop=0; alpha=0; }
+  else if(T<REL.appear+WA.dur){
+    summonU=(T-REL.appear)/WA.dur;
+    const s=sampleAnim(WA,summonU);
+    sx=s.sx; sy=s.sy; hop=-s.dy; alpha=s.alpha;
+  }
+  /* 鳴くまでの時間は出方が変わっても同じ */
+  if(!scene.cried && T>=REL.appear+scene.cryAt){
+    scene.cried=true; playCry(1.0,SELF); }
+  if(!scene.burst && T>=REL.appear){ scene.burst=true;   // 草をかき分けた瞬間
+    scene.rustles.push({x:REL_FROM.x,t:0});
+    scene.rustles.push({x:REL_FROM.x-18,t:-0.05});
+    scene.rustles.push({x:REL_FROM.x+18,t:-0.05});
+    playSceneSfx('appear'); playSceneSfx('grass',1.15); }
+  if(summonU>=WA.landAt && !scene.landed0){ scene.landed0=true;
+    scene.rustles.push({x:REL_FROM.x,t:0}); playSceneSfx('grass',0.95); }
+
+  if(T>=REL.settle && T<REL.dive){
+    const k=Math.min(REL.hops-0.0001,(T-REL.hop0)/REL.hopDur);
+    const i=Math.floor(k), u=k-i;
+    const p0=i/REL.hops, p1=(i+1)/REL.hops;
+    const p=p0+(p1-p0)*u;
+    mx=REL_FROM.x+(REL_TO.x-REL_FROM.x)*p;
+    gy=REL_FROM.y+(REL_TO.y-REL_FROM.y)*p;
+    hop=Math.sin(u*Math.PI)*26;
+    sx=1+Math.sin(u*Math.PI)*-0.14; sy=1+Math.sin(u*Math.PI)*0.16;
+    if(scene.landed!==i && u>0.92){ scene.landed=i;
+      scene.rustles.push({x:mx,t:0}); playSceneSfx('grass',0.95+i*0.07); }
+  } else if(T>=REL.dive){
+    const u=Math.min(1,(T-REL.dive)/(REL.gone-REL.dive));
+    mx=REL_TO.x; gy=REL_TO.y;
+    sink=u*30; alpha=1-u*0.9; sx=1+u*0.10; sy=1-u*0.16;
+    if(!scene.dived){ scene.dived=true;
+      scene.rustles.push({x:REL_TO.x,t:0}); scene.rustles.push({x:REL_TO.x+16,t:-0.12});
+      playSceneSfx('grass',0.85); }
+  } else if(T>=REL.appear+WA.dur && mon.idleMotion!==false){
+    hop=-Math.sin(T*2.6)*2;               // 出たあとの息づかい（待機を切っとる個体は動かん）
+  }
+  if(T>=REL.gone){ alpha=0; }
+
+  /* --- 揺れの計算 --- */
+  for(const r of scene.rustles) r.t+=dt;
+  scene.rustles=scene.rustles.filter(r=>r.t<1.0);
+  const swayAt=(t)=>{
+    let s=Math.sin(scene.t*t.sp+t.ph)*2.2;
+    for(const r of scene.rustles){
+      if(r.t<0) continue;
+      const d=Math.abs(t.x-r.x);
+      if(d>46) continue;
+      const amp=(1-d/46)*(1-r.t)*11;
+      s+=Math.sin(r.t*26+t.ph)*amp;
+    }
+    return s;
+  };
+
+  /* --- 草（奥）→ mon → 草（手前） --- */
+  const img=imgs.normal||ph.normal;
+  const ncfg=mon.img.normal||{scale:1,dy:0};
+  const w=104*mon.scale*(ncfg.scale||1);
+  const h=w;
+  const my=gy-hop;                   // 実際に描くy
+  const cut=gy+6;                    // 前後判定は「地面のy」で決める（跳ねてもチラつかん）
+  for(const t of GRASS.tufts) if(t.y<=cut) drawTuft(g,t,swayAt(t));
+
+  if(alpha>0.01 && pop>0){
+    drawShadow(g,mx,gy-2,w,h,Math.min(1,hop/40),alpha*(1-sink/34),0);
+    g.save();
+    g.globalAlpha=alpha;
+    g.translate(mx,my+sink+(mon.dy||0)+(ncfg.dy||0));
+    g.scale(sx*pop,sy*pop);
+    g.drawImage(img,-w/2,-h,w,h);
+    g.restore();
+  }
+  for(const t of GRASS.tufts) if(t.y>cut) drawTuft(g,t,swayAt(t));
+
+  /* --- 草むらに登録 --- */
+  if(T>=REL.gone && !scene.saved){ scene.saved=true; scene.result=pushWild(); }
+
+  /* --- 画面へ --- */
+  ctx.fillStyle='#0a0c11'; ctx.fillRect(0,0,W,FIELD_H);
+  ctx.drawImage(fieldTmp,0,0);
+  if(T<REL.appear){                  /* 入りのホワイトアウト */
+    ctx.save(); ctx.globalAlpha=Math.max(0,1-T/REL.appear);
+    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,FIELD_H); ctx.restore();
+  }
+
+  /* --- 文章 --- */
+  ctx.fillStyle='#0a0c11'; ctx.fillRect(0,FIELD_H,W,H-FIELD_H);
+  ctx.fillStyle='#161b24'; ctx.fillRect(4,FIELD_H+4,W-8,H-FIELD_H-8);
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.font='13px "DotGothic16",monospace';
+  const nm=mon.name||'四皇モン';
+  const lines=[];
+  if(T<REL.text){ lines.push(['#dfe6f0', nm+' を くさむらへ はなした！']); }
+  else{
+    lines.push(['#dfe6f0', nm+' は くさむらへ きえていった…']);
+    if(T>=REL.text+0.7){
+      const r=scene.result;
+      if(r&&r.ok) lines.push(['#7ad6a0', r.replaced
+        ? '同じIDの 前の個体と 入れ替わった！'
+        : 'やせいの 四皇モン に なった！']);
+      else if(r)  lines.push(['#f0a020','！ '+r.msg]);
+    }
+  }
+  lines.forEach((l,i)=>{ ctx.fillStyle=l[0]; ctx.fillText(l[1],14,FIELD_H+12+i*20); });
+  if(T>=REL.fin && !scene.done){ scene.done=true;
+    document.getElementById('sceneClose').disabled=false; }
+}
+
+/* =========================================================
+   4. 草むら（Wild Pool）
+   ========================================================= */
+const WILD_KEY='shioumon_wild_pool_v1';
+let wildIds=[];                      // 放流済みID。スライダを触るたびに localStorage を読まんため
+function refreshWildIds(){ wildIds=loadWild().map(e=>e.mon&&e.mon.id).filter(Boolean); }
+function loadWild(){
+  try{ const a=JSON.parse(localStorage.getItem(WILD_KEY)||'[]'); return Array.isArray(a)?a:[]; }
+  catch(e){ return []; }
+}
+function saveWild(a){
+  try{ localStorage.setItem(WILD_KEY,JSON.stringify(a)); return {ok:true}; }
+  catch(e){ return {ok:false,msg:'草むらに入りきらん（'+e.name+'）。古い個体を消すか、JSONを書き出して。'}; }
+}
+function pushWild(){
+  const snap=snapshot();
+  const a=loadWild();
+  const i=a.findIndex(e=>e.mon&&e.mon.id===snap.id);
+  const rec={ uid:snap.id+'_'+a.length, at:new Date().toISOString(),
+              cost:costOf(mon).cost, mon:snap };
+  let replaced=false;
+  if(i>=0){ rec.uid=a[i].uid; a[i]=rec; replaced=true; } else a.push(rec);
+  const r=saveWild(a);
+  if(!r.ok) return r;
+  refreshWildIds();
+  return {ok:true, replaced};
+}
+
+/* =========================================================
+   5. コントロール
+   ========================================================= */
+function slider(host,label,get0,set0,min,max,step,fmt,cls){
   const d=document.createElement('div'); d.className='ctl'+(cls?' '+cls:'');
   d.innerHTML=`<label>${label}</label><input type=range min=${min} max=${max} step=${step}><span class=v></span>`;
   const r=d.querySelector('input'), v=d.querySelector('.v');
-  const show=()=>{ r.value=get(); v.textContent=fmt?fmt(get()):get(); };
-  r.oninput=()=>{ set(step<1?parseFloat(r.value):parseInt(r.value,10)); show(); refresh(); };
-  host.appendChild(d); show();
+  const show=()=>{ r.value=get0(); v.textContent=fmt?fmt(get0()):get0(); };
+  r.oninput=()=>{ set0(step<1?parseFloat(r.value):parseInt(r.value,10)); show(); refresh(); };
+  host.appendChild(d); show(); return d;
 }
+function textRow(host,label,get0,set0){
+  const d=document.createElement('div'); d.className='ctl';
+  d.innerHTML=`<label>${label}</label><input type=text>`;
+  const t=d.querySelector('input'); t.value=get0();
+  t.oninput=()=>{ set0(t.value); refresh(); };
+  host.appendChild(d); return d;
+}
+
+/* ---- 画像スロット ---- */
 function buildSlots(){
   const st=$('slotTabs'); st.innerHTML='';
-  for(const k in SLOT_JP){
+  for(const k of SLOT_KEYS){
     const b=document.createElement('button');
-    b.textContent=SLOT_JP[k]+(imgs[k]?'':' ·');
+    const mark=imgs[k] ? (derived[k]?' ⤴':'') : ' ·';
+    b.textContent=SLOT_JP[k]+mark;
     b.classList.toggle('on',slot===k);
-    b.onclick=()=>{ slot=k; previewKey=k; animName='idle'; animT=0; buildSlots(); };
+    b.onclick=()=>{ slot=k; previewKey=k; sideA.anim='idle'; sideA.t=0; sideE.anim='idle'; sideE.t=0;
+      document.querySelectorAll('#anim0,#anim1,#anim2,#anim3,#anim4').forEach((x,i)=>
+        x.classList.toggle('on',i===0));
+      buildSlots(); };
     st.appendChild(b);
   }
   $('slotLbl').textContent=SLOT_JP[slot];
+  $('btnSameAsNormal').disabled = (slot==='normal');
+  $('btnSameAsNormal').style.opacity = (slot==='normal')?0.4:1;
   const sc=$('slotCtl'); sc.innerHTML='';
   slider(sc,SLOT_JP[slot]+'の倍率',()=>mon.img[slot].scale,v=>mon.img[slot].scale=v,
          0.3,2.5,0.02,v=>'×'+v.toFixed(2));
   slider(sc,SLOT_JP[slot]+'の縦位置',()=>mon.img[slot].dy,v=>mon.img[slot].dy=v,
          -40,40,1,v=>(v>0?'+':'')+v+'px');
 }
+
+/* 通常写真を、まだ自前の写真を入れとらんスロットへ配る */
+function deriveFromNormal(){
+  if(!imgs.normal){
+    for(const k of ['attack','hurt','back','summon'])
+      if(imgs[k] && !derived[k]){ imgs.normal=imgs[k]; derived.normal=true; break; }
+  }
+  if(!imgs.normal) return;
+  for(const k of ['attack','hurt','back','summon'])
+    if(!imgs[k] || derived[k]){ imgs[k]=imgs.normal; derived[k]=true; }
+}
+
+/* 実機が四皇モンを描くのは 味方104px / 敵80px。全体倍率を1.5まで上げても156px。
+   256px で持っとくのは 2.5倍の無駄で、置き場を食うだけ。160px あれば足りる。
+   形式も PNG やのうて WebP。写真は PNG やと数倍太る（透明は WebP でも残る）。 */
+const IMG_CAP=160;
+const IMG_Q=0.86;
+function reencode(im,cap,q){
+  const m=Math.max(im.width,im.height);
+  const k=m>cap ? cap/m : 1;
+  const c=mkCv(Math.max(1,Math.round(im.width*k)),Math.max(1,Math.round(im.height*k)));
+  const g=c.getContext('2d');
+  g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+  g.drawImage(im,0,0,c.width,c.height);
+  const webp=c.toDataURL('image/webp',q);
+  if(webp.indexOf('data:image/webp')===0) return webp;   // 使えん端末は PNG へ落とす
+  return c.toDataURL('image/png');
+}
+function shrink(im){
+  const out=reencode(im,IMG_CAP,IMG_Q);
+  /* 元のほうが小さいならそのまま（小さいドット絵で逆に太ることがある） */
+  return (im.src && im.src.length && im.src.length<out.length) ? im.src : out;
+}
+function setSlotImage(key,im){
+  imgs[key]=im; derived[key]=false;
+  deriveFromNormal(); buildSlots(); refresh(); paintImgState();
+}
+function openSecOf(el){ const s=el&&el.closest&&el.closest('.sec'); if(s) s.classList.remove('closed'); }
+function takeImageFile(key,f){
+  if(!f) return;
+  const isImg=/^image\//.test(f.type||'') || /\.(png|jpe?g|gif|webp|bmp)$/i.test(f.name||'');
+  if(!isImg){ alert('画像ファイルやなかった（'+(f.type||'種類不明')+'）'); return; }
+  const r=new FileReader();
+  r.onerror=()=>alert('写真が読めんかった');
+  r.onload=ev=>{ const im0=new Image();
+    im0.onerror=()=>alert('画像として開けんかった');
+    im0.onload=()=>{
+      let src;
+      try{ src=shrink(im0); }catch(err){ src=im0.src; }
+      if(src===im0.src){ setSlotImage(key,im0); openSecOf($('slotTabs')); return; }
+      const im=new Image();
+      im.onload=()=>{ setSlotImage(key,im); openSecOf($('slotTabs')); }; im.src=src;
+    }; im0.src=ev.target.result; };
+  r.readAsDataURL(f);          // 読み始めてから空にする
+  $('imgFile').value='';
+}
+$('imgFile').onchange=e=>takeImageFile(slot, e.target.files&&e.target.files[0]);
+/* いま入っとる写真の重さを出す。壁にぶつかる前に気づけるように */
+function paintImgState(){
+  const rows=[]; let tot=0;
+  for(const k of SLOT_KEYS){
+    if(!imgs[k]||derived[k]) continue;
+    const n=(imgs[k].src||'').length; tot+=n;
+    rows.push(SLOT_JP[k]+' '+imgs[k].naturalWidth+'x'+imgs[k].naturalHeight+' '+Math.round(n/1024)+'KB');
+  }
+  $('imgState').innerHTML = rows.length
+    ? '写真 '+Math.round(tot/1024)+'KB　<span style="color:#6a7484">'+rows.join('／')+'</span>'
+    : '<span style="color:#6a7484">自前の写真はまだ無い</span>';
+}
+/* 既に読み込んどる写真を、いまの設定（160px・WebP）で焼き直す */
+$('btnSlim').onclick=()=>{
+  const targets=SLOT_KEYS.filter(k=>imgs[k]&&!derived[k]);
+  if(!targets.length){ $('imgState').innerHTML='軽くする写真が無い'; return; }
+  let before=0, done=0;
+  for(const k of targets) before+=(imgs[k].src||'').length;
+  const finish=()=>{
+    if(++done<targets.length) return;
+    deriveFromNormal(); buildSlots(); refresh(); paintImgState();
+    let after=0; for(const k of targets) after+=(imgs[k].src||'').length;
+    $('imgState').innerHTML='<b style="color:#7ad6a0">'+Math.round(before/1024)+'KB → '+
+      Math.round(after/1024)+'KB</b>　'+
+      '<span style="color:#6a7484">'+Math.round((1-after/before)*100)+'% 減。'+
+      '大きさは実機の描画に合わせて160pxまで</span>';
+  };
+  for(const k of targets){
+    let src; try{ src=reencode(imgs[k],IMG_CAP,IMG_Q); }catch(e){ finish(); continue; }
+    if(src.length>=(imgs[k].src||'').length){ finish(); continue; }
+    const im=new Image();
+    im.onload=()=>{ imgs[k]=im; finish(); };
+    im.onerror=finish;
+    im.src=src;
+  }
+};
+$('btnSameAsNormal').onclick=()=>{
+  if(slot==='normal') return;
+  imgs[slot]=null; derived[slot]=false; deriveFromNormal(); buildSlots(); refresh();
+};
+$('btnClearImg').onclick=()=>{
+  imgs[slot]=null; derived[slot]=false;
+  if(slot==='normal'){ for(const k of ['attack','hurt','back','summon']) if(derived[k]){ imgs[k]=null; derived[k]=false; } }
+  deriveFromNormal(); buildSlots(); refresh();
+};
+
+/* ---- 鳴き声 ---- */
+function buildCry(){
+  const host=$('cryCtl'); host.innerHTML='';
+  if(!mon.cry) mon.cry={id:null,vol:1,rate:1};
+  const d=document.createElement('div'); d.className='ctl';
+  d.innerHTML='<label>鳴き声</label><button style="flex:1;text-align:left;overflow:hidden;'+
+              'text-overflow:ellipsis;white-space:nowrap;"></button>';
+  const b=d.querySelector('button');
+  const paint=()=>{ b.textContent=mon.cry.id?auiLabel(mon.cry.id):'— えらんどらん —';
+                    b.style.color=mon.cry.id?'#dfe6f0':'#66707f'; };
+  b.onclick=()=>SoundPicker.open(mon.cry.id,id=>{
+    mon.cry.id=id; paint(); refresh(); if(id) playCry(1.0); });
+  host.appendChild(d); paint();
+  slider(host,'音量',()=>mon.cry.vol,v=>mon.cry.vol=v,0,1.5,0.05,v=>Math.round(v*100)+'%');
+  slider(host,'高さ',()=>mon.cry.rate,v=>mon.cry.rate=v,0.4,2,0.05,v=>'×'+v.toFixed(2));
+  const bar=document.createElement('div'); bar.className='bar';
+  bar.innerHTML='<button>▶ 出現（×1.0）</button><button>▶ 戦闘不能（×0.7）</button>';
+  const bb=bar.querySelectorAll('button');
+  bb[0].onclick=()=>playCry(1.0);
+  bb[1].onclick=()=>playCry(0.7);
+  host.appendChild(bar);
+  paintCryState();
+}
+function paintCryState(){
+  const c=mon.cry||{};
+  if(c.data) $('cryState').innerHTML='<b style="color:#7ad6a0">自前の音を使いよる</b>　'+
+    (c.label||'')+'　'+Math.round(c.data.length/1024)+'KB';
+  else if(c.id) $('cryState').innerHTML='内蔵の音を使いよる';
+  else $('cryState').innerHTML='';
+}
+/* ---- 音声ファイルの読み込み ----
+   デコードは自前でやる（sfx_bank.js は自動生成やけん触らん）。
+   decodeAudioData は端末によって Promise を返さんことがあるけん両対応にする。 */
+function decodeInto(id, data){
+  const ctx=SND.ensure();
+  let bin;
+  try{ bin=atob(String(data).split(',')[1]||''); }
+  catch(e){ return Promise.reject(new Error('ファイルの中身が読めん')); }
+  if(!bin.length) return Promise.reject(new Error('中身が空'));
+  const ab=new ArrayBuffer(bin.length), u8=new Uint8Array(ab);
+  for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  return new Promise((res,rej)=>{
+    let p;
+    try{ p=ctx.decodeAudioData(ab, b=>res(b), e=>rej(e||new Error('デコード失敗'))); }
+    catch(e){ rej(e); return; }
+    if(p&&typeof p.then==='function') p.then(res,rej);
+  }).then(buf=>{
+    if(!buf) throw new Error('音として読めんかった');
+    SND.buf[id]=buf; return buf;
+  });
+}
+function cryNote(html){ $('cryState').innerHTML=html; }
+
+/* ---- 鳴き声を軽くする ----
+   鳴き声は1〜2秒。なのに音楽用の設定のまま入っとって、写真より重くなっとった。
+   ①前後の無音を切る ②長さの上限で切る ③モノラルに落とす ④Opus で焼き直す
+   Opus が使えん端末は 8kHz の PCM へ落とす（それでも WAV よりは軽い）。
+   録り直しは要らん。今ある音をそのまま細くするだけ。 */
+/* 既定は「あまり削らん」側に寄せとる。
+   無音カットは音の出だしや余韻を削ることがあるけん **既定はOFF**。
+   焼き直すかどうかも、どこまで削るかも、鴨川が決める。 */
+const CRY_OPT={ maxSec:3.0, bps:48000, trim:false };
+const CRY_RATE=32000;
+function b64ToBuf(data){
+  const bin=atob(String(data).split(',')[1]||'');
+  const ab=new ArrayBuffer(bin.length), u8=new Uint8Array(ab);
+  for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  return ab;
+}
+function blobToDataURL(b){
+  return new Promise((res,rej)=>{ const r=new FileReader();
+    r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(b); });
+}
+/* 前後の無音を落として、モノラル・低レートで焼き直したバッファを作る */
+async function trimMono(buf){
+  const th=0.008;
+  const n=buf.length, ch=buf.numberOfChannels;
+  const mix=new Float32Array(n);
+  for(let c=0;c<ch;c++){ const d=buf.getChannelData(c);
+    for(let i=0;i<n;i++) mix[i]+=d[i]/ch; }
+  let s=0, e=n-1;
+  if(CRY_OPT.trim){                       /* 切るとき以外は端に触らん */
+    while(s<n && Math.abs(mix[s])<th) s++;
+    while(e>s && Math.abs(mix[e])<th) e--;
+    if(e<=s){ s=0; e=n-1; }
+    s=Math.max(0, s-Math.floor(buf.sampleRate*0.03));   // 出だしを削らんよう少し戻す
+    e=Math.min(n-1, e+Math.floor(buf.sampleRate*0.05)); // 余韻も少し残す
+  }
+  const len=Math.min(e-s+1, Math.floor(buf.sampleRate*CRY_OPT.maxSec));
+  const sec=len/buf.sampleRate;
+  const off=new OfflineAudioContext(1, Math.ceil(sec*CRY_RATE), CRY_RATE);
+  const src=off.createBufferSource();
+  const tmp=off.createBuffer(1,len,buf.sampleRate);
+  tmp.copyToChannel(mix.subarray(s,s+len),0);
+  src.buffer=tmp; src.connect(off.destination); src.start();
+  return {rendered:await off.startRendering(), sec};
+}
+function wav8(buf){                       /* Opus が使えんとき用。8kHz 8bit モノラル */
+  const rate=8000, d=buf.getChannelData(0);
+  const n=Math.floor(buf.length*rate/buf.sampleRate);
+  const b=new Uint8Array(44+n), v=new DataView(b.buffer);
+  const w=(o,s)=>{ for(let i=0;i<s.length;i++) b[o+i]=s.charCodeAt(i); };
+  w(0,'RIFF'); v.setUint32(4,36+n,true); w(8,'WAVEfmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,rate,true); v.setUint32(28,rate,true);
+  v.setUint16(32,1,true); v.setUint16(34,8,true); w(36,'data'); v.setUint32(40,n,true);
+  for(let i=0;i<n;i++){
+    const x=d[Math.floor(i*buf.sampleRate/rate)]||0;
+    b[44+i]=Math.max(0,Math.min(255,Math.round((x*0.5+0.5)*255)));
+  }
+  let s=''; for(let i=0;i<b.length;i+=8192) s+=String.fromCharCode.apply(null,b.subarray(i,i+8192));
+  return 'data:audio/wav;base64,'+btoa(s);
+}
+async function shrinkCryData(data){
+  const ctx=SND.ensure();
+  const buf=await new Promise((res,rej)=>{
+    let p; try{ p=ctx.decodeAudioData(b64ToBuf(data),res,rej); }catch(e){ rej(e); return; }
+    if(p&&p.then) p.then(res,rej);
+  });
+  const {rendered,sec}=await trimMono(buf);
+  const mime=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/webm']
+    .find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
+  if(!mime) return {data:wav8(rendered), sec, how:'8kHz PCM'};
+  /* Opus は実時間で録るしかない。1〜2秒やけん待てる */
+  const dest=ctx.createMediaStreamDestination();
+  const src=ctx.createBufferSource(); src.buffer=rendered; src.connect(dest);
+  const rec=new MediaRecorder(dest.stream,{mimeType:mime,audioBitsPerSecond:CRY_OPT.bps});
+  const chunks=[];
+  rec.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
+  const done=new Promise(r=>{ rec.onstop=r; });
+  rec.start(); src.start();
+  await new Promise(r=>setTimeout(r, sec*1000+220));
+  rec.stop(); await done;
+  const url=await blobToDataURL(new Blob(chunks,{type:mime}));
+  return {data:url, sec, how:'Opus '+Math.round(CRY_OPT.bps/1000)+'kbps'+(CRY_OPT.trim?'・無音カット':'')};
+}
+/* いま入っとる鳴き声を軽くする */
+async function slimCurrentCry(){
+  const c=mon.cry;
+  if(!c||!c.data){ cryNote('自前の音が入っとらんけん、軽くするものが無い'); return; }
+  const before=c.data.length;
+  cryNote('軽くしよる…（実時間で焼き直すけん1〜2秒かかる）');
+  try{
+    const r=await shrinkCryData(c.data);
+    if(r.data.length>=before){
+      cryNote('もう十分軽い（'+Math.round(before/1024)+'KB）。触っとらん'); return;
+    }
+    cryBackup={id:c.id, data:c.data};
+    delete SND.buf[c.id];
+    c.data=r.data;
+    SND.custom[c.id]={label:c.label||'鳴き声',cat:'custom',src:'ユーザー追加',data:c.data};
+    await SND.decodeOne(c.id);
+    refresh(); buildCry();
+    cryNote('<b style="color:#7ad6a0">'+Math.round(before/1024)+'KB → '+
+      Math.round(r.data.length/1024)+'KB</b>　'+Math.round((1-r.data.length/before)*100)+'% 減　'+
+      '<span style="color:#6a7484">'+r.sec.toFixed(2)+'秒／'+r.how+'</span>');
+    playCry(1.0);
+  }catch(e){ cryNote('<b style="color:#e07070">軽くできんかった</b>（'+(e.message||e.name)+'）'); }
+}
+function takeCryFile(f){
+  if(!f){ cryNote('<b style="color:#e07070">ファイルが取れんかった</b>'); return; }
+  const isAudio=/^audio\//.test(f.type||'') || /\.(mp3|ogg|oga|wav|m4a|aac|opus|weba|webm|flac)$/i.test(f.name||'');
+  if(!isAudio){
+    cryNote('<b style="color:#e07070">音声ファイルやなかった</b>　'+
+            (f.type||'種類不明')+'　'+(f.name||''));
+    return;
+  }
+  if(f.size>3*1024*1024){
+    cryNote('<b style="color:#e07070">大きすぎ（'+Math.round(f.size/1024)+'KB）</b>　'+
+            '鳴き声は1秒あれば足りる。短く切ってから入れて。'); return;
+  }
+  openSecOf($('cryState'));
+  cryNote('読み込みよる…　'+(f.name||'')+'　'+Math.round(f.size/1024)+'KB');
+  const r=new FileReader();
+  r.onerror=()=>cryNote('<b style="color:#e07070">ファイルが読めんかった</b>');
+  r.onload=ev=>{
+    const data=ev.target.result;
+    const base=(mon.id||'mon').replace(/[^A-Za-z0-9_]/g,'')||'mon';
+    const id='cry_'+base;
+    SND.resume();
+    SND.custom[id]={label:(mon.name||'四皇モン')+'の声',cat:'custom',src:'ユーザー追加',data};
+    decodeInto(id,data).then(()=>{
+      mon.cry.id=id; mon.cry.data=data; mon.cry.label=SND.custom[id].label;
+      buildCry(); refresh();
+      /* **勝手に焼き直さん。** 音が変わることがあるけん、軽くするかは鴨川が決める */
+      const kb=Math.round(data.length/1024);
+      cryNote('<b style="color:#7ad6a0">そのまま入れた</b>　'+kb+'KB'+
+        (kb>40 ? '　<b style="color:#f0a020">重いけん、必要なら下の「鳴き声を軽くする」で</b>' : ''));
+      playCry(1.0);
+      if(f.size>300*1024) cryNote($('cryState').innerHTML+
+        '<br><b style="color:#f0a020">重い。保存できんくなるかもしれん</b>');
+    }).catch(err=>{
+      delete SND.custom[id];
+      cryNote('<b style="color:#e07070">この音は再生できんかった</b>（'+
+              (err&&err.message||err&&err.name||'不明')+'）<br>'+
+              'mp3 / ogg / wav なら大抵いける。m4a は端末によっては無理。');
+    });
+  };
+  r.readAsDataURL(f);          // 読み始めてから input を空にする（先に消すと参照が切れる端末がある）
+  $('cryFile').value='';
+}
+$('cryFile').onchange=e=>takeCryFile(e.target.files&&e.target.files[0]);
+/* 軽くする設定。開いたときだけ組む */
+function buildCrySlim(){
+  const h=$('crySlimCtl'); h.innerHTML='';
+  slider(h,'音の細かさ',()=>CRY_OPT.bps/1000,v=>CRY_OPT.bps=v*1000,16,96,8,
+         v=>v+'kbps'+(v>=48?'（元に近い）':v>=32?'':'（かなり削る）'));
+  slider(h,'長さの上限',()=>CRY_OPT.maxSec,v=>CRY_OPT.maxSec=v,0.5,6,0.1,v=>v.toFixed(1)+'秒');
+  const t=document.createElement('div'); t.className='ctl';
+  t.innerHTML='<label>無音カット</label><button style="flex:1"></button>';
+  const tb=t.querySelector('button');
+  const tp=()=>{ tb.textContent=CRY_OPT.trim?'する（出だしを削る恐れあり）':'せん（そのまま）';
+                 tb.classList.toggle('on',CRY_OPT.trim); };
+  tb.onclick=()=>{ CRY_OPT.trim=!CRY_OPT.trim; tp(); };
+  h.appendChild(t); tp();
+}
+$('crySlimTab').onclick=()=>{
+  const p=$('crySlimPanel'), open=p.style.display==='none';
+  p.style.display=open?'':'none';
+  $('crySlimTab').textContent=(open?'▾':'▸')+' 鳴き声を軽くする（音が変わるけん手動）';
+  $('crySlimTab').classList.toggle('open',open);
+  if(open) buildCrySlim();
+};
+$('cryUndo').onclick=async ()=>{
+  if(!cryBackup||!mon.cry||cryBackup.id!==mon.cry.id){
+    cryNote('戻せる音が無い（軽くしたあとだけ戻せる）'); return; }
+  mon.cry.data=cryBackup.data;
+  delete SND.buf[mon.cry.id];
+  SND.custom[mon.cry.id]={label:mon.cry.label||'鳴き声',cat:'custom',
+                          src:'ユーザー追加',data:mon.cry.data};
+  try{ await SND.decodeOne(mon.cry.id); }catch(e){}
+  cryBackup=null; buildCry(); refresh();
+  cryNote('<b style="color:#7ad6a0">元の音に戻した</b>　'+Math.round(mon.cry.data.length/1024)+'KB');
+  playCry(1.0);
+};
+$('crySlim').onclick=()=>slimCurrentCry();
+mlArmDelete($('cryDrop'),()=>{
+  const c=mon.cry;
+  if(!c||!c.data){ cryNote('自前の音は入っとらん'); return; }
+  delete SND.custom[c.id]; delete SND.buf[c.id];
+  c.id=null; c.data=null; c.label=null;
+  buildCry(); refresh();
+});
+
+/* ---- ファイルを投げ込む（ドラッグ＆ドロップ） ----
+   ページ全体で受ける。音声なら鳴き声、画像なら選んどるスロットへ。
+   これを付けとかんと、放り込んだ瞬間にブラウザがそのファイルを開いてしまう。 */
+(function(){
+  const stop=e=>{ e.preventDefault(); e.stopPropagation(); };
+  let overlay=null;
+  const show=on=>{
+    if(on && !overlay){
+      overlay=document.createElement('div');
+      overlay.style.cssText='position:fixed;inset:0;z-index:9998;background:rgba(15,18,24,0.82);'+
+        'border:3px dashed #7ad6a0;display:flex;align-items:center;justify-content:center;'+
+        'color:#7ad6a0;font-size:15px;font-family:inherit;text-align:center;line-height:2;pointer-events:none;';
+      overlay.innerHTML='ここに落とす<br><span style="font-size:11px;color:#8b97a8">'+
+        '音声 → 鳴き声　／　画像 → 「'+SLOT_JP[slot]+'」</span>';
+      document.body.appendChild(overlay);
+    }else if(!on && overlay){ overlay.remove(); overlay=null; }
+  };
+  let depth=0;
+  document.addEventListener('dragenter',e=>{ stop(e); depth++; show(true); });
+  document.addEventListener('dragover', e=>{ stop(e); if(e.dataTransfer) e.dataTransfer.dropEffect='copy'; });
+  document.addEventListener('dragleave',e=>{ stop(e); if(--depth<=0){ depth=0; show(false); } });
+  document.addEventListener('drop',e=>{
+    stop(e); depth=0; show(false);
+    const dt=e.dataTransfer; if(!dt) return;
+    const files=[...(dt.files||[])];
+    if(!files.length) return;
+    const au=files.find(f=>/^audio\//.test(f.type||'')||
+      /\.(mp3|ogg|oga|wav|m4a|aac|opus|weba|flac)$/i.test(f.name||''));
+    if(au){ takeCryFile(au);
+      document.querySelector('#cryState').scrollIntoView({block:'center'}); return; }
+    const im=files.find(f=>/^image\//.test(f.type||'')||
+      /\.(png|jpe?g|gif|webp|bmp)$/i.test(f.name||''));
+    if(im){ takeImageFile(slot,im); return; }
+    cryNote('<b style="color:#e07070">音声でも画像でもなかった</b>　'+(files[0].name||''));
+  });
+})();
+
+/* ---- 画面SE（草むらの演出音） ---- */
+function loadSceneSfx(){
+  try{ const s=localStorage.getItem(SCENE_SFX_KEY);
+       if(s){ const o=JSON.parse(s);
+         for(const k in SCENE_SFX) if(o[k]) SCENE_SFX[k]=Object.assign(SCENE_SFX[k],o[k]); } }catch(e){}
+}
+function buildSceneSfx(){
+  const host=$('sceneSfxCtl'); host.innerHTML='';
+  const rows=[['appear','出現のキラッ'],['grass','草のざわめき']];
+  for(const [k,lb] of rows){
+    const d=document.createElement('div'); d.className='ctl';
+    d.innerHTML='<label>'+lb+'</label><button style="flex:1;text-align:left;overflow:hidden;'+
+                'text-overflow:ellipsis;white-space:nowrap;"></button>'+
+                '<button style="width:38px;flex:none">▶</button>';
+    const [pick,play]=d.querySelectorAll('button');
+    const paint=()=>{ pick.textContent=SCENE_SFX[k].id?auiLabel(SCENE_SFX[k].id):'— 音なし —';
+                      pick.style.color=SCENE_SFX[k].id?'#dfe6f0':'#66707f'; };
+    pick.onclick=()=>SoundPicker.open(SCENE_SFX[k].id,id=>{
+      SCENE_SFX[k].id=id; paint();
+      try{ localStorage.setItem(SCENE_SFX_KEY,JSON.stringify(SCENE_SFX)); }catch(e){}
+      if(id) playSceneSfx(k); });
+    play.onclick=()=>{ SND.resume(); playSceneSfx(k); };
+    host.appendChild(d); paint();
+  }
+}
+
+/* ---- 出現（召喚）---- */
+function buildSummon(){
+  if(!mon.summon) mon.summon={style:'trainer',cryDelay:0.5,land:[]};
+  if(!Array.isArray(mon.summon.land)) mon.summon.land=[];
+  const S=mon.summon;
+  const h=$('sumCtl'); h.innerHTML='';
+  const d=document.createElement('div'); d.className='ctl';
+  d.innerHTML='<label>出方</label><select>'+
+    '<option value="trainer">トレーナー戦（光の柱から降ってくる）</option>'+
+    '<option value="wild">草むら（草から飛び出す）</option></select>';
+  const sel=d.querySelector('select'); sel.value=S.style||'trainer';
+  sel.onchange=()=>{ S.style=sel.value; refresh(); };
+  h.appendChild(d);
+  slider(h,'鳴くまで',()=>S.cryDelay,v=>S.cryDelay=v,0,2,0.05,v=>v.toFixed(2)+'秒');
+  const w=document.createElement('div'); w.className='ctl';
+  w.innerHTML='<label>瀕死の見た目</label><button style="flex:1"></button>';
+  const wb=w.querySelector('button');
+  const wp=()=>{ wb.textContent=weakPreview?'体力1/3以下として見る':'ふつうに見る';
+                 wb.classList.toggle('on',weakPreview); };
+  wb.onclick=()=>{ weakPreview=!weakPreview; wp(); };
+  h.appendChild(w); wp();
+}
+const LAND_IMG_JP=()=>SLOT_KEYS.map(k=>[k,SLOT_JP[k]]);
+function buildLand(){
+  const host=$('landList'); host.innerHTML='';
+  const L=landList();
+  if(!L.length){
+    const e=document.createElement('div'); e.className='hint'; e.style.margin='0 0 8px';
+    e.textContent='コマ割りは空。着地しても写真は変わらん。';
+    host.appendChild(e);
+  }
+  L.forEach((st,i)=>{
+    const d=document.createElement('div'); d.className='step';
+    d.innerHTML='<span class="no">'+(i+1)+'</span>'+
+      '<select>'+LAND_IMG_JP().map(([k,j])=>'<option value="'+k+'">'+j+'</option>').join('')+'</select>'+
+      '<span class="sl"><span>長さ</span><input type=range min=0.01 max=0.5 step=0.01><b></b></span>'+
+      '<span class="sl"><span>本体の震え</span><input type=range min=0 max=12 step=1><b></b></span>'+
+      '<button title="上へ">▲</button><button title="下へ">▼</button>'+
+      '<button style="background:#2a1a1a;border-color:#5a2a2a;color:#e08080" title="消す">×</button>';
+    const sel=d.querySelector('select'); sel.value=st.img||'normal';
+    sel.onchange=()=>{ st.img=sel.value; refresh(); };
+    const [rD,rS]=d.querySelectorAll('input[type=range]');
+    const [bD,bS]=d.querySelectorAll('.sl b');
+    const show=()=>{ rD.value=st.dur; bD.textContent=(+st.dur).toFixed(2)+'s';
+                     rS.value=st.shake||0; bS.textContent=(st.shake||0)===0?'なし':(st.shake+''); };
+    rD.oninput=()=>{ st.dur=parseFloat(rD.value); show(); refresh(); };
+    rS.oninput=()=>{ st.shake=parseInt(rS.value,10); show(); refresh(); };
+    const [bu,bd,bx]=d.querySelectorAll('button');
+    bu.onclick=()=>{ if(i>0){ L.splice(i-1,0,L.splice(i,1)[0]); buildLand(); refresh(); } };
+    bd.onclick=()=>{ if(i<L.length-1){ L.splice(i+1,0,L.splice(i,1)[0]); buildLand(); refresh(); } };
+    mlArmDelete(bx,()=>{ L.splice(i,1); buildLand(); refresh(); });
+    show(); host.appendChild(d);
+  });
+  /* まとめて足す */
+  const rp=$('landRepeat'); rp.innerHTML='';
+  const box=document.createElement('div');
+  box.style.cssText='border:1px solid #262e3b;border-radius:3px;padding:8px;';
+  box.innerHTML='<div style="font-size:11px;color:#f0a020;margin-bottom:6px;">くり返しでまとめて足す</div>';
+  const opt=LAND_IMG_JP().map(([k,j])=>'<option value="'+k+'">'+j+'</option>').join('');
+  const r1=document.createElement('div'); r1.className='ctl';
+  r1.innerHTML='<label>ゆきと帰り</label><select>'+opt+'</select><select>'+opt+'</select>';
+  const [sa,sb]=r1.querySelectorAll('select'); sa.value='normal'; sb.value='summon';
+  box.appendChild(r1);
+  const cfg={dur:0.3,times:3};
+  slider(box,'1コマの長さ',()=>cfg.dur,v=>cfg.dur=v,0.01,0.5,0.01,v=>v.toFixed(2)+'秒');
+  slider(box,'回数',()=>cfg.times,v=>cfg.times=v,1,8,1,v=>v+'回');
+  const bar=document.createElement('div'); bar.className='bar';
+  bar.innerHTML='<button>この並びを足す</button>';
+  bar.querySelector('button').onclick=()=>{
+    for(let n=0;n<cfg.times;n++){
+      L.push({img:sa.value,dur:cfg.dur,shake:0});
+      L.push({img:sb.value,dur:cfg.dur,shake:0});
+    }
+    buildLand(); refresh();
+  };
+  box.appendChild(bar);
+  rp.appendChild(box);
+}
+$('landTab').onclick=()=>{
+  const p=$('landPanel'), open=p.style.display==='none';
+  p.style.display=open?'':'none';
+  if(!open) setLandLoop(false);
+  $('landTab').textContent=(open?'▾':'▸')+' 着地モーションを細かく作る';
+  $('landTab').classList.toggle('open',open);
+  if(open) buildLand();
+};
+$('landAdd').onclick=()=>{ landList().push({img:'summon',dur:0.2,shake:0}); buildLand(); refresh(); };
+
+/* 見るためのボタン。並びは一切書き換えん */
+$('landPlay').onclick=()=>playAppear();
+function setLandLoop(on){
+  landLoop=!!on; landLoopT=0;
+  $('landLoop').textContent=landLoop?'くり返し中':'くり返す';
+  $('landLoop').classList.toggle('on',landLoop);
+}
+$('landLoop').onclick=()=>{ setLandLoop(!landLoop); if(landLoop) playAppear(); };
+
+/* 見本は「今の並びを置きかえる」。一度目は必ず確認を出す。
+   ここを再生ボタン代わりに使うと、いじった数値が見本の値へ戻ってしまう。 */
+let sampleArmed=false, sampleTimer=null;
+function resetSampleBtn(){
+  sampleArmed=false;
+  if(sampleTimer){ clearTimeout(sampleTimer); sampleTimer=null; }
+  $('landSample').textContent='見本を入れる';
+  $('landSample').style.background='';
+}
+$('landSample').onclick=()=>{
+  if(landList().length && !sampleArmed){
+    sampleArmed=true;
+    $('landSample').textContent='今の並びを消して入れる？';
+    $('landSample').style.background='#7a2020';
+    sampleTimer=setTimeout(resetSampleBtn,3500);
+    return;
+  }
+  resetSampleBtn();
+  /* 鴨川の例：通常→召喚を0.3秒ずつ3往復、2周目から振動、最後の召喚だけ長め */
+  mon.summon.land=[
+    {img:'normal',dur:0.30,shake:0}, {img:'summon',dur:0.30,shake:0},
+    {img:'normal',dur:0.30,shake:4}, {img:'summon',dur:0.30,shake:4},
+    {img:'normal',dur:0.30,shake:7}, {img:'summon',dur:0.50,shake:7}
+  ];
+  buildLand(); refresh(); playAppear();
+};
+$('btnSummon').onclick=()=>playAppear();
+
+/* ---- 影 ---- */
+function buildShadow(){
+  const h=$('shadowCtl'); h.innerHTML='';
+  if(!mon.shadow) mon.shadow={scale:1,flat:1,dx:0,dy:0,alpha:0.24,follow:0.6};
+  const S=mon.shadow;
+  slider(h,'大きさ',   ()=>S.scale, v=>S.scale=v, 0,2.5,0.02,v=>'×'+v.toFixed(2),'sd');
+  slider(h,'平たさ',   ()=>S.flat,  v=>S.flat=v,  0.2,2.5,0.02,v=>'×'+v.toFixed(2),'sd');
+  slider(h,'横位置',   ()=>S.dx,    v=>S.dx=v,    -48,48,1,v=>(v>0?'+':'')+v+'px','sd');
+  slider(h,'縦位置',   ()=>S.dy,    v=>S.dy=v,    -32,32,1,v=>(v>0?'+':'')+v+'px','sd');
+  slider(h,'濃さ',     ()=>S.alpha, v=>S.alpha=v, 0,0.8,0.01,v=>Math.round(v*100)+'%','sd');
+  slider(h,'横の追従', ()=>S.follow,v=>S.follow=v,0,1,0.05,v=>Math.round(v*100)+'%','sd');
+}
+
+/* ---- 技 ---- */
+function nextMoveId(){
+  let n=1;
+  while(MOVES['mv'+n] || mon.customMoves.some(c=>c.id==='mv'+n)) n++;
+  return 'mv'+n;
+}
+function syncCustom(){
+  /* いったん内蔵技を元の姿へ戻してから、上書きを載せ直す */
+  for(const id of Object.keys(MOVES)) if(!isBuiltinId(id)) delete MOVES[id];
+  for(const id of BUILTIN_MOVE_IDS) MOVES[id]=JSON.parse(JSON.stringify(BUILTIN_MOVES[id]));
+  BUILT.clear();
+  for(const c of mon.customMoves){
+    if(!c.fx) c.fx=makeSpec('projectile',918273,c.name||'技','炎');
+    c.fx.id=c.id; c.fx.name=c.name;
+    MOVES[c.id]={id:c.id,name:c.name,type:c.type,power:c.power,cast:c.cast,
+                 cooldown:c.cooldown,fx:c.fx,tags:c.tags||[],custom:true};
+    /* 内蔵技の上書きは、音まで四皇モン側に抱えん。
+       音は音ラボと共有の AUDIO_CFG が正。ここで上書きすると鴨川の設定を壊す。 */
+    if(isBuiltinId(c.id)) c.audio=null;
+    else{ if(!Array.isArray(c.audio)) c.audio=[]; AUDIO_CFG.moves[c.id]=c.audio; }
+  }
+  mon.moves=mon.moves.filter(id=>!!MOVES[id]);
+}
+/* 技クリエーターが触る音のタイムライン。内蔵技なら共有設定そのもの */
+function audioListOf(c){
+  if(isBuiltinId(c.id)){
+    if(!Array.isArray(AUDIO_CFG.moves[c.id])) AUDIO_CFG.moves[c.id]=[];
+    return AUDIO_CFG.moves[c.id];
+  }
+  if(!Array.isArray(c.audio)) c.audio=[];
+  return c.audio;
+}
+/* 内蔵技をそのまま編集する（IDも名前も変えん。上書きとして持つ） */
+function editBuiltin(id){
+  const m=MOVES[id];
+  const c={ id:id, name:m.name, type:m.type, power:m.power, cast:m.cast,
+            cooldown:m.cooldown, tags:(m.tags||[]).slice(),
+            fx:JSON.parse(JSON.stringify(m.fx)), audio:null };
+  mon.customMoves.push(c);
+  syncCustom(); buildMoveList(); openMove(c); refresh();
+}
+function toggleMove(id){
+  const i=mon.moves.indexOf(id);
+  if(i>=0) mon.moves.splice(i,1);
+  else if(mon.moves.length<4) mon.moves.push(id);
+  else { alert('技は4つまで。どれか外して。'); return; }
+  buildMoveList(); refresh();
+}
+function buildMoveList(){
+  const ml=$('moveList'); ml.innerHTML='';
+  const ids=BUILTIN_MOVE_IDS.concat(
+    mon.customMoves.map(c=>c.id).filter(id=>!isBuiltinId(id)));
+  for(const id of ids){
+    const m=MOVES[id]; if(!m) continue;
+    const edited=mon.customMoves.some(c=>c.id===id);   // 自作 or 内蔵の上書き
+    const over  =edited && isBuiltinId(id);            // 内蔵技を書き換えとる
+    const d=document.createElement('div');
+    d.className='mv'+(mon.moves.includes(id)?' on':'')+(edited?' cus':'');
+    d.innerHTML=`<span class="tp" style="background:${TYPES[m.type]||'#888'}">${m.type||'—'}</span>`+
+      `<span class="nm">${m.name||id}${over?'<span style="color:#f0a020;font-size:9px"> 編集済</span>':''}</span>`+
+      `<span class="st">威${m.power} 溜${(+m.cast).toFixed(2)}s CD${m.cooldown}s</span>`;
+    d.querySelector('.nm').onclick=()=>toggleMove(id);
+    d.querySelector('.tp').onclick=()=>toggleMove(id);
+    /* ✎ どの技でも直接いじれる。内蔵技は「同じIDの上書き」になる */
+    const bt=document.createElement('button');
+    bt.textContent='✎'; bt.title='この技を編集する';
+    bt.style.color='#f0a020';
+    bt.onclick=()=>{ if(edited) openMove(mon.customMoves.find(c=>c.id===id));
+                     else editBuiltin(id); };
+    d.appendChild(bt);
+    /* 複 別IDの派生を作る（元は残る） */
+    const bc=document.createElement('button');
+    bc.textContent='複'; bc.title='別の技として複製する';
+    bc.onclick=()=>copyBuiltin(id);
+    d.appendChild(bc);
+    if(edited){
+      const bx=document.createElement('button');
+      bx.textContent=over?'戻':'×';
+      bx.title=over?'内蔵のままに戻す':'この技を消す';
+      bx.style.cssText='background:#2a1a1a;border-color:#5a2a2a;color:#e08080;';
+      mlArmDelete(bx,()=>delMove(mon.customMoves.find(c=>c.id===id)),
+                  over?'元に戻す？':'消す？');
+      d.appendChild(bx);
+    }
+    ml.appendChild(d);
+  }
+  const sel=$('fireSel'); sel.innerHTML='';
+  const list=mon.moves.length?mon.moves:ids.slice(0,1);
+  for(const id of list){ if(!MOVES[id]) continue;
+    const o=document.createElement('option'); o.value=id; o.textContent=MOVES[id].name; sel.appendChild(o); }
+}
+function copyBuiltin(id){
+  const m=MOVES[id];
+  const c={ id:nextMoveId(), name:m.name+'・改', type:m.type, power:m.power,
+            cast:m.cast, cooldown:m.cooldown, tags:(m.tags||[]).slice(),
+            fx:JSON.parse(JSON.stringify(m.fx)),
+            audio:JSON.parse(JSON.stringify(AUDIO_CFG.moves[id]||[])) };
+  c.fx.palKey=c.fx.palKey||mlPalKeyOf(c.fx.palette);   // 亜空切断は既製の色と一致せん＝どれも選ばれん
+  mon.customMoves.push(c);
+  syncCustom(); buildMoveList(); openMove(c); refresh();
+}
+function newMove(){
+  const c={ id:nextMoveId(), name:'あたらしい技', type:'ノーマル', power:26,
+            cast:0.30, cooldown:2.4, tags:[],
+            fx:makeSpec('projectile',918273,'あたらしい技','炎'), audio:[] };
+  c.fx.palKey='炎';
+  mon.customMoves.push(c);
+  syncCustom(); buildMoveList(); openMove(c); refresh();
+}
+function delMove(c){
+  if(!c) return;
+  const i=mon.customMoves.indexOf(c);
+  if(i>=0) mon.customMoves.splice(i,1);
+  if(!isBuiltinId(c.id)){                    // 内蔵技の上書きを消しただけなら技は残る
+    const j=mon.moves.indexOf(c.id); if(j>=0) mon.moves.splice(j,1);
+    delete AUDIO_CFG.moves[c.id];
+  }
+  for(const p of (c.fx&&c.fx.parts)||[]) forgetPart(p);
+  if(editMove===c) editMove=null;            // 別の技を消したときは編集画面を閉じん
+  syncCustom(); buildMoveList(); buildMoveEditor(); refresh();
+}
+function openMove(c){
+  editMove=c;
+  $('secMove').classList.remove('closed');
+  buildMoveEditor();
+  setMini(true);                 // 調整中はプレビューを小さく固定して、絵を見ながら触れるように
+  $('secMove').scrollIntoView({block:'start'});
+}
+/* プレビューの縮小。#top は sticky やけん、縮めるほど下のスライダが見える */
+function setMini(on){
+  $('top').classList.toggle('mini',!!on);
+  $('btnMini').title=on?'プレビューを大きくする':'プレビューを小さくする';
+  $('btnMini').classList.toggle('on',!!on);
+}
+function setAuto(on){
+  autoFire=!!on; autoT=0;
+  $('btnAuto').textContent=autoFire?'連射中':'自動連射';
+  $('btnAuto').classList.toggle('on',autoFire);
+  if(autoFire) previewKey=null;
+}
+$('btnMini').onclick=()=>setMini(!$('top').classList.contains('mini'));
+$('btnAuto').onclick=()=>setAuto(!autoFire);
+$('fxSpeedSel').onchange=e=>{ fxSpeed=parseFloat(e.target.value)||1; };
+
+/* 技ライブラリ（技ラボと共通の保存棚） */
+/* ネタ帳の作りはじめ10個を技ライブラリへ。**既にある名前は絶対に触らん** */
+$('mvStarter').textContent='ネタ帳の技を棚に入れる（'+STARTER_MOVES.length+'個）';
+$('mvStarter').onclick=()=>{
+  const all=mlLibAll();
+  const added=[], skipped=[];
+  for(const m of STARTER_MOVES){
+    if(all[m.name]){ skipped.push(m.name); continue; }
+    const r=mlLibPut(m.name, JSON.parse(JSON.stringify(m)));
+    if(!r.ok){ $('mvStarterState').innerHTML='<b style="color:#e07070">棚に入りきらん（'+r.msg+'）</b>'; break; }
+    all[m.name]=1; added.push(m.name);
+  }
+  buildMoveLib();
+  $('mvStarterState').innerHTML=
+    (added.length?'<b style="color:#7ad6a0">'+added.length+'個を棚に入れた</b>　'+added.join('・'):'')+
+    (skipped.length?'<br><b style="color:#f0a020">'+skipped.length+'個はもう棚にあるけん触っとらん</b>　'+skipped.join('・'):'');
+};
+function buildMoveLib(){
+  mlLibrary($('mvLib'),{
+    name:()=>editMove?editMove.name:'',
+    rec:()=>{
+      if(!editMove) return null;
+      const c=editMove;
+      return { name:c.name, fx:JSON.parse(JSON.stringify(c.fx)),
+               battle:{type:c.type,power:c.power,cast:c.cast,cooldown:c.cooldown,
+                       tags:(c.tags||[]).slice()},
+               audio:JSON.parse(JSON.stringify(audioListOf(c))) };
+    },
+    load:(rec,k)=>{
+      if(mon.customMoves.length>=12){ alert('自作の技を持ちすぎ。要らんのを × で消して。'); return; }
+      const b=rec.battle||{};
+      const c={ id:nextMoveId(), name:rec.name||k, type:b.type||'ノーマル',
+                power:b.power!=null?b.power:26, cast:b.cast!=null?b.cast:0.3,
+                cooldown:b.cooldown!=null?b.cooldown:2.4, tags:b.tags||[],
+                fx:(rec.fx&&rec.fx.generator)?rec.fx:makeSpec('projectile',918273,rec.name||k,'炎'),
+                audio:Array.isArray(rec.audio)?rec.audio:[] };
+      mon.customMoves.push(c);
+      syncCustom(); buildMoveList(); openMove(c); refresh();
+    }
+  });
+}
+const mvCtx={
+  spec:()=>editMove.fx,
+  set:(sp)=>{ editMove.fx=sp; },
+  change:()=>{ mvRebuild(); },
+  rebuild:()=>{ buildMoveEditor(); }
+};
+function mvRebuild(){
+  if(!editMove) return;
+  editMove.fx.id=editMove.id; editMove.fx.name=editMove.name;
+  try{ editBuilt=buildEffect(editMove.fx); }catch(e){ console.error('buildEffect',e); editBuilt={}; }
+  mlFrames($('mvFrames'),editBuilt);
+  $('mvJson').value=JSON.stringify(editMove.fx,null,2);
+  syncCustom(); buildMoveList(); refresh();
+}
+function buildMoveEditor(){
+  const on=!!editMove;
+  $('mvNone').style.display=on?'none':'';
+  $('mvEditor').style.display=on?'':'none';
+  buildMoveLib();                    // 技を開いとらんでも「読込」は使える
+  if(!on) return;
+  const c=editMove;
+  const b=$('mvBase'); b.innerHTML='';
+  textRow(b,'技名',()=>c.name,v=>{ c.name=v; c.fx.name=v; mvRebuild(); });
+  /* ID は他の技とかぶらせられん。弾いたときは枠を赤くして理由を見せる */
+  const idr=document.createElement('div'); idr.className='ctl';
+  idr.innerHTML='<label>ID</label><input type=text>';
+  const idi=idr.querySelector('input'); idi.value=c.id;
+  if(isBuiltinId(c.id)){                       // 内蔵技の上書きはIDを固定する
+    idi.disabled=true; idi.style.opacity=0.55;
+    idi.title='内蔵技を編集しよる。IDは変えられん（別IDにしたいときは一覧の「複」）';
+  }
+  idi.oninput=()=>{
+    const nv=(idi.value||'').replace(/[^A-Za-z0-9_]/g,'');
+    const ng=!nv || (MOVES[nv] && nv!==c.id);
+    idi.style.borderColor=ng?'#a04040':'#2c3442';
+    idi.title=ng?'この技IDはもう使われとる':'';
+    if(ng) return;
+    const old=c.id;
+    c.id=nv; c.fx.id=nv;
+    const i=mon.moves.indexOf(old); if(i>=0) mon.moves[i]=nv;
+    if(old!==nv) delete AUDIO_CFG.moves[old];
+    mvRebuild();
+  };
+  b.appendChild(idr);
+  const td=document.createElement('div'); td.className='ctl';
+  td.innerHTML='<label>タイプ</label><select>'+TYPE_LIST.map(o=>`<option>${o}</option>`).join('')+'</select>';
+  const ts=td.querySelector('select'); ts.value=c.type;
+  ts.style.borderLeft='6px solid '+(TYPES[c.type]||'#2c3442');
+  ts.onchange=()=>{ c.type=ts.value; ts.style.borderLeft='6px solid '+(TYPES[c.type]||'#2c3442');
+    mvRebuild(); };
+  b.appendChild(td);
+  slider(b,'威力',      ()=>c.power,   v=>{c.power=v;   mvRebuild();},1,80,1);
+  slider(b,'溜め',      ()=>c.cast,    v=>{c.cast=v;    mvRebuild();},0,1.5,0.02,v=>v.toFixed(2)+'s');
+  slider(b,'クールダウン',()=>c.cooldown,v=>{c.cooldown=v;mvRebuild();},0.5,10,0.1,v=>v.toFixed(1)+'s');
+  mlTimeScale(b,mvCtx);
+
+  $('mvGens').innerHTML=''; mlGens($('mvGens'),mvCtx);
+  $('mvSeed').innerHTML=''; mlSeed($('mvSeed'),mvCtx);
+  $('mvParams').innerHTML=''; mlParams($('mvParams'),mvCtx);
+  $('mvPal').innerHTML='';   mlPalette($('mvPal'),mvCtx);
+  $('mvImpact').innerHTML='';mlImpact($('mvImpact'),mvCtx);
+  mlMotions($('mvMotion'),mvCtx);
+  mlParts($('mvSub'),mvCtx);
+  mlScreen($('mvScreen'),mvCtx);
+  renderTimeline($('mvSnd'), audioListOf(c), ()=>{ audioSave(); refresh(); });
+  const over=isBuiltinId(c.id);
+  $('mvDel').textContent=over?'内蔵のままに戻す':'この技を消す';
+  mlArmDelete($('mvDel'),()=>delMove(c), over?'元に戻す？':'消す？');
+  mvRebuild();
+}
+$('btnNewMove').onclick=newMove;
+$('mvClose').onclick=()=>{ editMove=null; buildMoveEditor(); };
+$('mvJsonLoad').onclick=()=>{
+  if(!editMove) return;
+  try{
+    const o=JSON.parse($('mvJson').value);
+    if(!o.generator) throw new Error('generator が無い');
+    o.id=editMove.id; o.name=editMove.name;
+    editMove.fx=o; buildMoveEditor();
+  }catch(e){ alert('技のJSONが読めん: '+e.message); }
+};
+$('mvJsonCopy').onclick=async e=>{
+  let ok=false;
+  try{ await navigator.clipboard.writeText($('mvJson').value); ok=true; }catch(err){
+    const t=$('mvJson'); t.focus(); t.select();
+    try{ ok=document.execCommand('copy'); }catch(e2){}
+  }
+  e.target.textContent=ok?'コピーした':'手動でコピーして';
+  setTimeout(()=>e.target.textContent='コピー',1600);
+};
+$('mvSndOn').onclick=e=>{ mvSndOn=!mvSndOn;
+  e.target.textContent=mvSndOn?'音 ON':'音 OFF'; e.target.classList.toggle('on',mvSndOn);
+  if(mvSndOn) SND.resume(); };
+
+/* ---- 技を撃つ ---- */
+function fxBuiltOf(id){
+  const m=MOVES[id]; if(!m||!m.fx) return null;
+  if(editMove && editMove.id===id) return editBuilt;
+  return builtOf(m.fx);
+}
+function fireMove(id){
+  const m=MOVES[id]; if(!m||!m.fx){ return; }
+  const sp=m.fx;
+  const self=(sp.generator==='aura');      // 技ラボと同じ扱いにする
+  const FROM={x:LAY_A.cx, y:LAY_A.platY-46};
+  const TO  ={x:LAY_E.cx, y:LAY_E.platY-32};
+  const pts={from:FROM, to:(self?FROM:TO), center:{x:W/2,y:104}};
+  pendingMotions=pendingMotions.filter(p=>p.st!==sideA);     // 前の技の予約は捨てる
+  scheduleMotions(sp,'cast',sideA);
+  if(mvSndOn){ SND.resume(); playMovePhase(id,'cast',1); }
+  for(const s2 of spawnSubFX(sp,'cast',pts)) fxs.push(s2);   /* 演出素材。実戦と同じ道を通す */
+  const go=()=>{
+    if(mvSndOn) playMovePhase(id,'fire',1);
+    const built=fxBuiltOf(id); if(!built) return;
+    scheduleMotions(sp,'fire',sideA);
+    for(const s2 of spawnSubFX(sp,'fire',pts)) fxs.push(s2);
+    fxs.push(spawnFX(sp, FROM, pts.to, built, ()=>{
+      if(!self){ sideE.anim='hurt'; sideE.t=0; sideE.durOv=null; }
+      scheduleMotions(sp,'impact',sideA);
+      if(mvSndOn) playMovePhase(id,'impact',1);
+      for(const s2 of spawnSubFX(sp,'impact',pts)) fxs.push(s2);
+    }));
+  };
+  const cast=+m.cast||0;
+  if(cast>0.01) setTimeout(go,cast*1000/fxSpeed); else go();   // 溜めもスローに乗せる
+}
+$('btnFire').onclick=()=>{ previewKey=null; fireMove($('fireSel').value); };
+$('mvFire').onclick=()=>{ if(editMove){ previewKey=null; fireMove(editMove.id); } };
+
+/* ---- 基本・ステータス・性格 ---- */
 function buildAll(){
-  buildSlots();
+  buildSlots(); buildShadow(); buildCry(); buildSummon(); paintImgState();
+  if($('landPanel').style.display!=='none') buildLand();
   const sz=$('sizeCtl'); sz.innerHTML='';
   slider(sz,'全体の倍率',()=>mon.scale,v=>mon.scale=v,0.4,2.0,0.02,v=>'×'+v.toFixed(2));
   slider(sz,'全体の縦位置',()=>mon.dy, v=>mon.dy=v,  -40,40,1,v=>(v>0?'+':'')+v+'px');
 
   const b=$('baseCtl'); b.innerHTML='';
-  const t=document.createElement('div'); t.className='ctl';
-  t.innerHTML='<label>名前</label><input type=text>';
-  t.querySelector('input').value=mon.name;
-  t.querySelector('input').oninput=e=>{ mon.name=e.target.value; refresh(); };
-  b.appendChild(t);
-  const idr=document.createElement('div'); idr.className='ctl';
-  idr.innerHTML='<label>ID</label><input type=text>';
-  idr.querySelector('input').value=mon.id;
-  idr.querySelector('input').oninput=e=>{ mon.id=e.target.value; refresh(); };
-  b.appendChild(idr);
+  textRow(b,'名前',()=>mon.name,v=>mon.name=v);
+  textRow(b,'ID',  ()=>mon.id,  v=>mon.id=v);
+  /* 待機モーション。動かん方が似合う個体もおる */
+  const im=document.createElement('div'); im.className='ctl';
+  im.innerHTML='<label>待機で動く</label><button style="flex:1"></button>';
+  const ib=im.querySelector('button');
+  const ipaint=()=>{ const on=mon.idleMotion!==false;
+    ib.textContent=on?'ゆらゆら動く':'動かん（止め絵）';
+    ib.classList.toggle('on',on); };
+  ib.onclick=()=>{ mon.idleMotion=(mon.idleMotion===false); ipaint(); refresh(); };
+  b.appendChild(im); ipaint();
   for(let i=0;i<2;i++){
     const d=document.createElement('div'); d.className='ctl';
     const opts=(i===1?['（なし）']:[]).concat(TYPE_LIST).map(o=>`<option>${o}</option>`).join('');
@@ -325,27 +1914,15 @@ function buildAll(){
 
   const st=$('statCtl'); st.innerHTML='';
   for(const k in STAT_JP) slider(st,STAT_JP[k],()=>mon.stats[k],v=>mon.stats[k]=v,1,100,1);
-
   const pe=$('perCtl'); pe.innerHTML='';
   for(const k in PER_JP) slider(pe,PER_JP[k],()=>mon.per[k],v=>mon.per[k]=v,0,100,1,null,'per');
 
-  const ml=$('moveList'); ml.innerHTML='';
-  for(const id in MOVES){
-    const m=MOVES[id];
-    const d=document.createElement('div'); d.className='mv'+(mon.moves.includes(id)?' on':'');
-    d.innerHTML=`<span class="tp" style="background:${TYPES[m.type]||'#888'}">${m.type}</span>`+
-      `<span class="nm">${m.name}</span>`+
-      `<span class="st">威力${m.power} 溜${m.cast}s CD${m.cooldown}s</span>`;
-    d.onclick=()=>{
-      const i=mon.moves.indexOf(id);
-      if(i>=0) mon.moves.splice(i,1);
-      else if(mon.moves.length<4) mon.moves.push(id);
-      buildAll(); refresh();
-    };
-    ml.appendChild(d);
-  }
+  syncCustom(); buildMoveList(); buildMoveEditor();
 }
-function refresh(){
+
+/* ---- 反映（重い処理は遅らせる） ---- */
+let saveTimer=null;
+function paintCost(){
   const c=costOf(mon);
   $('costBox').innerHTML=
     'コスト <b>'+c.cost+'</b>　'+
@@ -353,61 +1930,113 @@ function refresh(){
     '重み付き平均 '+c.avg.toFixed(1)+'　最大HP '+Math.round(40+mon.stats.hp*1.6)+'　'+
     '行動間隔 ×'+(1.55-mon.stats.spd/100*0.85).toFixed(2)+'　'+
     'ひるみ率 '+Math.round(Math.max(10,Math.min(85,85-mon.stats.def/100*75)))+'%';
-  $('json').value=JSON.stringify(snapshot(),null,2);
-  autoSave();
+}
+function paintReleaseCheck(){
+  const w=[];
+  if(!imgs.normal) w.push('通常の写真がまだ無い（仮の姿のまま放つことになる）');
+  if(!mon.moves.length) w.push('技を1つも覚えとらん');
+  if(!mon.cry||!mon.cry.id) w.push('鳴き声が無い');
+  if(!mon.name||mon.name==='なまえ') w.push('名前がまだ「なまえ」のまま');
+  if(wildIds.includes(mon.id))
+    w.push('同じID「'+mon.id+'」が草むらに居る。放つと<b>入れ替え</b>になる');
+  $('relCheck').innerHTML = w.length
+    ? '<b style="color:#f0a020">気になるところ</b><br>・'+w.join('<br>・')
+    : '<b style="color:#7ad6a0">準備できとる。</b>放つと野生の四皇モンになる。';
+}
+function refresh(){ paintCost(); paintReleaseCheck(); scheduleSave(); }
+function scheduleSave(){
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{ saveTimer=null; const j=JSON.stringify(snapshot(),null,2);
+    $('json').value=j; autoSave(j); },350);
 }
 
-/* 画像読み込み */
-const IMG_CAP=256;   // これより大きい画像は縮める（写真をそのまま入れると保存できんくなる）
-function shrink(im){
-  const m=Math.max(im.width,im.height);
-  if(m<=IMG_CAP) return im.src;
-  const k=IMG_CAP/m, c=mkCv(Math.round(im.width*k),Math.round(im.height*k));
-  const g=c.getContext('2d'); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
-  g.drawImage(im,0,0,c.width,c.height);
-  return c.toDataURL('image/png');
-}
-$('imgFile').onchange=e=>{ const f=e.target.files[0]; if(!f) return;
-  const key=slot, r=new FileReader();
-  r.onload=ev=>{ const im0=new Image();
-    im0.onload=()=>{
-      const src=shrink(im0);
-      if(src===im0.src){ imgs[key]=im0; buildSlots(); refresh(); return; }
-      const im=new Image();
-      im.onload=()=>{ imgs[key]=im; buildSlots(); refresh(); }; im.src=src;
-    }; im0.src=ev.target.result; };
-  r.readAsDataURL(f); e.target.value=''; };
-/* モーション確認 */
-['anim0','anim1','anim2','anim3'].forEach((id,i)=>{
-  $(id).onclick=e=>{ animName=ANIM_KEYS[i]; animT=0; previewKey=null;
-    document.querySelectorAll('#anim0,#anim1,#anim2,#anim3').forEach(x=>x.classList.remove('on'));
-    e.target.classList.add('on'); };
+/* ---- モーション確認 ---- */
+['anim0','anim1','anim2','anim3','anim4'].forEach((id,i)=>{
+  $(id).onclick=e=>{
+    document.querySelectorAll('#anim0,#anim1,#anim2,#anim3,#anim4').forEach(x=>x.classList.remove('on'));
+    e.target.classList.add('on');
+    if(ANIM_KEYS[i]==='appear'){ playAppear(); return; }   // 出方・鳴くまでの時間はデータどおり
+    pendingMotions.length=0;
+    sideA.anim=ANIM_KEYS[i]; sideA.t=0; sideA.seqT=null; sideA.durOv=null;
+    sideE.anim=ANIM_KEYS[i]; sideE.t=0; sideE.seqT=null; sideE.durOv=null;
+    previewKey=null;
+  };
 });
+
 /* =========================================================
-   保存：自動保存＋名前つきスロット（localStorage）
+   6. 保存
    ========================================================= */
 const AUTO_KEY='shioumon_creator_auto', SLOT_KEY='shioumon_creator_slots';
 let lastSaved='';
 function snapshot(){
-  return {...mon, images:{
-    normal: imgs.normal?imgs.normal.src:null, attack: imgs.attack?imgs.attack.src:null,
-    hurt:   imgs.hurt  ?imgs.hurt.src  :null, back:   imgs.back  ?imgs.back.src  :null }};
+  const im={};
+  for(const k of SLOT_KEYS) im[k]=(imgs[k]&&!derived[k])?imgs[k].src:null;
+  return {...JSON.parse(JSON.stringify(mon)), derived:{...derived}, images:im};
+}
+function normalizeMon(o){
+  const d=DEFAULT_MON();
+  o=o&&typeof o==='object'?o:{};
+  const m={...d,...o};
+  m.stats={...d.stats,...(o.stats||{})};
+  m.per  ={...d.per,  ...(o.per  ||{})};
+  m.shadow={...d.shadow,...(o.shadow||{})};
+  m.cry  ={...d.cry,  ...(o.cry  ||{})};
+  m.img  ={...d.img};
+  for(const k of SLOT_KEYS) m.img[k]={scale:1,dy:0,...((o.img||{})[k]||{})};
+  m.types=Array.isArray(o.types)?[o.types[0]||'ノーマル',o.types[1]||'（なし）']:d.types;
+  m.moves=Array.isArray(o.moves)?o.moves.map(x=>typeof x==='string'?x:(x&&x.id)).filter(Boolean):[];
+  m.customMoves=Array.isArray(o.customMoves)?o.customMoves.filter(c=>c&&c.id):[];
+  for(const c of m.customMoves){
+    c.name=c.name||c.id; c.type=c.type||'ノーマル';
+    c.power=+c.power||20; c.cast=+c.cast||0.3; c.cooldown=+c.cooldown||2.4;
+    if(!Array.isArray(c.audio)) c.audio=[];
+    if(!c.fx||!c.fx.generator) c.fx=makeSpec('projectile',918273,c.name,'炎');
+    c.fx.timeScale=Math.max(0.25,Math.min(3,+c.fx.timeScale||1));
+    if(!Array.isArray(c.fx.motions)) c.fx.motions=[];
+    c.fx.motions=c.fx.motions.filter(x=>x&&ANIMS[x.anim]).map(x=>({
+      anim:x.anim, at:['cast','fire','impact'].includes(x.at)?x.at:'fire',
+      off:Math.max(0,Math.min(2,+x.off||0)), dur:Math.max(0.05,Math.min(3,+x.dur||0.75))}));
+  }
+  m.scale=+m.scale||1; m.dy=+m.dy||0;
+  m.idleMotion=(o.idleMotion!==false);
+  m.summon={style:'trainer',cryDelay:0.5,land:[],...(o.summon||{})};
+  if(!Array.isArray(m.summon.land)) m.summon.land=[];
+  m.summon.land=m.summon.land.filter(x=>x&&typeof x==='object')
+    .map(x=>({img:SLOT_KEYS.includes(x.img)?x.img:'normal',
+              dur:Math.max(0.01,Math.min(0.5,+x.dur||0.2)),
+              shake:Math.max(0,Math.min(12,+x.shake||0))}));
+  m.summon.cryDelay=Math.max(0,Math.min(2,+m.summon.cryDelay||0));
+  if(m.summon.style!=='wild') m.summon.style='trainer';
+  delete m.images; delete m.derived;
+  return m;
 }
 function applySnapshot(o){
-  if(o.images){ for(const k in o.images){ if(o.images[k]){ const im=new Image();
-    im.onload=()=>{ imgs[k]=im; buildSlots(); }; im.src=o.images[k]; } else imgs[k]=null; } }
-  const rest={...o}; delete rest.images;
-  if(!rest.img) rest.img={normal:{scale:1,dy:0},attack:{scale:1,dy:0},
-                          hurt:{scale:1,dy:0},back:{scale:1,dy:0}};
-  Object.assign(mon,rest);
+  o=o&&typeof o==='object'?o:{};
+  const rest={...o}; delete rest.images; delete rest.derived;
+  mon=normalizeMon(rest);
+  const srcs=o.images||{};
+  for(const k of SLOT_KEYS){ imgs[k]=null; derived[k]=false; }
+  const wait=SLOT_KEYS.filter(k=>srcs[k]);
+  const finish=()=>{ deriveFromNormal(); registerMonCry(); buildAll(); refresh(); };
+  if(!wait.length){ finish(); return; }
+  let n=wait.length;
+  const one=()=>{ if(--n<=0) finish(); };
+  for(const k of wait){
+    const im=new Image();
+    im.onload =()=>{ imgs[k]=im; derived[k]=false; one(); };
+    im.onerror=()=>{ console.warn('画像が読めん',k); one(); };
+    im.src=srcs[k];
+  }
 }
-function autoSave(){
+function autoSave(jstr){
   try{
-    const j=JSON.stringify(snapshot());
+    const j=jstr||JSON.stringify(snapshot());
     if(j===lastSaved) return;
     localStorage.setItem(AUTO_KEY,j); lastSaved=j;
     const kb=Math.round(j.length/1024);
-    $('autoState').innerHTML='<b style="color:#7ad6a0">自動保存済み</b>　'+kb+'KB　'+
+    let used=0; try{ for(const k in localStorage) used+=(localStorage[k]||'').length; }catch(e){}
+    $('autoState').innerHTML='<b style="color:#7ad6a0">自動保存済み</b>　この1体 '+kb+'KB　'+
+      '<span style="color:#6a7484">置き場ぜんぶで '+Math.round(used/1024)+'KB</span>　'+
       new Date().toLocaleTimeString('ja-JP');
   }catch(e){
     $('autoState').innerHTML='<b style="color:#e07070">自動保存できん</b>（'+e.name+
@@ -415,7 +2044,8 @@ function autoSave(){
   }
 }
 function loadSlots(){
-  try{ return JSON.parse(localStorage.getItem(SLOT_KEY)||'{}'); }catch(e){ return {}; }
+  try{ const o=JSON.parse(localStorage.getItem(SLOT_KEY)||'{}');
+       return (o&&typeof o==='object')?o:{}; }catch(e){ return {}; }
 }
 function buildSlotList(){
   const host=$('slotList'); host.innerHTML='';
@@ -425,29 +2055,152 @@ function buildSlotList(){
     const d=document.createElement('div'); d.className='mv';
     d.innerHTML='<span class="nm">'+k+'</span>'+
       '<span class="st">'+Math.round(sl[k].length/1024)+'KB</span>'+
-      '<button style="padding:5px 9px;font-size:10px">読込</button>'+
-      '<button style="padding:5px 9px;font-size:10px">削除</button>';
+      '<button>読込</button><button>削除</button>';
     const [bl,bd]=d.querySelectorAll('button');
-    bl.onclick=()=>{ try{ applySnapshot(JSON.parse(sl[k])); buildAll(); refresh();
+    bl.onclick=()=>{ try{ applySnapshot(JSON.parse(sl[k])); setBound(k);
+      $('slotName').value=k;
       $('autoState').innerHTML='<b style="color:#7ad6a0">「'+k+'」を読み込んだ</b>'; }
       catch(e){ alert('読めん: '+e.message); } };
-    bd.onclick=()=>{ if(!confirm('「'+k+'」を消す？')) return;
-      const s2=loadSlots(); delete s2[k];
-      localStorage.setItem(SLOT_KEY,JSON.stringify(s2)); buildSlotList(); };
+    mlArmDelete(bd,()=>{ const s2=loadSlots(); delete s2[k];
+      localStorage.setItem(SLOT_KEY,JSON.stringify(s2));
+      if(boundSlot===k) setBound(null);
+      if(foeName===k) setFoe(null);
+      buildSlotList(); buildFoe(); });
     host.appendChild(d);
   });
 }
-$('slotSave').onclick=()=>{
-  const nm=($('slotName').value||mon.name||'無題').trim();
+/* いま編集しとるのがどのスロットの続きか。上書き保存はここへ書く */
+let boundSlot=null;
+function setBound(name){
+  boundSlot=name||null;
+  $('boundState').innerHTML = boundSlot
+    ? '編集中：<b style="color:#7ad6a0">「'+boundSlot+'」</b>　'+
+      '<span style="color:#6a7484">上書き保存はここへ書く</span>'
+    : '<span style="color:#6a7484">まだどのスロットにも結びついとらん。'+
+      '「名前を付けて保存」すると、そこからは上書き保存が使える。</span>';
+  const b=$('slotOver');
+  b.disabled=!boundSlot; b.style.opacity=boundSlot?1:0.4;
+  b.textContent=boundSlot?('「'+boundSlot+'」へ上書き'):'上書き保存';
+  if(overArm){ overArm=false; if(overTimer){clearTimeout(overTimer); overTimer=null;} b.style.background=''; }
+}
+/* 上書きは前のを消す操作やけん、二度押しにする */
+let overArm=false, overTimer=null;
+$('slotOver').onclick=()=>{
+  if(!boundSlot) return;
+  const b=$('slotOver');
+  if(!overArm){
+    overArm=true;
+    b.textContent='「'+boundSlot+'」を上書きする？';
+    b.style.background='#7a2020';
+    overTimer=setTimeout(()=>{ overArm=false; b.style.background='';
+      b.textContent='「'+boundSlot+'」へ上書き'; },3500);
+    return;
+  }
+  overArm=false; if(overTimer){ clearTimeout(overTimer); overTimer=null; }
+  b.style.background=''; b.textContent='「'+boundSlot+'」へ上書き';
   try{
-    const s2=loadSlots(); s2[nm]=JSON.stringify(snapshot());
+    const s2=loadSlots(); s2[boundSlot]=JSON.stringify(snapshot());
     localStorage.setItem(SLOT_KEY,JSON.stringify(s2));
-    buildSlotList();
-    $('autoState').innerHTML='<b style="color:#7ad6a0">「'+nm+'」で保存した</b>';
+    buildSlotList(); buildFoe();
+    $('autoState').innerHTML='<b style="color:#7ad6a0">「'+boundSlot+'」を上書きした</b>';
   }catch(e){ alert('保存できん: '+e.name+'\n画像が大きすぎるかも。'); }
 };
 
-/* 書き出し：スマホでダウンロードが効かんことがあるので手段を増やす */
+/* 同じ名前でも絶対に上書きせん。◯◯2、◯◯3 …と番号を振って、
+   そのことを画面に出す。うっかり1回で前の個体が消えたら取り返しがつかん。 */
+$('slotSave').onclick=()=>{
+  const raw=($('slotName').value||mon.name||'無題').trim();
+  const s2=loadSlots();
+  const dup=!!s2[raw];
+  let nm=raw, n=2;
+  while(s2[nm]) nm=raw+(n++);
+  try{
+    s2[nm]=JSON.stringify(snapshot());
+    localStorage.setItem(SLOT_KEY,JSON.stringify(s2));
+    buildSlotList(); buildFoe(); setBound(nm);
+    $('slotName').value=nm;
+    $('autoState').innerHTML = dup
+      ? '<b style="color:#f0a020">！ 「'+raw+'」はもうあったけん、'+
+        '「'+nm+'」で保存した。</b><br>前の「'+raw+'」は<b>消しとらん</b>。'+
+        '要らんかったら下の一覧から消して。'
+      : '<b style="color:#7ad6a0">「'+nm+'」で保存した</b>';
+  }catch(e){ alert('保存できん: '+e.name+'\n画像が大きすぎるかも。'); }
+};
+
+/* ---- プレビューの相手（保存した個体を奥に立たせる） ---- */
+function deriveImgs(im){
+  if(!im.normal) for(const k of ['attack','hurt','back','summon']) if(im[k]){ im.normal=im[k]; break; }
+  if(!im.normal) return;
+  for(const k of ['attack','hurt','back','summon']) if(!im[k]) im[k]=im.normal;
+}
+function setFoe(name){
+  foeName=name||null; foe=null;
+  if(!foeName) return;
+  const sl=loadSlots();
+  if(!sl[foeName]){ foeName=null; return; }
+  try{
+    const o=JSON.parse(sl[foeName]);
+    const rest={...o}; delete rest.images; delete rest.derived;
+    const im={normal:null,attack:null,hurt:null,back:null,summon:null};
+    foe={ mon:normalizeMon(rest), imgs:im };
+    const srcs=o.images||{};
+    for(const k of SLOT_KEYS){
+      if(!srcs[k]) continue;
+      const img=new Image();
+      img.onload=()=>{ im[k]=img; deriveImgs(im); };
+      img.src=srcs[k];
+    }
+    deriveImgs(im);
+    registerMonCry(foe);
+  }catch(e){ console.warn('相手が読めん',e); foe=null; foeName=null; }
+}
+function buildFoe(){
+  const host=$('foeCtl'); host.innerHTML='';
+  const keys=Object.keys(loadSlots());
+  const d=document.createElement('div'); d.className='ctl';
+  d.innerHTML='<label>奥に立つ相手</label><select>'+
+    '<option value="">— 自分と同じ —</option>'+
+    keys.map(k=>'<option value="'+k.replace(/"/g,'&quot;')+'">'+k+'</option>').join('')+
+    '</select>';
+  const sel=d.querySelector('select');
+  sel.value=(foeName&&keys.includes(foeName))?foeName:'';
+  sel.onchange=()=>{ setFoe(sel.value); buildFoe(); };
+  host.appendChild(d);
+  const note=document.createElement('div'); note.className='hint'; note.style.margin='0';
+  note.innerHTML = foe
+    ? '奥は <b style="color:#7ad6a0">'+(foe.mon.name||foeName)+'</b>'+
+      '（COST '+costOf(foe.mon).cost+'／全体×'+(+foe.mon.scale).toFixed(2)+'）'
+    : (keys.length ? '' : '名前を付けて保存した個体がまだ無い。保存すればここに出る。');
+  host.appendChild(note);
+}
+
+/* ---- 草むらの一覧 ---- */
+function buildWildList(){
+  const host=$('wildList'); host.innerHTML='';
+  const a=loadWild(); refreshWildIds();
+  if(!a.length){ host.innerHTML='<div class="hint" style="margin:0">まだ誰も放しとらん</div>'; return; }
+  a.forEach((rec,i)=>{
+    const d=document.createElement('div'); d.className='mv';
+    const nm=(rec.mon&&rec.mon.name)||'?';
+    d.innerHTML='<span class="nm">'+nm+'</span>'+
+      '<span class="st">COST '+(rec.cost||'?')+'</span>'+
+      '<button>読込</button><button>逃がす</button>';
+    const [bl,bd]=d.querySelectorAll('button');
+    bl.onclick=()=>{ applySnapshot(rec.mon);
+      $('autoState').innerHTML='<b style="color:#7ad6a0">草むらの「'+nm+'」を読み込んだ</b>'; };
+    mlArmDelete(bd,()=>{ const b=loadWild(); b.splice(i,1); saveWild(b);
+      buildWildList(); paintReleaseCheck(); },'逃がす？');
+    host.appendChild(d);
+  });
+}
+$('btnWildCopy').onclick=async e=>{
+  const j=JSON.stringify(loadWild(),null,2); let ok=false;
+  try{ await navigator.clipboard.writeText(j); ok=true; }catch(err){}
+  e.target.textContent=ok?'コピーした':'コピーできん';
+  setTimeout(()=>e.target.textContent='草むらのJSONをコピー',1600);
+};
+
+/* ---- 書き出し ---- */
 $('btnSel').onclick=()=>{ const t=$('json'); t.focus(); t.select();
   t.setSelectionRange(0,t.value.length); };
 $('btnShare').onclick=async e=>{
@@ -459,11 +2212,8 @@ $('btnShare').onclick=async e=>{
     else { e.target.textContent='共有できん'; setTimeout(()=>e.target.textContent='共有',1500); }
   }catch(err){}
 };
-
-$('btnLoad').onclick=()=>{ try{
-  const o=JSON.parse($('json').value);
-  applySnapshot(o); buildAll(); refresh();
-}catch(e){ alert('JSONが読めん: '+e.message); } };
+$('btnLoad').onclick=()=>{ try{ applySnapshot(JSON.parse($('json').value)); }
+  catch(e){ alert('JSONが読めん: '+e.message); } };
 $('btnCopy').onclick=async e=>{
   const j=$('json').value; let ok=false;
   try{ await navigator.clipboard.writeText(j); ok=true; }catch(err){
@@ -480,14 +2230,56 @@ $('btnDl').onclick=()=>{
   document.body.appendChild(a); a.click();          // DOMに入れんと効かん環境がある
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500);
 };
+
+/* ---- 初期化 ---- */
+mlArmDelete($('btnReset'),()=>{
+  editMove=null; editBuilt={}; fxs.length=0; SCREEN.clear(); pendingMotions.length=0;
+  setLandLoop(false); resetSampleBtn();
+  setAuto(false); setMini(false);
+  if(mon.cry&&mon.cry.id&&mon.cry.data){ delete SND.custom[mon.cry.id]; delete SND.buf[mon.cry.id]; }
+  mon=DEFAULT_MON();
+  for(const k of SLOT_KEYS){ imgs[k]=null; derived[k]=false; }
+  slot='normal'; previewKey='normal';
+  sideA={anim:'idle',t:0}; sideE={anim:'idle',t:0};
+  lastSaved='';
+  try{ localStorage.removeItem(AUTO_KEY); }catch(e){}
+  $('slotName').value=''; setBound(null);
+  document.querySelectorAll('#anim0,#anim1,#anim2,#anim3,#anim4').forEach((x,i)=>
+    x.classList.toggle('on',i===0));
+  buildAll(); refresh();
+  $('autoState').innerHTML='<b style="color:#7ad6a0">まっさらにした</b>';
+  $('stage').scrollIntoView({block:'start'});
+},'ほんとに初期化する？');
+
+/* ---- 放流 ---- */
+$('btnRelease').onclick=()=>{ if(!scene) startRelease(); };
+$('sceneSkip').onclick=()=>{ if(scene) scene.t=Math.max(scene.t,REL.fin); };
+$('sceneClose').onclick=()=>endRelease();
+
 document.querySelectorAll('.sec>h2').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('closed'));
 
-/* 前回の続きから */
+/* =========================================================
+   7. 起動
+   ========================================================= */
 (function(){
+  auiInjectCSS(); mlInjectCSS();
+  audioLoadSaved(); loadSceneSfx(); refreshWildIds();
   let restored=false;
   try{ const j=localStorage.getItem(AUTO_KEY);
-    if(j){ applySnapshot(JSON.parse(j)); restored=true; } }catch(e){}
-  buildAll(); buildSlotList(); refresh();
+    if(j){ applySnapshot(JSON.parse(j)); restored=true; } }catch(e){ console.warn(e); }
+  if(!restored){ buildAll(); }
+  /* 既に 0.8 で保存されとる個体を一度だけ 0.5 へ拾い直す。
+     一度やったら印を残す（あとから自分で 0.8 に戻しても、もう触らん） */
+  try{
+    if(!localStorage.getItem('shioumon_crydelay_050')){
+      localStorage.setItem('shioumon_crydelay_050','1');
+      if(mon.summon && Math.abs((+mon.summon.cryDelay||0)-0.8)<1e-6){
+        mon.summon.cryDelay=0.5; buildSummon();
+      }
+    }
+  }catch(e){}
+  registerMonCry();
+  buildSlotList(); buildFoe(); setBound(null); buildWildList(); refresh();
   if(restored) $('autoState').innerHTML='<b style="color:#7ad6a0">前回の続きを復元した</b>';
 })();
 </script>

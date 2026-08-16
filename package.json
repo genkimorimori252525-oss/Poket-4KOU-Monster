@@ -5,7 +5,9 @@
   "description": "ポケット四皇モンスター — 収集・育成・AI自動戦闘のモンスターゲーム",
   "scripts": {
     "build": "node build.js",
-    "verify": "node tools/verify_audio.js && node tools/verify_ui.js",
+    "serve": "node tools/serve.js",
+    "verify": "node tools/verify_audio.js && node tools/verify_ui.js && node tools/verify_creator.js",
+    "verify:creator": "node tools/verify_creator.js",
     "sfx": "python3 tools/gen_sfx.py"
   },
   "devDependencies": {

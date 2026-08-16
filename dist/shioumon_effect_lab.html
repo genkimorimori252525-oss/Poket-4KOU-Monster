@@ -23,8 +23,6 @@
   button:active{background:var(--accent);color:#12151c;}
   button.on{background:var(--accent);color:#12151c;border-color:var(--accent);}
   button.go{background:#1d4a63;border-color:#2c6d92;color:#cdeaf8;}
-  .gens{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:8px;}
-  .gens button{padding:10px 2px;font-size:10px;}
   .sec{background:var(--panel);border:1px solid var(--line);border-radius:4px;margin-bottom:8px;}
   .sec>h2{font-size:12px;margin:0;color:var(--accent);padding:10px 12px;cursor:pointer;
     display:flex;justify-content:space-between;letter-spacing:1px;}
@@ -57,11 +55,19 @@
 
 <div id="stage"><canvas id="cv" width="384" height="288"></canvas></div>
 
-<div class="gens" id="gens"></div>
+<div id="gens"></div><!-- 中身は movelab.js が .ml-gens で並べる -->
+
 <div class="bar">
   <button id="mFire" class="go">▶ 発射</button>
   <button id="mAuto">自動連射</button>
   <button id="mLoop">拡大再生</button>
+  <select id="fxSpeedSel" title="エフェクトの再生速度"
+    style="flex:0 0 84px;background:#0c0f15;border:1px solid var(--line);color:var(--accent);
+    border-radius:3px;padding:9px 4px;font-size:11px;font-family:inherit;min-width:0;">
+    <option value="0.15">×0.15</option><option value="0.25">×0.25</option>
+    <option value="0.5">×0.5</option><option value="0.85" selected>等速</option>
+    <option value="2">×2</option><option value="4">×4</option>
+  </select>
 </div>
 
 <div class="sec"><h2><span>■ 生成フレーム（原寸）</span><span>▾</span></h2><div>
@@ -74,6 +80,7 @@
 <div class="sec"><h2><span>■ パラメータ</span><span>▾</span></h2><div id="cMain"></div></div>
 <div class="sec"><h2><span>■ パレット</span><span>▾</span></h2><div id="cPal"></div></div>
 <div class="sec"><h2><span>■ 着弾</span><span>▾</span></h2><div id="cImpact"></div></div>
+<div class="sec"><h2><span>■ 演出素材（重ねるエフェクト）</span><span>▾</span></h2><div id="cSub"></div></div>
 <div class="sec"><h2><span>■ 画面演出（背景変化）</span><span>▾</span></h2><div id="cScreen"></div></div>
 
 <div class="sec"><h2><span>■ 音（好きなタイミングで鳴らす）</span><span>▾</span></h2><div>
@@ -82,6 +89,12 @@
   <div id="sndTL"></div>
   <div class="hint">ここで置いた音は<b>音ラボと共通</b>。▶発射を押すと、構え→発射→着弾の実タイミングで鳴る。<br>
   「ずらす」で発射の何秒あとに重ねるかまで決められる。</div>
+</div></div>
+
+<div class="sec"><h2><span>■ 技の保存（制作ツールと共通）</span><span>▾</span></h2><div>
+  <div id="cLib"></div>
+  <div class="hint">ここで保存した技は<b>四皇モン制作ツールの技クリエーターにも出る</b>。<br>
+  技ラボからの保存には戦闘の数値（威力・溜め・CD）が入らんけん、制作ツール側で読んだら数値は既定値になる。</div>
 </div></div>
 
 <div class="sec closed"><h2><span>■ JSON（技データ）</span><span>▾</span></h2><div>
@@ -422,6 +435,9 @@ class BaseFX{
     Object.assign(this,{sp,f:from,t:to,b:built,onHit});
     this.time=0; this.state='run'; this.hit=false; this.if_=-1; this.parts=[];
     this.rng=new RNG(sp.seed+77);
+    /* 技全体の速さ。技データの値やけん、同じ技なら誰が撃っても同じ速さになる
+       （＝決定論は壊れん）。各 update の頭で dt に掛ける。 */
+    this.ts=Math.max(0.05,Math.min(4,+sp.timeScale||1));
     SCREEN.trigger(sp.screen,'cast');
   }
   doHit(){ if(!this.hit){ this.hit=true; this.if_=0;
@@ -452,6 +468,7 @@ class ProjectileFX extends BaseFX{
     return {x:this.f.x+(this.t.x-this.f.x)*t,
             y:this.f.y+(this.t.y-this.f.y)*t+Math.sin(Math.min(1,t)*Math.PI)*this.sp.travel.arc}; }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     if(!this.hit){
       this.p+=dt/this.dur;
@@ -506,6 +523,7 @@ class BeamFX extends BaseFX{
   endPoint(){ const e=this.extent();
     return {x:this.f.x+(this.t.x-this.f.x)*e, y:this.f.y+(this.t.y-this.f.y)*e}; }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     const s=this.sp;
     if(this.time>=s.charge+s.fire && !this.blocked) this.doHit();
@@ -550,6 +568,7 @@ class BeamFX extends BaseFX{
 class SlashFX extends BaseFX{
   constructor(...a){ super(...a); this.n=0; }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     const s=this.sp, per=s.interval;
     this.n=Math.min(s.count,Math.floor(this.time/per)+1);
@@ -608,6 +627,7 @@ class LightningFX extends BaseFX{
     }
   }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     const tk=Math.floor(this.time*16);
     if(tk!==this.tick){ this.tick=tk; this.gen(tk); }
@@ -632,6 +652,7 @@ class LightningFX extends BaseFX{
 /* ---- aura：強化・回復・状態変化。輪が立ち昇る ---- */
 class AuraFX extends BaseFX{
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     const s=this.sp;
     this.spawn=(this.spawn||0)+dt;
@@ -720,6 +741,7 @@ class ShatterFX extends BaseFX{
     }
   }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     if(this.time>=0.06) this.doHit();
     if(this.time>=this.sp.duration) this.state='dead';
@@ -785,6 +807,129 @@ function spawnFX(sp,from,to,built,onHit){
     case 'aura':      return new AuraFX(sp,from,to,built,onHit);
     case 'shatter':   return new ShatterFX(sp,from,to,built,onHit);
     default:          return new ProjectileFX(sp,from,to,built,onHit);
+  }
+}
+
+/* =========================================================
+   演出素材（parts）
+   技は「本体ひとつ」やのうて、素材の集まりとして組める。
+   素材ごとに 種類・基準・位置・タイミング を持つ：
+
+     at     'cast' 構え ／ 'fire' 発射 ／ 'impact' 着弾
+     off    その瞬間から何秒あと
+     anchor 'from' 撃った人 ／ 'to' 当たった場所 ／ 'center' 画面の中央
+     dx,dy  基準からのずらし（px）
+
+   **遅延に setTimeout を使わん。** 固定タイムステップの dt で数える。
+   使うと戦闘の決定論が壊れる（掟1・2）。
+   **技ラボ・制作ツール・戦闘は spawnSubFX() だけを使うこと。**
+   呼ぶ側それぞれに書いたら「亜空切断の割れが戦闘にだけ出る」が実際に起きた。
+   ========================================================= */
+
+/* 出るまで待つだけの入れ物。時間が来てはじめて中身を作る（＝画面演出も遅れて出る） */
+class DelayFX{
+  constructor(delay, make, sp){
+    this.delay=delay; this.make=make; this.sp=sp;
+    this.inner=null; this.state='run'; this.hit=false;
+  }
+  update(dt){
+    if(!this.inner){
+      this.delay-=dt;
+      if(this.delay>0) return;
+      this.inner=this.make();
+    }
+    this.inner.update(dt);
+    this.state=this.inner.state;
+    this.hit=this.inner.hit;
+  }
+  draw(g){ if(this.inner) this.inner.draw(g); }
+}
+
+/* 素材の焼いたコマは使い回す。編集中に作り替えたら forgetPart() で捨てる */
+const PART_BUILT = new WeakMap();
+function builtPart(sp){
+  let b=PART_BUILT.get(sp);
+  if(!b){ b=buildEffect(sp); PART_BUILT.set(sp,b); }
+  return b;
+}
+function forgetPart(sp){ if(sp) PART_BUILT.delete(sp); }
+
+const TRAVELS = { projectile:1, beam:1 };     // 飛んでいく種類は行き先が要る
+function partPoints(p, pts){
+  const a=p.anchor||'to';
+  const base = a==='from' ? pts.from : a==='center' ? (pts.center||pts.to) : pts.to;
+  const from = { x:(base.x||0)+(+p.dx||0), y:(base.y||0)+(+p.dy||0) };
+  if(!TRAVELS[p.generator]) return {from, to:from};
+  /* 飛ぶ素材は「基準の反対側」へ向かう。同じ点やと距離0で計算が壊れる */
+  const other = a==='from' ? pts.to : pts.from;
+  let to = {x:other.x, y:other.y};
+  if(Math.hypot(to.x-from.x,to.y-from.y)<1) to={x:from.x+1,y:from.y};
+  return {from, to};
+}
+/* ts = 親の技の速さ。素材の遅れも中身の速さも一緒に伸び縮みさせる */
+function spawnPart(p, pts, ts){
+  const k=Math.max(0.05,Math.min(4,+ts||1));
+  const {from,to}=partPoints(p,pts);
+  const make=()=>{ const o=spawnFX(p, from, to, builtPart(p), null); o.ts*=k; return o; };
+  const d=Math.max(0,+p.off||0)/k;
+  return d>0 ? new DelayFX(d, make, p) : make();
+}
+/* phase の瞬間に出るべき素材を作って返す。呼ぶ側は自分の描画リストへ push する。
+   pts = {from:撃った人, to:当たった場所, center:画面の中央} */
+function spawnSubFX(sp, phase, pts){
+  const out=[];
+  if(!sp||!pts) return out;
+  const ts=+sp.timeScale||1;
+  /* 旧形式 fx.shatter ＝「着弾と同時・当たった場所」の素材1つと同じ扱い */
+  if(sp.shatter && phase==='impact')
+    out.push(spawnPart(Object.assign({},sp.shatter,{anchor:'to',dx:0,dy:0,off:0}), pts, ts));
+  for(const p of (sp.parts||[]))
+    if(p && (p.at||'impact')===phase) out.push(spawnPart(p, pts, ts));
+  return out;
+}
+
+/* ---- 鳴き声のゆらぎ ----
+   毎回きっちり同じ秒数で鳴くと機械っぽい。±CRY_JITTER 秒だけ散らす。
+   **戦闘で Math.random() は使えん**（掟1）けん、種から決める。
+   同じ種なら必ず同じズレになるけん、決定論は壊れん。
+   戦闘は battleTime から、制作ツールは押した時刻から種を作る。 */
+const CRY_JITTER = 0.15;
+function cryJitter(seed, amt){
+  const a = amt==null ? CRY_JITTER : amt;
+  return (hash3(seed|0, 20260816, 7) - 0.5) * 2 * a;
+}
+/* 鳴くまでの秒。マイナスにはせん */
+function cryDelayWith(delay, seed, amt){
+  return Math.max(0, (+delay||0) + cryJitter(seed, amt));
+}
+
+/* ---- 出現（召喚）の光 ----
+   ANIMS は変形しかできん（絵を描けん）けん、光の柱と着地の衝撃はここが描く。
+   ANIMS.appear と対で使う。u は appear の進行度（0〜1）。
+   cx=中心x / groundY=足元のy / w=見た目の幅
+   制作ツール・草むら演出・戦闘の3か所で同じ絵になるよう、ここ1か所に置く。 */
+function drawSummon(g, cx, groundY, w, u){
+  if(!(u>=0) || u>1) return;
+  const BEAM_END=0.50;                       // 着地したら光は消える
+  if(u<BEAM_END){
+    const k=1-u/BEAM_END;
+    g.save();
+    const bw=Math.max(4, w*0.44*k);
+    g.globalAlpha=0.26*k; g.fillStyle='#bfe6ff';
+    g.fillRect(Math.round(cx-bw/2), 0, Math.round(bw), Math.round(groundY));
+    const cw=Math.max(2, bw*0.36);
+    g.globalAlpha=0.80*k; g.fillStyle='#ffffff';
+    g.fillRect(Math.round(cx-cw/2), 0, Math.round(cw), Math.round(groundY));
+    g.restore();
+  }
+  if(u>=0.44){                               // 着地の衝撃：床に輪が広がる
+    const k=Math.min(1,(u-0.44)/0.46);
+    g.save();
+    g.globalAlpha=(1-k)*0.8; g.strokeStyle='#ffffff'; g.lineWidth=2;
+    g.beginPath(); g.ellipse(cx,groundY, w*0.20+k*w*0.80, (w*0.20+k*w*0.80)*0.30, 0,0,Math.PI*2); g.stroke();
+    g.globalAlpha=(1-k)*0.45; g.strokeStyle='#dff0ff'; g.lineWidth=1;
+    g.beginPath(); g.ellipse(cx,groundY, w*0.12+k*w*0.46, (w*0.12+k*w*0.46)*0.30, 0,0,Math.PI*2); g.stroke();
+    g.restore();
   }
 }
 
@@ -1239,6 +1384,8 @@ const AUDIO_UI_CSS = `
 .aui-item{display:flex;align-items:center;gap:6px;background:#141922;border:1px solid #2c3442;
   border-radius:4px;padding:9px;margin-bottom:5px;}
 .aui-item.on{border-color:#f0a020;background:#1d1a12;}
+.aui-item.dead{opacity:0.5;}
+.aui-item.dead button{background:#2a2a2a;border-color:#3a3a3a;color:#777;}
 .aui-item .t{flex:1;min-width:0;font-size:11px;color:#dfe6f0;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap;}
 .aui-item .s{font-size:9px;color:#66707f;}
@@ -1280,12 +1427,17 @@ const SoundPicker = {
       list.innerHTML='';
       for(const id of SND.list(cur)){
         const m=SND.meta(id);
+        /* デコードに失敗した音は選ばせん（選べても鳴らんけん、ただの罠になる） */
+        const dead=SND.ready && !SND.buf[id];
         const d=document.createElement('div');
-        d.className='aui-item'+(id===currentId?' on':'');
-        d.innerHTML='<div class="t">'+m.label+'<div class="s">'+id+'</div></div>'+
-                    '<button>えらぶ</button>';
+        d.className='aui-item'+(id===currentId?' on':'')+(dead?' dead':'');
+        d.innerHTML='<div class="t">'+m.label+
+                    (dead?' <span style="color:#e07070">（この端末では鳴らん）</span>':'')+
+                    '<div class="s">'+id+'</div></div>'+
+                    '<button'+(dead?' disabled':'')+'>えらぶ</button>';
         d.onclick=e=>{
-          if(e.target.tagName==='BUTTON'){ onPick(id); document.body.removeChild(ov); return; }
+          if(dead) return;
+          if(e.target.tagName==='BUTTON'){ onPick(id); close(); return; }
           SND.play(id);
         };
         list.appendChild(d);
@@ -1300,9 +1452,25 @@ const SoundPicker = {
         cats.appendChild(b);
       }
     }
-    ov.querySelector('[data-a="none"]').onclick=()=>{ onPick(null); document.body.removeChild(ov); };
-    ov.querySelector('[data-a="close"]').onclick=()=>document.body.removeChild(ov);
+    /* 79音のデコードは1〜3秒かかる。その間タップしても鳴らんけん、状態を出す */
+    let poll=null;
+    const close=()=>{ if(poll) clearInterval(poll); poll=null;
+                      if(ov.parentNode) document.body.removeChild(ov); };
+    ov.querySelector('[data-a="none"]').onclick=()=>{ onPick(null); close(); };
+    ov.querySelector('[data-a="close"]').onclick=close;
     drawCats(); drawList();
+    if(!SND.ready){
+      const note=document.createElement('div'); note.className='aui-empty';
+      note.style.cssText='color:#f0a020;padding:4px 2px 8px;';
+      note.textContent='音を読み込みよる… もう少し待って';
+      ov.insertBefore(note, ov.querySelector('.aui-list'));
+      poll=setInterval(()=>{
+        if(!SND.ready) return;
+        clearInterval(poll); poll=null;
+        if(note.parentNode) note.parentNode.removeChild(note);
+        drawList();                       // 鳴らん音に印を付け直す
+      },300);
+    }
   }
 };
 
@@ -1400,23 +1568,58 @@ function renderSysMap(host, sysObj, onChange){
   }
 }
 
-
 /* =========================================================
-   技ラボ本体
+   movelab.js — 技クリエーターの共有部品
+   技ラボ（lab.tpl.html）と 四皇モン制作ツール（creator.tpl.html）が同じ部品を使う。
+   ここに置くのは「技データをいじるUI」だけ。
+     絵を描く   → fx_core.js
+     音を並べる → audio_ui.js
+   前提: fx_core.js（PALETTES / SCREEN_DEFAULTS / makeSpec / buildEffect / mkCv）
+
+   ctx（呼び出し側が渡す窓口）:
+     spec()        いま編集しとる技スペックを返す
+     set(newSpec)  スペックごと差し替える（generator 切替で使う）
+     change()      値が変わった（＝作り直して保存）
+     rebuild()     コントロールの構造ごと作り直す
    ========================================================= */
+
+/* ラベルは「見りゃ何のツマミか分かる」ことを優先する。
+   短さより分かりやすさ。迷ったら動詞を入れる。 */
 const LABEL={
-  shape:'形',size:'大きさ',frames:'コマ数',wobble:'歪み',core:'コア',spin:'回転',specks:'火の粉',
-  'trail.type':'尾の種類','trail.length':'尾の長さ','trail.rate':'尾の密度','trail.size':'粒の大きさ',
-  'travel.speed':'速度','travel.arc':'弧','travel.spin':'自転',
-  width:'太さ',segments:'分割',waver:'ゆらぎ',charge:'溜め',fire:'伸び',sustain:'持続',fade:'消え',
-  arcDeg:'弧の角度',thickness:'太さ',taper:'端の尖り',hollow:'芯の空洞',jitter:'縁のギザつき',
-  squash:'縦の潰し',count:'連撃',interval:'間隔',spread:'ばらつき',
-  jag:'ギザギザ',branches:'枝分かれ',duration:'継続',fromSky:'空から落とす',
-  rings:'輪の数',rise:'上昇',cracks:'亀裂の数',drift:'飛散速度',spin:'回転',dust:'ガラス粉',
-  'impact.size':'大きさ','impact.frames':'コマ数','impact.shards':'破片',
-  strength:'強さ',dur:'長さ',times:'点滅回数',power:'揺れ幅',color:'色',at:'タイミング',dir:'向き'
+  shape:'玉のかたち',size:'大きさ',frames:'パラパラのコマ数',wobble:'ぐらつき',
+  core:'芯の明るさ',spin:'回転',specks:'散る火の粉',
+  'trail.type':'尾のたなびき方','trail.length':'尾の長さ','trail.rate':'尾の濃さ',
+  'trail.size':'尾の粒の大きさ',
+  'travel.speed':'飛ぶ速さ','travel.arc':'山なりの高さ','travel.spin':'飛びながら回る',
+  width:'太さ',segments:'折れ曲がる数',waver:'うねり',
+  charge:'溜める時間',fire:'伸びきるまで',sustain:'出しっぱなしの時間',fade:'消えるまで',
+  arcDeg:'振る角度',thickness:'刃の太さ',taper:'先の細さ',hollow:'芯の空洞',
+  jitter:'縁のギザつき',squash:'縦のつぶし',
+  count:'何連撃',interval:'次を出すまで',spread:'振る位置のばらけ',
+  jag:'ギザギザの荒さ',branches:'枝分かれの数',duration:'出とる長さ',fromSky:'空から落とす',
+  rings:'輪の数',rise:'昇る高さ',cracks:'ひび割れの数',drift:'破片の飛ぶ速さ',dust:'ガラス粉の量',
+  'impact.size':'着弾の大きさ','impact.frames':'着弾のコマ数','impact.shards':'着弾の破片',
+  strength:'強さ',dur:'長さ',times:'点滅の回数',power:'揺れ幅',color:'色',
+  at:'いつ',dir:'線の向き',
+  off:'ずらす',dx:'横の位置',dy:'縦の位置',anchor:'どこを基準に'
 };
 const SCREEN_JP={flash:'閃光',blink:'背景点滅',tint:'背景に色',darken:'暗転',shake:'画面揺れ',lines:'走査線'};
+const GEN_JP={projectile:'飛び道具',beam:'光線',slash:'斬撃',lightning:'雷',aura:'オーラ',shatter:'空間割れ'};
+const GEN_DESC={
+  projectile:'弾が飛んでいく。火の玉・水弾・エネルギー球',
+  beam:'まっすぐ伸びる光の柱。溜めてから撃つ',
+  slash:'弧を描いて斬る。連撃にもできる',
+  lightning:'雷が落ちる。空からでも足元からでも',
+  aura:'自分のまわりを輪が昇る。補助技むき',
+  shatter:'空間がガラスみたいに割れて飛び散る'
+};
+/* 素材の置き場所 */
+const ANCHOR_JP={ from:'撃った人', to:'当たった場所', center:'画面の中央' };
+const PHASE_JP ={ cast:'構えた時', fire:'撃った時', impact:'当たった時' };
+/* 技を出すとき、四皇モン本体にさせる動き */
+const ANIM_JP={ attack:'突き出す', charge:'力を溜める', jump:'跳ぶ', fly:'空へ舞う',
+                dodge:'横へ跳ぶ', zigzag:'往復横跳び', hurt:'のけぞる', knockback:'ふっとぶ',
+                appear:'降りてくる', idle:'動かん' };
 const SCHEMA={
   projectile:[['shape','sel',['orb','shard','ring','bolt']],['size','rng',6,96,1,'px'],
     ['frames','rng',1,12,1,'コマ'],['wobble','rng',0,0.5,0.01],['core','rng',0.1,1.2,0.05],
@@ -1440,14 +1643,614 @@ const SCHEMA={
     ['drift','rng',0,220,5],['spin','rng',0,14,0.5],['dust','rng',0,120,2,'粒'],
     ['duration','rng',0.4,2.5,0.05,'秒']]
 };
-const GEN_JP={projectile:'飛び道具',beam:'光線',slash:'斬撃',lightning:'雷',aura:'オーラ',shatter:'空間割れ'};
 
-const get=(o,p)=>p.split('.').reduce((a,k)=>a&&a[k],o);
-const set=(o,p,v)=>{ const ks=p.split('.'); let t=o;
-  for(let i=0;i<ks.length-1;i++) t=t[ks[i]]; t[ks[ks.length-1]]=v; };
+const specGet=(o,p)=>p.split('.').reduce((a,k)=>a&&a[k],o);
+const specSet=(o,p,v)=>{ const ks=p.split('.'); let t=o;
+  for(let i=0;i<ks.length-1;i++){ if(t[ks[i]]==null) t[ks[i]]={}; t=t[ks[i]]; }
+  t[ks[ks.length-1]]=v; };
 
-let palKey='炎';
+/* ---- 共有CSS（技ラボ側は自前の <style> と同じ見た目になる） ---- */
+const MOVELAB_CSS=`
+.ml-gens{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;}
+.ml-gens button{padding:10px 2px;font-size:10px;background:#252d3a;border:1px solid #2c3442;
+  color:#dfe6f0;border-radius:3px;font-family:inherit;}
+.ml-gens button.on{background:#f0a020;color:#12151c;border-color:#f0a020;}
+.ml-ctl{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.ml-ctl label{font-size:11px;color:#8b97a8;width:82px;flex:none;}
+.ml-ctl input[type=range]{flex:1;min-width:50px;accent-color:#f0a020;}
+.ml-ctl .v{font-size:11px;color:#f0a020;width:52px;text-align:right;flex:none;}
+.ml-ctl select,.ml-ctl input[type=text],.ml-ctl input[type=number]{flex:1;background:#0c0f15;
+  border:1px solid #2c3442;color:#dfe6f0;border-radius:3px;padding:7px;font-size:12px;
+  font-family:inherit;min-width:0;}
+.ml-ctl button{background:#252d3a;border:1px solid #2c3442;color:#dfe6f0;border-radius:3px;
+  padding:9px 6px;font-size:11px;font-family:inherit;}
+.ml-ctl button.on{background:#f0a020;color:#12151c;border-color:#f0a020;}
+.ml-bar{display:flex;gap:5px;margin:8px 0;}
+.ml-bar button{flex:1;background:#252d3a;border:1px solid #2c3442;color:#dfe6f0;border-radius:3px;
+  padding:9px 6px;font-size:11px;font-family:inherit;}
+.ml-pre{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+.ml-pre button{padding:9px 2px;font-size:11px;background:#252d3a;border:1px solid #2c3442;
+  color:#dfe6f0;border-radius:3px;font-family:inherit;}
+.ml-pre button.on{background:#f0a020;color:#12151c;border-color:#f0a020;}
+.ml-pal{display:flex;gap:6px;margin-top:10px;}
+.ml-pal>div{flex:1;}
+.ml-pal input[type=color]{width:100%;height:34px;border:1px solid #2c3442;background:none;
+  border-radius:3px;padding:0;}
+.ml-hint{font-size:10px;color:#8b97a8;line-height:1.6;margin-top:6px;}
+.ml-frames{display:flex;gap:4px;flex-wrap:wrap;background:#0c0f15;padding:8px;border-radius:3px;
+  border:1px solid #2c3442;min-height:40px;overflow-x:auto;}
+.ml-frames canvas{width:auto;height:52px;image-rendering:pixelated;border:1px solid #2c3442;
+  background:repeating-conic-gradient(#20252e 0% 25%,#171b23 0% 50%) 0 0/10px 10px;}
+.ml-box{border:1px solid #262e3b;border-radius:3px;padding:8px;margin-bottom:7px;}
+`;
+/* 二度押しで消す。
+   confirm() はブラウザに「このページのダイアログを表示しない」を効かされると
+   黙って false を返す。そうなると何を押しても消えん。ダイアログに頼らん。 */
+function mlArmDelete(btn, onDo, armedText){
+  let armed=false, timer=null;
+  const base=btn.textContent, baseW=btn.style.width, baseTitle=btn.title||'';
+  const reset=()=>{ armed=false; btn.textContent=base; btn.title=baseTitle;
+    btn.style.width=baseW; btn.style.background='';
+    if(timer){ clearTimeout(timer); timer=null; } };
+  btn.onclick=e=>{
+    if(e) e.stopPropagation();
+    if(armed){ reset(); onDo(); return; }
+    armed=true;
+    btn.textContent=armedText||'消す？'; btn.title='もう一度押すと決まる';
+    btn.style.width='auto'; btn.style.background='#7a2020';
+    timer=setTimeout(reset,3500);
+  };
+}
+
+function mlInjectCSS(){
+  if(document.getElementById('movelab-css')) return;
+  const s=document.createElement('style'); s.id='movelab-css'; s.textContent=MOVELAB_CSS;
+  document.head.appendChild(s);
+}
+
+/* ---- 部品 ---- */
+function mlRange(host,ctx,path,min,max,step,unit,labelOv){
+  const d=document.createElement('div'); d.className='ml-ctl';
+  d.innerHTML=`<label>${labelOv||LABEL[path]||path}</label>`+
+    `<input type=range min=${min} max=${max} step=${step}><span class=v></span>`;
+  const r=d.querySelector('input'), v=d.querySelector('.v');
+  const show=()=>{ const g0=specGet(ctx.spec(),path); r.value=g0;
+    v.textContent=(step<1?(+g0).toFixed(2):g0)+(unit||''); };
+  r.oninput=()=>{ specSet(ctx.spec(),path,step<1?parseFloat(r.value):parseInt(r.value,10));
+    show(); ctx.change(); };
+  host.appendChild(d); show(); return d;
+}
+function mlSel(host,ctx,path,opts){
+  const d=document.createElement('div'); d.className='ml-ctl';
+  d.innerHTML=`<label>${LABEL[path]||path}</label>`+
+    `<select>${opts.map(o=>`<option>${o}</option>`).join('')}</select>`;
+  const s=d.querySelector('select'); s.value=specGet(ctx.spec(),path);
+  s.onchange=()=>{ specSet(ctx.spec(),path,s.value); ctx.change(); };
+  host.appendChild(d); return d;
+}
+function mlBool(host,ctx,path){
+  const d=document.createElement('div'); d.className='ml-ctl';
+  d.innerHTML=`<label>${LABEL[path]||path}</label><button style="flex:1"></button>`;
+  const b=d.querySelector('button');
+  const show=()=>{ const on=!!specGet(ctx.spec(),path);
+    b.textContent=on?'ON':'OFF'; b.classList.toggle('on',on); };
+  b.onclick=()=>{ specSet(ctx.spec(),path,!specGet(ctx.spec(),path)); show(); ctx.change(); };
+  host.appendChild(d); show(); return d;
+}
+function mlText(host,label,get0,set0,onChange){
+  const d=document.createElement('div'); d.className='ml-ctl';
+  d.innerHTML=`<label>${label}</label><input type=text>`;
+  const t=d.querySelector('input'); t.value=get0();
+  t.oninput=()=>{ set0(t.value); onChange&&onChange(); };
+  host.appendChild(d); return d;
+}
+
+/* generator 切替（押すとその generator の既定値で作り直す） */
+function mlGens(host,ctx){
+  mlInjectCSS();
+  const gs=document.createElement('div'); gs.className='ml-gens';
+  Object.keys(SCHEMA).forEach(k=>{
+    const b=document.createElement('button');
+    b.textContent=GEN_JP[k]; b.classList.toggle('on',ctx.spec().generator===k);
+    b.onclick=()=>{
+      const old=ctx.spec();
+      const sp=makeSpec(k,old.seed,old.name,old.palKey||'炎');
+      sp.id=old.id; sp.palKey=old.palKey||'炎';
+      sp.palette=[...old.palette];
+      if(sp.impact) sp.impact.palette=[...old.palette];
+      if(old.screen) sp.screen=JSON.parse(JSON.stringify(old.screen));
+      ctx.set(sp); ctx.rebuild(); ctx.change();
+    };
+    gs.appendChild(b);
+  });
+  host.appendChild(gs); return gs;
+}
+
+/* 技名 / ID / シード（技ラボ用。制作ツールは戦闘値も一緒に出すので自前で組む） */
+function mlBase(host,ctx){
+  mlInjectCSS();
+  mlText(host,'技名',()=>ctx.spec().name,v=>ctx.spec().name=v,ctx.change);
+  mlText(host,'ID',  ()=>ctx.spec().id,  v=>ctx.spec().id=v,  ctx.change);
+  mlSeed(host,ctx);
+}
+/* 技全体の速さ。エフェクトも素材も本体の動きも、まとめて伸び縮みする */
+function mlTimeScale(host,ctx){
+  mlInjectCSS();
+  const sp=ctx.spec();
+  if(sp.timeScale==null) sp.timeScale=1;
+  mlRange(host,ctx,'timeScale',0.25,3,0.05,'倍','技全体の速さ');
+  const h=document.createElement('div'); h.className='ml-hint';
+  h.innerHTML='1.00 が今までどおり。0.50 にすると<b>技が半分の速さ</b>（重い大技になる）、'+
+    '2.00 で倍速（素早い連射向き）。<br>'+
+    'エフェクト・演出素材のずらし・本体の動き、<b>全部まとめて</b>伸び縮みする。'+
+    'プレビューの再生速度とは別物で、<b>こっちは実戦にも効く</b>。';
+  host.appendChild(h);
+}
+function mlSeed(host,ctx){
+  const rb=document.createElement('div'); rb.className='ml-bar';
+  rb.innerHTML='<button>シード変更</button><button>シード戻す</button>';
+  const bs=rb.querySelectorAll('button');
+  bs[0].onclick=()=>{ const s=ctx.spec(); s.seed=(s.seed*7919+13)%999983; ctx.change(); };
+  bs[1].onclick=()=>{ ctx.spec().seed=918273; ctx.change(); };
+  host.appendChild(rb); return rb;
+}
+
+/* generator ごとのパラメータ */
+function mlParams(host,ctx){
+  mlInjectCSS();
+  const rows=SCHEMA[ctx.spec().generator]||[];
+  for(const row of rows){
+    const [path,type]=row;
+    if(type==='rng')      mlRange(host,ctx,path,row[2],row[3],row[4],row[5]);
+    else if(type==='sel') mlSel(host,ctx,path,row[2]);
+    else if(type==='bool')mlBool(host,ctx,path);
+  }
+}
+
+/* 4色がどのプリセットと一致するか。読み込んだJSONに palKey が無いとき用 */
+function mlPalKeyOf(pal){
+  if(!Array.isArray(pal)) return null;
+  for(const k in PALETTES){
+    const p=PALETTES[k];
+    if(p.length===pal.length &&
+       p.every((c,i)=>c.toLowerCase()===String(pal[i]).toLowerCase())) return k;
+  }
+  return null;
+}
+
+/* パレット（プリセット＋4色） */
+function mlPalette(host,ctx){
+  mlInjectCSS();
+  const sp=ctx.spec();
+  const cur=sp.palKey||mlPalKeyOf(sp.palette)||'';
+  const pre=document.createElement('div'); pre.className='ml-pre';
+  Object.keys(PALETTES).forEach(k=>{
+    const bt=document.createElement('button'); bt.textContent=k;
+    bt.classList.toggle('on',cur===k);
+    bt.onclick=()=>{ const s=ctx.spec();
+      s.palKey=k; s.palette=[...PALETTES[k]];
+      if(s.impact) s.impact.palette=[...PALETTES[k]];
+      ctx.rebuild(); ctx.change(); };
+    pre.appendChild(bt);
+  });
+  host.appendChild(pre);
+  const row=document.createElement('div'); row.className='ml-pal';
+  sp.palette.forEach((c,i)=>{
+    const w=document.createElement('div');
+    w.innerHTML=`<input type=color value="${c}">`;
+    w.querySelector('input').oninput=e=>{
+      const s=ctx.spec(); s.palette[i]=e.target.value;
+      if(s.impact&&s.impact.palette) s.impact.palette[i]=e.target.value;
+      ctx.change(); };
+    row.appendChild(w);
+  });
+  host.appendChild(row);
+  const lb=document.createElement('div'); lb.className='ml-hint';
+  lb.textContent='左＝中心（明るい）→ 右＝外周（暗い）。この並び順が立体感を作る。';
+  host.appendChild(lb);
+}
+
+/* 着弾 */
+function mlImpact(host,ctx){
+  mlInjectCSS();
+  if(ctx.spec().impact){
+    mlRange(host,ctx,'impact.size',12,340,2,'px');
+    mlRange(host,ctx,'impact.frames',2,24,1,'コマ');
+    mlRange(host,ctx,'impact.shards',0,60,1);
+  } else {
+    const d=document.createElement('div'); d.className='ml-hint';
+    d.textContent='この generator は着弾エフェクトを持たん（補助技あつかい）。';
+    host.appendChild(d);
+  }
+}
+
+/* =========================================================
+   演出素材（parts）— 本体に重ねる追加のエフェクト
+   1つずつ「種類・どこを基準に・横縦の位置・いつ・何秒ずらす」を決められる。
+   ========================================================= */
+function partLabel(p,i){
+  const nm=p.name||GEN_JP[p.generator]||'素材';
+  const off=(+p.off||0)>0 ? ' +'+(+p.off).toFixed(2)+'秒' : '';
+  return '⑈'.replace('⑈',String(i+1))+'. '+nm+
+         '　〈'+(PHASE_JP[p.at||'impact'])+off+'・'+(ANCHOR_JP[p.anchor||'to'])+'〉';
+}
+function newPart(sp,gen){
+  const g=gen||'shatter';
+  const p=makeSpec(g,((sp.seed||1)+7*((sp.parts||[]).length+1))%999983,GEN_JP[g],sp.palKey||'炎');
+  p.palette=[...(sp.palette||PALETTES['炎'])];
+  if(p.impact) p.impact.palette=[...p.palette];
+  p.name=GEN_JP[g];
+  p.at='impact'; p.off=0; p.anchor='to'; p.dx=0; p.dy=0;
+  delete p.screen;                       // 画面演出は本体側で持つ。素材ごとに持たせると重なりすぎる
+  return p;
+}
+function mlParts(host,ctx){
+  mlInjectCSS();
+  host.innerHTML='';
+  const sp=ctx.spec();
+  if(!Array.isArray(sp.parts)) sp.parts=[];
+  /* 旧形式（fx.shatter）は開いた時点で素材へ移す。以後ふつうに位置もずらせる */
+  if(sp.shatter){
+    const p=Object.assign({},sp.shatter,
+      {name:'空間割れ',at:'impact',off:0,anchor:'to',dx:0,dy:0});
+    sp.parts.push(p); delete sp.shatter;
+  }
+
+  if(!sp.parts.length){
+    const e=document.createElement('div'); e.className='ml-hint'; e.style.margin='0 0 8px';
+    e.textContent='素材はまだ無い。本体だけの技になる。';
+    host.appendChild(e);
+  }
+
+  sp.parts.forEach((p,i)=>{
+    const box=document.createElement('div'); box.className='ml-box';
+    const head=document.createElement('div'); head.className='ml-ctl'; head.style.marginBottom='0';
+    head.innerHTML='<label style="width:auto;flex:1;color:#f0a020;font-size:11px"></label>'+
+      '<button style="width:30px;flex:none" title="上へ">▲</button>'+
+      '<button style="width:30px;flex:none" title="下へ">▼</button>'+
+      '<button style="width:30px;flex:none;background:#2a1a1a;border-color:#5a2a2a;color:#e08080" '+
+      'title="この素材を消す">×</button>';
+    head.querySelector('label').textContent=partLabel(p,i);
+    const [bu,bd,bx]=head.querySelectorAll('button');
+    bu.onclick=()=>{ if(i>0){ sp.parts.splice(i-1,0,sp.parts.splice(i,1)[0]);
+                     mlParts(host,ctx); ctx.change(); } };
+    bd.onclick=()=>{ if(i<sp.parts.length-1){ sp.parts.splice(i+1,0,sp.parts.splice(i,1)[0]);
+                     mlParts(host,ctx); ctx.change(); } };
+    mlArmDelete(bx,()=>{ forgetPart(p); sp.parts.splice(i,1); mlParts(host,ctx); ctx.change(); });
+    box.appendChild(head);
+
+    const body=document.createElement('div'); body.style.marginTop='8px';
+    const pctx={ spec:()=>p, set:()=>{},
+                 change:()=>{ forgetPart(p); ctx.change(); },
+                 rebuild:()=>mlParts(host,ctx) };
+
+    mlText(body,'素材の名前',()=>p.name||'',v=>{ p.name=v;
+      head.querySelector('label').textContent=partLabel(p,i); ctx.change(); });
+
+    /* 種類 */
+    const gs=document.createElement('div'); gs.className='ml-gens';
+    Object.keys(SCHEMA).forEach(k=>{
+      const b=document.createElement('button'); b.textContent=GEN_JP[k];
+      b.classList.toggle('on',p.generator===k);
+      b.onclick=()=>{
+        const keep={name:p.name,at:p.at,off:p.off,anchor:p.anchor,dx:p.dx,dy:p.dy,
+                    palette:[...p.palette],seed:p.seed};
+        const np=newPart(sp,k);
+        Object.assign(np,keep);
+        if(np.impact) np.impact.palette=[...keep.palette];
+        forgetPart(p); sp.parts[i]=np;
+        mlParts(host,ctx); ctx.change();
+      };
+      gs.appendChild(b);
+    });
+    body.appendChild(gs);
+    const gd=document.createElement('div'); gd.className='ml-hint'; gd.style.margin='0 0 8px';
+    gd.textContent=GEN_DESC[p.generator]||'';
+    body.appendChild(gd);
+
+    /* 場所 */
+    const an=document.createElement('div'); an.className='ml-ctl';
+    an.innerHTML='<label>どこを基準に</label><select>'+
+      Object.keys(ANCHOR_JP).map(k=>'<option value="'+k+'">'+ANCHOR_JP[k]+'</option>').join('')+
+      '</select>';
+    const ansel=an.querySelector('select'); ansel.value=p.anchor||'to';
+    ansel.onchange=()=>{ p.anchor=ansel.value;
+      head.querySelector('label').textContent=partLabel(p,i); ctx.change(); };
+    body.appendChild(an);
+    mlRange(body,pctx,'dx',-192,192,1,'px');
+    mlRange(body,pctx,'dy',-140,140,1,'px');
+
+    /* タイミング */
+    const at=document.createElement('div'); at.className='ml-ctl';
+    at.innerHTML='<label>いつ</label><select>'+
+      Object.keys(PHASE_JP).map(k=>'<option value="'+k+'">'+PHASE_JP[k]+'</option>').join('')+
+      '</select>';
+    const atsel=at.querySelector('select'); atsel.value=p.at||'impact';
+    atsel.onchange=()=>{ p.at=atsel.value;
+      head.querySelector('label').textContent=partLabel(p,i); ctx.change(); };
+    body.appendChild(at);
+    const offRow=mlRange(body,pctx,'off',0,2,0.01,'秒');
+    offRow.querySelector('input').addEventListener('input',()=>{
+      head.querySelector('label').textContent=partLabel(p,i); });
+
+    /* この種類のパラメータ */
+    const sep=document.createElement('div');
+    sep.style.cssText='border-top:1px solid #262e3b;margin:9px 0 8px;';
+    body.appendChild(sep);
+    for(const row of SCHEMA[p.generator]||[]){
+      const [path,type]=row;
+      if(type==='rng')      mlRange(body,pctx,path,row[2],row[3],row[4],row[5]);
+      else if(type==='sel') mlSel(body,pctx,path,row[2]);
+      else if(type==='bool')mlBool(body,pctx,path);
+    }
+    if(p.impact){
+      mlRange(body,pctx,'impact.size',12,340,2,'px');
+      mlRange(body,pctx,'impact.frames',2,24,1,'コマ');
+      mlRange(body,pctx,'impact.shards',0,60,1);
+    }
+    /* 色 */
+    const pal=document.createElement('div'); pal.className='ml-pal';
+    (p.palette||[]).forEach((c,j)=>{
+      const w=document.createElement('div');
+      w.innerHTML=`<input type=color value="${c}">`;
+      w.querySelector('input').oninput=e=>{
+        p.palette[j]=e.target.value;
+        if(p.impact&&p.impact.palette) p.impact.palette[j]=e.target.value;
+        forgetPart(p); ctx.change(); };
+      pal.appendChild(w);
+    });
+    body.appendChild(pal);
+
+    box.appendChild(body);
+    host.appendChild(box);
+  });
+
+  const add=document.createElement('button'); add.className='aui-add';
+  add.textContent='＋ 素材を足す';
+  add.onclick=()=>{ sp.parts.push(newPart(sp,'shatter')); mlParts(host,ctx); ctx.change(); };
+  host.appendChild(add);
+
+  const h=document.createElement('div'); h.className='ml-hint';
+  h.innerHTML='素材は本体に<b>重ねる</b>追加のエフェクト。亜空切断の「空間割れ」がこれ。<br>'+
+    '「いつ」＋「ずらす」で順番を組める。0.20秒ずらして2枚重ねる、みたいな作り方ができる。<br>'+
+    'ずらす時間は<b>戦闘の時計で数えとる</b>けん、遅くなっても演出は崩れんし、決定論も壊れん。';
+  host.appendChild(h);
+}
+
+/* =========================================================
+   四皇モン本体の動き（fx.motions）
+   技を出すとき、撃った本人にどの動きを・いつ・何秒かけてさせるか。
+   空なら「撃った時に突き出す」だけ（今までと同じ）。
+   ========================================================= */
+function motionLabel(m,i){
+  const off=(+m.off||0)>0 ? ' +'+(+m.off).toFixed(2)+'秒' : '';
+  return (i+1)+'. '+(ANIM_JP[m.anim]||m.anim)+
+         '　〈'+(PHASE_JP[m.at||'fire'])+off+'・'+(+m.dur||0.75).toFixed(2)+'秒かけて〉';
+}
+function mlMotions(host,ctx){
+  mlInjectCSS();
+  host.innerHTML='';
+  const sp=ctx.spec();
+  if(!Array.isArray(sp.motions)) sp.motions=[];
+  if(!sp.motions.length){
+    const e=document.createElement('div'); e.className='ml-hint'; e.style.margin='0 0 8px';
+    e.textContent='何も入れとらん＝「撃った時に突き出す」だけ（今までと同じ動き）。';
+    host.appendChild(e);
+  }
+  sp.motions.forEach((m,i)=>{
+    const box=document.createElement('div'); box.className='ml-box';
+    const head=document.createElement('div'); head.className='ml-ctl'; head.style.marginBottom='8px';
+    head.innerHTML='<label style="width:auto;flex:1;color:#f0a020;font-size:11px"></label>'+
+      '<button style="width:30px;flex:none" title="上へ">▲</button>'+
+      '<button style="width:30px;flex:none" title="下へ">▼</button>'+
+      '<button style="width:30px;flex:none;background:#2a1a1a;border-color:#5a2a2a;color:#e08080" '+
+      'title="消す">×</button>';
+    const lb=head.querySelector('label');
+    const paint=()=>{ lb.textContent=motionLabel(m,i); };
+    paint();
+    const [bu,bd,bx]=head.querySelectorAll('button');
+    bu.onclick=()=>{ if(i>0){ sp.motions.splice(i-1,0,sp.motions.splice(i,1)[0]);
+                     mlMotions(host,ctx); ctx.change(); } };
+    bd.onclick=()=>{ if(i<sp.motions.length-1){ sp.motions.splice(i+1,0,sp.motions.splice(i,1)[0]);
+                     mlMotions(host,ctx); ctx.change(); } };
+    mlArmDelete(bx,()=>{ sp.motions.splice(i,1); mlMotions(host,ctx); ctx.change(); });
+    box.appendChild(head);
+
+    const mctx={ spec:()=>m, set:()=>{}, change:()=>{ paint(); ctx.change(); },
+                 rebuild:()=>mlMotions(host,ctx) };
+    const sel=(label,key,map,def)=>{
+      const d=document.createElement('div'); d.className='ml-ctl';
+      d.innerHTML='<label>'+label+'</label><select>'+
+        Object.keys(map).map(k=>'<option value="'+k+'">'+map[k]+'</option>').join('')+'</select>';
+      const s=d.querySelector('select'); s.value=m[key]||def;
+      s.onchange=()=>{ m[key]=s.value; paint(); ctx.change(); };
+      box.appendChild(d);
+    };
+    sel('どの動き','anim',ANIM_JP,'attack');
+    sel('いつ','at',PHASE_JP,'fire');
+    mlRange(box,mctx,'off',0,2,0.01,'秒','その瞬間から');
+    mlRange(box,mctx,'dur',0.05,3,0.05,'秒','かける時間');
+    host.appendChild(box);
+  });
+  const add=document.createElement('button'); add.className='aui-add';
+  add.textContent='＋ 動きを足す';
+  add.onclick=()=>{ sp.motions.push({anim:'attack',at:'fire',off:0,dur:0.75});
+                    mlMotions(host,ctx); ctx.change(); };
+  host.appendChild(add);
+  const h=document.createElement('div'); h.className='ml-hint';
+  h.innerHTML='技を出したとき、<b>撃った本人</b>にさせる動き。<br>'+
+    '「かけて」の秒数でアニメを伸び縮みさせる。0.20秒にすれば素早い突き、'+
+    '1.50秒にすればじっくり溜めた動きになる。<br>'+
+    '複数入れれば「構えで力を溜める → 撃った瞬間に突き出す → 当たった瞬間に跳ぶ」も組める。';
+  host.appendChild(h);
+}
+
+/* 画面演出（背景変化） */
+function mlScreen(host,ctx){
+  mlInjectCSS();
+  host.innerHTML='';
+  const sp=ctx.spec();
+  if(!sp.screen) sp.screen={};
+  for(const k of Object.keys(SCREEN_DEFAULTS)){
+    const wrap=document.createElement('div'); wrap.className='ml-box';
+    const head=document.createElement('div'); head.className='ml-ctl'; head.style.marginBottom='0';
+    head.innerHTML='<label style="width:auto;flex:1;color:#dfe6f0">'+SCREEN_JP[k]+'</label>'
+                  +'<button style="width:74px;flex:none"></button>';
+    const bt=head.querySelector('button');
+    const on=()=>!!sp.screen[k];
+    const paint=()=>{ bt.textContent=on()?'ON':'OFF'; bt.classList.toggle('on',on()); };
+    bt.onclick=()=>{ if(on()) delete sp.screen[k];
+      else sp.screen[k]=JSON.parse(JSON.stringify(SCREEN_DEFAULTS[k]));
+      mlScreen(host,ctx); ctx.change(); };
+    wrap.appendChild(head); paint();
+    if(on()){
+      const body=document.createElement('div'); body.style.marginTop='8px';
+      const cfg=sp.screen[k];
+      for(const key of Object.keys(SCREEN_DEFAULTS[k])){
+        if(key==='color'){
+          const d=document.createElement('div'); d.className='ml-ctl';
+          d.innerHTML='<label>色</label><input type=color value="'+cfg.color+'" '+
+            'style="flex:1;height:30px;border:1px solid #2c3442;background:none;border-radius:3px;padding:0">';
+          d.querySelector('input').oninput=e=>{ cfg.color=e.target.value; ctx.change(); };
+          body.appendChild(d);
+        } else if(key==='at'){
+          const d=document.createElement('div'); d.className='ml-ctl';
+          d.innerHTML='<label>タイミング</label><select><option value="cast">技を出した時</option>'+
+                      '<option value="impact">当たった時</option></select>';
+          const sel=d.querySelector('select'); sel.value=cfg.at;
+          sel.onchange=()=>{ cfg.at=sel.value; ctx.change(); };
+          body.appendChild(d);
+        } else if(key==='dir'){
+          const d=document.createElement('div'); d.className='ml-ctl';
+          d.innerHTML='<label>向き</label><select><option value="h">横線</option>'+
+                      '<option value="v">縦線</option></select>';
+          const sel=d.querySelector('select'); sel.value=cfg.dir;
+          sel.onchange=()=>{ cfg.dir=sel.value; ctx.change(); };
+          body.appendChild(d);
+        } else {
+          const RG={strength:[0,1,0.05],dur:[0.05,2,0.05],times:[1,16,1],power:[1,26,1]};
+          const [mn,mx,st]=RG[key]||[0,1,0.05];
+          const d=document.createElement('div'); d.className='ml-ctl';
+          d.innerHTML='<label>'+(LABEL[key]||key)+'</label><input type=range min='+mn+
+                      ' max='+mx+' step='+st+'><span class=v></span>';
+          const r=d.querySelector('input'), v=d.querySelector('.v');
+          const show=()=>{ r.value=cfg[key]; v.textContent=st<1?(+cfg[key]).toFixed(2):cfg[key]; };
+          r.oninput=()=>{ cfg[key]=st<1?parseFloat(r.value):parseInt(r.value,10); show(); ctx.change(); };
+          body.appendChild(d); show();
+        }
+      }
+      wrap.appendChild(body);
+    }
+    host.appendChild(wrap);
+  }
+  const h=document.createElement('div'); h.className='ml-hint';
+  h.textContent='背景の点滅・色付け・暗転・揺れは「技エフェクトの一部」として技データに入る。'+
+                '大技ほど画面を派手に動かせる。';
+  host.appendChild(h);
+}
+
+/* =========================================================
+   技ライブラリ（技ラボと制作ツールで共有）
+   localStorage['shioumon_move_lib_v1'] = { 名前: {name, fx, battle, audio} }
+   fx      … エフェクトの設計（素材ぜんぶ入り）
+   battle  … 戦闘の数値（タイプ・威力・溜め・CD）。技ラボから保存したときは null
+   audio   … 音のタイムライン
+   ========================================================= */
+const MOVE_LIB_KEY='shioumon_move_lib_v1';
+function mlLibAll(){
+  try{ const o=JSON.parse(localStorage.getItem(MOVE_LIB_KEY)||'{}');
+       return (o&&typeof o==='object')?o:{}; }catch(e){ return {}; }
+}
+function mlLibPut(name,rec){
+  try{ const a=mlLibAll(); a[name]=rec;
+       localStorage.setItem(MOVE_LIB_KEY,JSON.stringify(a)); return {ok:true}; }
+  catch(e){ return {ok:false,msg:e.name}; }
+}
+function mlLibDel(name){
+  try{ const a=mlLibAll(); delete a[name];
+       localStorage.setItem(MOVE_LIB_KEY,JSON.stringify(a)); return true; }catch(e){ return false; }
+}
+/* opts = { rec():保存する中身（無ければ null）, name():既定の名前, load(rec,名前) } */
+function mlLibrary(host,opts){
+  mlInjectCSS();
+  host.innerHTML='';
+  const row=document.createElement('div'); row.className='ml-ctl';
+  row.innerHTML='<label>名前をつけて</label><input type=text placeholder="亜空切断">';
+  const inp=row.querySelector('input');
+  inp.value=(opts.name&&opts.name())||'';
+  host.appendChild(row);
+  const bar=document.createElement('div'); bar.className='ml-bar';
+  bar.innerHTML='<button>この名前で保存</button>';
+  bar.querySelector('button').onclick=()=>{
+    const rec=opts.rec();
+    if(!rec){ alert('先に技を開いて'); return; }
+    /* 同じ名前でも上書きせん。◯◯2 と番号を振って警告を出す。
+       ダイアログには頼らん（止められると黙って消える）し、黙って上書きもせん。 */
+    const raw=(inp.value||rec.name||'無題').trim();
+    const all=mlLibAll();
+    const dup=!!all[raw];
+    let nm=raw, n=2;
+    while(all[nm]) nm=raw+(n++);
+    const r=mlLibPut(nm,rec);
+    if(!r.ok){ alert('保存できん（'+r.msg+'）。要らん技を消して。'); return; }
+    mlLibrary(host,opts);
+    const note=document.createElement('div'); note.className='ml-hint';
+    note.style.margin='0 0 6px';
+    note.innerHTML = dup
+      ? '<b style="color:#f0a020">！ 「'+raw+'」はもうあったけん「'+nm+'」で保存した。'+
+        '前のは消しとらん。</b>'
+      : '<b style="color:#7ad6a0">「'+nm+'」を保存した</b>';
+    host.insertBefore(note,host.firstChild);
+    if(!dup) setTimeout(()=>{ if(note.parentNode) note.parentNode.removeChild(note); },2500);
+  };
+  host.appendChild(bar);
+
+  const all=mlLibAll(), keys=Object.keys(all);
+  if(!keys.length){
+    const e=document.createElement('div'); e.className='ml-hint'; e.style.margin='0';
+    e.textContent='まだ1つも保存しとらん。保存しとけば、別の四皇モンにも同じ技を持たせられる。';
+    host.appendChild(e); return;
+  }
+  for(const k of keys){
+    const rec=all[k];
+    const d=document.createElement('div'); d.className='ml-ctl';
+    const gen=(rec.fx&&GEN_JP[rec.fx.generator])||'?';
+    const np=(rec.fx&&rec.fx.parts||[]).length;
+    const pw=(rec.battle&&rec.battle.power!=null)?('威'+rec.battle.power):'数値なし';
+    d.innerHTML='<label style="width:auto;flex:1;color:#dfe6f0;font-size:11px;overflow:hidden;'+
+      'text-overflow:ellipsis;white-space:nowrap"></label>'+
+      '<span style="font-size:9px;color:#8b97a8;flex:none">'+gen+(np?'+素材'+np:'')+' / '+pw+'</span>'+
+      '<button style="width:52px;flex:none">読込</button>'+
+      '<button style="width:32px;flex:none;background:#2a1a1a;border-color:#5a2a2a;color:#e08080">×</button>';
+    d.querySelector('label').textContent=k;
+    const [bl,bx]=d.querySelectorAll('button');
+    bl.onclick=()=>opts.load(JSON.parse(JSON.stringify(all[k])),k);
+    mlArmDelete(bx,()=>{ mlLibDel(k); mlLibrary(host,opts); });
+    host.appendChild(d);
+  }
+}
+
+/* 焼いたコマの一覧 */
+function mlFrames(host,built){
+  mlInjectCSS();
+  host.innerHTML='';
+  const add=c=>{ const n=mkCv(c.width,c.height); n.getContext('2d').drawImage(c,0,0); host.appendChild(n); };
+  if(built.body) built.body.forEach(add);
+  if(built.body&&built.impact){ const sp=document.createElement('div');
+    sp.style.width='12px'; sp.style.flex='none'; host.appendChild(sp); }
+  if(built.impact) built.impact.forEach(add);
+  if(!built.body&&!built.impact)
+    host.innerHTML='<div class="ml-hint" style="margin:0">毎フレーム描画型（焼いたコマなし）</div>';
+}
+
+
+/* =========================================================
+   技ラボ本体
+   UI部品（LABEL / SCHEMA / スライダ類）は movelab.js に出しとる。
+   四皇モン制作ツールの技クリエーターと同じ部品を使う。
+   ========================================================= */
 let spec=makeSpec('projectile',918273,'灼熱弾','炎');
+spec.palKey='炎';
 let built=buildEffect(spec);
 
 /* ---- プレビュー画面 ---- */
@@ -1491,20 +2294,28 @@ const fieldTmp=mkCv(W,216), ftx=fieldTmp.getContext('2d');
 ftx.imageSmoothingEnabled=false;
 let fxs=[], mode='fire', loopT=0, autoT=0;
 let sndOn=false, sndMove='akuu';
+let fxSpeed=0.85;
 function fire(){
   const self=spec.generator==='aura';
+  const F=self?SELF:FROM, T=self?SELF:TO;
+  const pts={from:F, to:T, center:{x:192,y:104}};
+  for(const s2 of spawnSubFX(spec,'cast',pts)) fxs.push(s2);   /* 演出素材。実戦と同じ道を通す */
   const go=()=>{
     if(sndOn) playMovePhase(sndMove,'fire',1);
-    fxs.push(spawnFX(spec, self?SELF:FROM, self?SELF:TO, built,
-      sndOn ? (()=>playMovePhase(sndMove,'impact',1)) : null));
+    for(const s2 of spawnSubFX(spec,'fire',pts)) fxs.push(s2);
+    fxs.push(spawnFX(spec, F, T, built, ()=>{
+      if(sndOn) playMovePhase(sndMove,'impact',1);
+      for(const s2 of spawnSubFX(spec,'impact',pts)) fxs.push(s2);
+    }));
   };
   if(!sndOn){ go(); return; }
   SND.resume();
   playMovePhase(sndMove,'cast',1);
   const cast=(MOVES[sndMove]||{}).cast||0;
-  if(cast>0.01) setTimeout(go, cast*1000); else go();
+  if(cast>0.01) setTimeout(go, cast*1000/fxSpeed); else go();
 }
 function frame(dt){
+  dt*=fxSpeed;            // スロー／倍速はここ1か所
   SCREEN.update(dt);
   ftx.clearRect(0,0,W,216);
   ftx.drawImage(bgCv,0,0);
@@ -1540,7 +2351,7 @@ function frame(dt){
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillText(spec.name,14,228);
   ctx.fillStyle='#8b97a8'; ctx.font='11px "DotGothic16",monospace';
-  ctx.fillText(`${spec.generator} / seed ${spec.seed} / ${palKey}`,14,250);
+  ctx.fillText(`${spec.generator} / seed ${spec.seed} / ${spec.palKey||'—'}`,14,250);
   ctx.fillStyle='#f0a020';
   ctx.fillText(mode==='loop'?'拡大再生':(mode==='auto'?'自動連射':'発射モード'),14,266);
 }
@@ -1553,168 +2364,24 @@ let last=performance.now();
 
 /* ---- コントロール ---- */
 const $=id=>document.getElementById(id);
-function rebuild(){ built=buildEffect(spec); drawFrames(); $('json').value=JSON.stringify(spec,null,2); }
+function rebuild(){ built=buildEffect(spec); mlFrames($('frames'),built);
+  $('json').value=JSON.stringify(spec,null,2); }
 
-function ctlRange(host,path,min,max,step,unit){
-  const d=document.createElement('div'); d.className='ctl';
-  d.innerHTML=`<label>${LABEL[path]||path}</label><input type=range min=${min} max=${max} step=${step}><span class=v></span>`;
-  const r=d.querySelector('input'), v=d.querySelector('.v');
-  const show=()=>{ const g0=get(spec,path); r.value=g0;
-    v.textContent=(step<1?(+g0).toFixed(2):g0)+(unit||''); };
-  r.oninput=()=>{ set(spec,path,step<1?parseFloat(r.value):parseInt(r.value,10)); show(); rebuild(); };
-  host.appendChild(d); show();
-}
-function ctlSel(host,path,opts){
-  const d=document.createElement('div'); d.className='ctl';
-  d.innerHTML=`<label>${LABEL[path]||path}</label><select>${opts.map(o=>`<option>${o}</option>`).join('')}</select>`;
-  const s=d.querySelector('select'); s.value=get(spec,path);
-  s.onchange=()=>{ set(spec,path,s.value); rebuild(); };
-  host.appendChild(d);
-}
-function ctlBool(host,path){
-  const d=document.createElement('div'); d.className='ctl';
-  d.innerHTML=`<label>${LABEL[path]||path}</label><button style="flex:1"></button>`;
-  const b=d.querySelector('button');
-  const show=()=>{ b.textContent=get(spec,path)?'ON':'OFF'; b.classList.toggle('on',!!get(spec,path)); };
-  b.onclick=()=>{ set(spec,path,!get(spec,path)); show(); rebuild(); };
-  host.appendChild(d); show();
-}
-function ctlText(host,label,g0,s0){
-  const d=document.createElement('div'); d.className='ctl';
-  d.innerHTML=`<label>${label}</label><input type=text>`;
-  const t=d.querySelector('input'); t.value=g0();
-  t.oninput=()=>{ s0(t.value); rebuild(); };
-  host.appendChild(d);
-}
-
+/* movelab.js の部品へ渡す窓口 */
+const labCtx={
+  spec  :()=>spec,
+  set   :sp=>{ spec=sp; },
+  change:()=>rebuild(),
+  rebuild:()=>buildControls()
+};
 function buildControls(){
-  // generator 切替
-  const gs=$('gens'); gs.innerHTML='';
-  Object.keys(SCHEMA).forEach(k=>{
-    const b=document.createElement('button');
-    b.textContent=GEN_JP[k]; b.classList.toggle('on',spec.generator===k);
-    b.onclick=()=>{ const nm=spec.name, sd=spec.seed;
-      spec=makeSpec(k,sd,GEN_JP[k]==='飛び道具'?nm:GEN_JP[k]+'テスト',palKey);
-      buildControls(); rebuild(); };
-    gs.appendChild(b);
-  });
-
-  const b=$('cBase'); b.innerHTML='';
-  ctlText(b,'技名',()=>spec.name,v=>spec.name=v);
-  ctlText(b,'ID',()=>spec.id,v=>spec.id=v);
-  const rb=document.createElement('div'); rb.className='bar';
-  rb.innerHTML='<button>シード変更</button><button>シード戻す</button>';
-  const bs=rb.querySelectorAll('button');
-  bs[0].onclick=()=>{ spec.seed=(spec.seed*7919+13)%999983; rebuild(); };
-  bs[1].onclick=()=>{ spec.seed=918273; rebuild(); };
-  b.appendChild(rb);
-
-  const m=$('cMain'); m.innerHTML='';
-  for(const row of SCHEMA[spec.generator]){
-    const [path,type]=row;
-    if(type==='rng') ctlRange(m,path,row[2],row[3],row[4],row[5]);
-    else if(type==='sel') ctlSel(m,path,row[2]);
-    else if(type==='bool') ctlBool(m,path);
-  }
-
-  const p=$('cPal'); p.innerHTML='';
-  const pre=document.createElement('div'); pre.className='pre';
-  Object.keys(PALETTES).forEach(k=>{
-    const bt=document.createElement('button'); bt.textContent=k;
-    bt.classList.toggle('on',palKey===k);
-    bt.onclick=()=>{ palKey=k; spec.palette=[...PALETTES[k]];
-      if(spec.impact) spec.impact.palette=[...PALETTES[k]];
-      buildControls(); rebuild(); };
-    pre.appendChild(bt);
-  });
-  p.appendChild(pre);
-  const row=document.createElement('div'); row.className='pal';
-  spec.palette.forEach((c,i)=>{
-    const w=document.createElement('div');
-    w.innerHTML=`<input type=color value="${c}">`;
-    w.querySelector('input').oninput=e=>{ spec.palette[i]=e.target.value; rebuild(); };
-    row.appendChild(w);
-  });
-  p.appendChild(row);
-  const lb=document.createElement('div'); lb.className='hint';
-  lb.textContent='左＝中心（明るい）→ 右＝外周（暗い）。この並び順が立体感を作る。';
-  p.appendChild(lb);
-
-  buildScreenControls();
-
-  const im=$('cImpact'); im.innerHTML='';
-  if(spec.impact){
-    ctlRange(im,'impact.size',12,340,2,'px');
-    ctlRange(im,'impact.frames',2,24,1,'コマ');
-    ctlRange(im,'impact.shards',0,60,1);
-  } else {
-    im.innerHTML='<div class="hint">このgeneratorは着弾エフェクトを持たん（補助技扱い）。</div>';
-  }
-}
-function buildScreenControls(){
-  const host=$('cScreen'); host.innerHTML='';
-  if(!spec.screen) spec.screen={};
-  for(const k of Object.keys(SCREEN_DEFAULTS)){
-    const wrap=document.createElement('div');
-    wrap.style.cssText='border:1px solid #262e3b;border-radius:3px;padding:8px;margin-bottom:7px;';
-    const head=document.createElement('div'); head.className='ctl'; head.style.marginBottom='0';
-    head.innerHTML='<label style="width:auto;flex:1;color:#dfe6f0">'+SCREEN_JP[k]+'</label>'
-                  +'<button style="width:74px;flex:none"></button>';
-    const bt=head.querySelector('button');
-    const on=()=>!!spec.screen[k];
-    const paint=()=>{ bt.textContent=on()?'ON':'OFF'; bt.classList.toggle('on',on()); };
-    bt.onclick=()=>{ if(on()) delete spec.screen[k];
-      else spec.screen[k]=JSON.parse(JSON.stringify(SCREEN_DEFAULTS[k]));
-      buildScreenControls(); rebuild(); };
-    wrap.appendChild(head); paint();
-    if(on()){
-      const body=document.createElement('div'); body.style.marginTop='8px';
-      const cfg=spec.screen[k];
-      for(const key of Object.keys(SCREEN_DEFAULTS[k])){
-        if(key==='color'){
-          const d=document.createElement('div'); d.className='ctl';
-          d.innerHTML='<label>色</label><input type=color value="'+cfg.color+'" style="flex:1;height:30px;border:1px solid #2c3442;background:none;border-radius:3px;padding:0">';
-          d.querySelector('input').oninput=e=>{ cfg.color=e.target.value; rebuild(); };
-          body.appendChild(d);
-        } else if(key==='at'){
-          const d=document.createElement('div'); d.className='ctl';
-          d.innerHTML='<label>タイミング</label><select><option value="cast">技を出した時</option><option value="impact">当たった時</option></select>';
-          const sel=d.querySelector('select'); sel.value=cfg.at;
-          sel.onchange=()=>{ cfg.at=sel.value; rebuild(); };
-          body.appendChild(d);
-        } else if(key==='dir'){
-          const d=document.createElement('div'); d.className='ctl';
-          d.innerHTML='<label>向き</label><select><option value="h">横線</option><option value="v">縦線</option></select>';
-          const sel=d.querySelector('select'); sel.value=cfg.dir;
-          sel.onchange=()=>{ cfg.dir=sel.value; rebuild(); };
-          body.appendChild(d);
-        } else {
-          const RG={strength:[0,1,0.05],dur:[0.05,2,0.05],times:[1,16,1],power:[1,26,1]};
-          const [mn,mx,st]=RG[key]||[0,1,0.05];
-          const d=document.createElement('div'); d.className='ctl';
-          d.innerHTML='<label>'+(LABEL[key]||key)+'</label><input type=range min='+mn+' max='+mx+' step='+st+'><span class=v></span>';
-          const r=d.querySelector('input'), v=d.querySelector('.v');
-          const show=()=>{ r.value=cfg[key]; v.textContent=st<1?(+cfg[key]).toFixed(2):cfg[key]; };
-          r.oninput=()=>{ cfg[key]=st<1?parseFloat(r.value):parseInt(r.value,10); show(); rebuild(); };
-          body.appendChild(d); show();
-        }
-      }
-      wrap.appendChild(body);
-    }
-    host.appendChild(wrap);
-  }
-  const h=document.createElement('div'); h.className='hint';
-  h.textContent='背景の点滅・色付け・暗転・揺れは「技エフェクトの一部」として技データに入る。大技ほど画面を派手に動かせる。';
-  host.appendChild(h);
-}
-
-function drawFrames(){
-  const host=$('frames'); host.innerHTML='';
-  const add=c=>{ const n=mkCv(c.width,c.height); n.getContext('2d').drawImage(c,0,0); host.appendChild(n); };
-  if(built.body) built.body.forEach(add);
-  if(built.body&&built.impact){ const sp=document.createElement('div'); sp.style.width='12px'; host.appendChild(sp); }
-  if(built.impact) built.impact.forEach(add);
-  if(!built.body&&!built.impact) host.innerHTML='<div class="hint" style="margin:0">毎フレーム描画型（焼いたコマなし）</div>';
+  $('gens').innerHTML='';    mlGens($('gens'),labCtx);
+  $('cBase').innerHTML='';   mlBase($('cBase'),labCtx); mlTimeScale($('cBase'),labCtx);
+  $('cMain').innerHTML='';   mlParams($('cMain'),labCtx);
+  $('cPal').innerHTML='';    mlPalette($('cPal'),labCtx);
+  $('cImpact').innerHTML=''; mlImpact($('cImpact'),labCtx);
+  mlParts($('cSub'),labCtx);
+  mlScreen($('cScreen'),labCtx);
 }
 
 document.querySelectorAll('.sec>h2').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('closed'));
@@ -1760,7 +2427,17 @@ function buildSndTL(){
   buildSndTL();
 })();
 
-buildControls(); rebuild(); setMode('fire'); fire();
+$('fxSpeedSel').onchange=e=>{ fxSpeed=parseFloat(e.target.value)||1; };
+function buildLib(){
+  mlLibrary($('cLib'),{
+    name:()=>spec.name,
+    rec:()=>({ name:spec.name, fx:JSON.parse(JSON.stringify(spec)), battle:null,
+               audio:JSON.parse(JSON.stringify(AUDIO_CFG.moves[sndMove]||[])) }),
+    load:(rec)=>{ if(!rec.fx||!rec.fx.generator){ alert("エフェクトが入っとらん"); return; }
+      spec=rec.fx; buildControls(); rebuild(); buildLib(); }
+  });
+}
+buildControls(); rebuild(); buildLib(); setMode('fire'); fire();
 </script>
 </body>
 </html>

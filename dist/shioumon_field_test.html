@@ -563,6 +563,9 @@ class BaseFX{
     Object.assign(this,{sp,f:from,t:to,b:built,onHit});
     this.time=0; this.state='run'; this.hit=false; this.if_=-1; this.parts=[];
     this.rng=new RNG(sp.seed+77);
+    /* 技全体の速さ。技データの値やけん、同じ技なら誰が撃っても同じ速さになる
+       （＝決定論は壊れん）。各 update の頭で dt に掛ける。 */
+    this.ts=Math.max(0.05,Math.min(4,+sp.timeScale||1));
     SCREEN.trigger(sp.screen,'cast');
   }
   doHit(){ if(!this.hit){ this.hit=true; this.if_=0;
@@ -593,6 +596,7 @@ class ProjectileFX extends BaseFX{
     return {x:this.f.x+(this.t.x-this.f.x)*t,
             y:this.f.y+(this.t.y-this.f.y)*t+Math.sin(Math.min(1,t)*Math.PI)*this.sp.travel.arc}; }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     if(!this.hit){
       this.p+=dt/this.dur;
@@ -647,6 +651,7 @@ class BeamFX extends BaseFX{
   endPoint(){ const e=this.extent();
     return {x:this.f.x+(this.t.x-this.f.x)*e, y:this.f.y+(this.t.y-this.f.y)*e}; }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     const s=this.sp;
     if(this.time>=s.charge+s.fire && !this.blocked) this.doHit();
@@ -691,6 +696,7 @@ class BeamFX extends BaseFX{
 class SlashFX extends BaseFX{
   constructor(...a){ super(...a); this.n=0; }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     const s=this.sp, per=s.interval;
     this.n=Math.min(s.count,Math.floor(this.time/per)+1);
@@ -749,6 +755,7 @@ class LightningFX extends BaseFX{
     }
   }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     const tk=Math.floor(this.time*16);
     if(tk!==this.tick){ this.tick=tk; this.gen(tk); }
@@ -773,6 +780,7 @@ class LightningFX extends BaseFX{
 /* ---- aura：強化・回復・状態変化。輪が立ち昇る ---- */
 class AuraFX extends BaseFX{
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     const s=this.sp;
     this.spawn=(this.spawn||0)+dt;
@@ -861,6 +869,7 @@ class ShatterFX extends BaseFX{
     }
   }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     if(this.time>=0.06) this.doHit();
     if(this.time>=this.sp.duration) this.state='dead';
@@ -926,6 +935,129 @@ function spawnFX(sp,from,to,built,onHit){
     case 'aura':      return new AuraFX(sp,from,to,built,onHit);
     case 'shatter':   return new ShatterFX(sp,from,to,built,onHit);
     default:          return new ProjectileFX(sp,from,to,built,onHit);
+  }
+}
+
+/* =========================================================
+   演出素材（parts）
+   技は「本体ひとつ」やのうて、素材の集まりとして組める。
+   素材ごとに 種類・基準・位置・タイミング を持つ：
+
+     at     'cast' 構え ／ 'fire' 発射 ／ 'impact' 着弾
+     off    その瞬間から何秒あと
+     anchor 'from' 撃った人 ／ 'to' 当たった場所 ／ 'center' 画面の中央
+     dx,dy  基準からのずらし（px）
+
+   **遅延に setTimeout を使わん。** 固定タイムステップの dt で数える。
+   使うと戦闘の決定論が壊れる（掟1・2）。
+   **技ラボ・制作ツール・戦闘は spawnSubFX() だけを使うこと。**
+   呼ぶ側それぞれに書いたら「亜空切断の割れが戦闘にだけ出る」が実際に起きた。
+   ========================================================= */
+
+/* 出るまで待つだけの入れ物。時間が来てはじめて中身を作る（＝画面演出も遅れて出る） */
+class DelayFX{
+  constructor(delay, make, sp){
+    this.delay=delay; this.make=make; this.sp=sp;
+    this.inner=null; this.state='run'; this.hit=false;
+  }
+  update(dt){
+    if(!this.inner){
+      this.delay-=dt;
+      if(this.delay>0) return;
+      this.inner=this.make();
+    }
+    this.inner.update(dt);
+    this.state=this.inner.state;
+    this.hit=this.inner.hit;
+  }
+  draw(g){ if(this.inner) this.inner.draw(g); }
+}
+
+/* 素材の焼いたコマは使い回す。編集中に作り替えたら forgetPart() で捨てる */
+const PART_BUILT = new WeakMap();
+function builtPart(sp){
+  let b=PART_BUILT.get(sp);
+  if(!b){ b=buildEffect(sp); PART_BUILT.set(sp,b); }
+  return b;
+}
+function forgetPart(sp){ if(sp) PART_BUILT.delete(sp); }
+
+const TRAVELS = { projectile:1, beam:1 };     // 飛んでいく種類は行き先が要る
+function partPoints(p, pts){
+  const a=p.anchor||'to';
+  const base = a==='from' ? pts.from : a==='center' ? (pts.center||pts.to) : pts.to;
+  const from = { x:(base.x||0)+(+p.dx||0), y:(base.y||0)+(+p.dy||0) };
+  if(!TRAVELS[p.generator]) return {from, to:from};
+  /* 飛ぶ素材は「基準の反対側」へ向かう。同じ点やと距離0で計算が壊れる */
+  const other = a==='from' ? pts.to : pts.from;
+  let to = {x:other.x, y:other.y};
+  if(Math.hypot(to.x-from.x,to.y-from.y)<1) to={x:from.x+1,y:from.y};
+  return {from, to};
+}
+/* ts = 親の技の速さ。素材の遅れも中身の速さも一緒に伸び縮みさせる */
+function spawnPart(p, pts, ts){
+  const k=Math.max(0.05,Math.min(4,+ts||1));
+  const {from,to}=partPoints(p,pts);
+  const make=()=>{ const o=spawnFX(p, from, to, builtPart(p), null); o.ts*=k; return o; };
+  const d=Math.max(0,+p.off||0)/k;
+  return d>0 ? new DelayFX(d, make, p) : make();
+}
+/* phase の瞬間に出るべき素材を作って返す。呼ぶ側は自分の描画リストへ push する。
+   pts = {from:撃った人, to:当たった場所, center:画面の中央} */
+function spawnSubFX(sp, phase, pts){
+  const out=[];
+  if(!sp||!pts) return out;
+  const ts=+sp.timeScale||1;
+  /* 旧形式 fx.shatter ＝「着弾と同時・当たった場所」の素材1つと同じ扱い */
+  if(sp.shatter && phase==='impact')
+    out.push(spawnPart(Object.assign({},sp.shatter,{anchor:'to',dx:0,dy:0,off:0}), pts, ts));
+  for(const p of (sp.parts||[]))
+    if(p && (p.at||'impact')===phase) out.push(spawnPart(p, pts, ts));
+  return out;
+}
+
+/* ---- 鳴き声のゆらぎ ----
+   毎回きっちり同じ秒数で鳴くと機械っぽい。±CRY_JITTER 秒だけ散らす。
+   **戦闘で Math.random() は使えん**（掟1）けん、種から決める。
+   同じ種なら必ず同じズレになるけん、決定論は壊れん。
+   戦闘は battleTime から、制作ツールは押した時刻から種を作る。 */
+const CRY_JITTER = 0.15;
+function cryJitter(seed, amt){
+  const a = amt==null ? CRY_JITTER : amt;
+  return (hash3(seed|0, 20260816, 7) - 0.5) * 2 * a;
+}
+/* 鳴くまでの秒。マイナスにはせん */
+function cryDelayWith(delay, seed, amt){
+  return Math.max(0, (+delay||0) + cryJitter(seed, amt));
+}
+
+/* ---- 出現（召喚）の光 ----
+   ANIMS は変形しかできん（絵を描けん）けん、光の柱と着地の衝撃はここが描く。
+   ANIMS.appear と対で使う。u は appear の進行度（0〜1）。
+   cx=中心x / groundY=足元のy / w=見た目の幅
+   制作ツール・草むら演出・戦闘の3か所で同じ絵になるよう、ここ1か所に置く。 */
+function drawSummon(g, cx, groundY, w, u){
+  if(!(u>=0) || u>1) return;
+  const BEAM_END=0.50;                       // 着地したら光は消える
+  if(u<BEAM_END){
+    const k=1-u/BEAM_END;
+    g.save();
+    const bw=Math.max(4, w*0.44*k);
+    g.globalAlpha=0.26*k; g.fillStyle='#bfe6ff';
+    g.fillRect(Math.round(cx-bw/2), 0, Math.round(bw), Math.round(groundY));
+    const cw=Math.max(2, bw*0.36);
+    g.globalAlpha=0.80*k; g.fillStyle='#ffffff';
+    g.fillRect(Math.round(cx-cw/2), 0, Math.round(cw), Math.round(groundY));
+    g.restore();
+  }
+  if(u>=0.44){                               // 着地の衝撃：床に輪が広がる
+    const k=Math.min(1,(u-0.44)/0.46);
+    g.save();
+    g.globalAlpha=(1-k)*0.8; g.strokeStyle='#ffffff'; g.lineWidth=2;
+    g.beginPath(); g.ellipse(cx,groundY, w*0.20+k*w*0.80, (w*0.20+k*w*0.80)*0.30, 0,0,Math.PI*2); g.stroke();
+    g.globalAlpha=(1-k)*0.45; g.strokeStyle='#dff0ff'; g.lineWidth=1;
+    g.beginPath(); g.ellipse(cx,groundY, w*0.12+k*w*0.46, (w*0.12+k*w*0.46)*0.30, 0,0,Math.PI*2); g.stroke();
+    g.restore();
   }
 }
 
@@ -1519,6 +1651,24 @@ const ANIMS = {
     K({t:1,    sx:1.00,sy:1.00})
   ], img:[[0,'normal']]},
 
+  /* 往復横跳び：左右へ跳んで戻る。かく乱・回り込みの前ぶり向き。
+     dx は描画側で dir を掛けるけん、味方と敵で自然に鏡になる。 */
+  zigzag:{ dur:0.95, keys:[
+    K({t:0,    sx:1.00,sy:1.00,dx:0}),
+    K({t:0.07, sx:1.26,sy:0.78,dx:-5}),                        // 沈んで溜め
+    K({t:0.19, sx:1.32,sy:0.80,dx:-46,ghost:1,rot:-0.06}),     // 左へ跳ぶ
+    K({t:0.27, sx:0.94,sy:1.08,dx:-50,rot:0.03}),
+    K({t:0.33, sx:1.22,sy:0.84,dx:-44}),                       // 踏み替え
+    K({t:0.45, sx:1.32,sy:0.80,dx:44, ghost:1,rot:0.06}),      // 右へ跳ぶ
+    K({t:0.53, sx:0.94,sy:1.08,dx:48, rot:-0.03}),
+    K({t:0.59, sx:1.22,sy:0.84,dx:42}),
+    K({t:0.71, sx:1.30,sy:0.82,dx:-30,ghost:1,rot:-0.05}),     // もう一往復
+    K({t:0.79, sx:0.96,sy:1.06,dx:-32}),
+    K({t:0.90, sx:1.16,sy:0.88,dx:-6, ghost:1}),               // 戻る
+    K({t:0.96, sx:0.94,sy:1.06,dx:2}),
+    K({t:1,    sx:1.00,sy:1.00,dx:0})
+  ], img:[[0,'normal']]},
+
   /* その場でジャンプ（画面内に収まる） */
   jump:{ dur:1.45, keys:[
     K({t:0,    sx:1.00,sy:1.00,dy:0}),
@@ -1553,6 +1703,38 @@ const ANIMS = {
     K({t:0.98, sx:1.06,sy:0.96,dy:0}),
     K({t:1,    sx:1.00,sy:1.00,dy:0})
   ], img:[[0,'normal'],[0.05,'attack'],[0.90,'normal']]},
+
+  /* 出現（召喚）：光の中から降ってきて、ズシンと着地する。トレーナー戦の出方。
+     高さは -96px に抑えとる。上げすぎると画面外へ抜けて、何が来たか分からんくなる。
+     光そのものは絵やけん fx_core.js の drawSummon() が描く（ここは変形だけ）。
+     landAt = 着地した瞬間の t。着地モーション（mon.summon.land）はここから流れる。 */
+  appear:{ dur:1.15, landAt:0.46, keys:[
+    K({t:0,    sx:0.52,sy:1.60,dy:-96,alpha:0,  flash:1}),              // 光の中
+    K({t:0.12, sx:0.60,sy:1.50,dy:-90,alpha:1,  flash:1}),
+    K({t:0.28, sx:0.70,sy:1.36,dy:-56,alpha:1,  flash:0.55,ghost:1}),  // 落ちる
+    K({t:0.40, sx:0.78,sy:1.26,dy:-16,alpha:1,  flash:0.20,ghost:1}),
+    K({t:0.46, sx:1.48,sy:0.54,dy:7,  alpha:1,  flash:0.40}),          // ズシン
+    K({t:0.55, sx:1.28,sy:0.74,dy:3}),
+    K({t:0.66, sx:0.86,sy:1.16,dy:-11}),                               // 反動
+    K({t:0.77, sx:1.12,sy:0.92,dy:2}),
+    K({t:0.88, sx:0.95,sy:1.05,dy:-3}),
+    K({t:1,    sx:1.00,sy:1.00,dy:0})
+  ], img:[[0,'normal']]},
+
+  /* 出現（草むら）：光は出らん。草をかき分けて飛び出し、着地する。
+     野生の四皇モンはこっち。トレーナーが繰り出す appear とは出方が違う。 */
+  appearWild:{ dur:1.15, landAt:0.56, keys:[
+    K({t:0,    sx:1.34,sy:0.60,dy:26, alpha:0}),                       // 草の中で沈んどる
+    K({t:0.09, sx:1.26,sy:0.70,dy:20, alpha:0.4}),
+    K({t:0.20, sx:0.70,sy:1.34,dy:-38,alpha:1, ghost:1}),              // 飛び出す
+    K({t:0.32, sx:0.82,sy:1.20,dy:-58,alpha:1, ghost:1}),              // 頂点
+    K({t:0.44, sx:0.94,sy:1.06,dy:-36,alpha:1}),
+    K({t:0.56, sx:1.36,sy:0.64,dy:7}),                                 // 着地
+    K({t:0.64, sx:1.18,sy:0.84,dy:2}),
+    K({t:0.74, sx:0.88,sy:1.13,dy:-9}),
+    K({t:0.86, sx:1.09,sy:0.94,dy:1}),
+    K({t:1,    sx:1.00,sy:1.00,dy:0})
+  ], img:[[0,'normal']]},
 
   /* 力を溜める（脈打つ） */
   charge:{ dur:1.1, loop:true, keys:[
@@ -1626,6 +1808,11 @@ class Fighter {
     this.img={normal:{scale:1,dy:0},attack:{scale:1,dy:0},
               hurt:{scale:1,dy:0},back:{scale:1,dy:0}};
     this.anim='idle'; this.t=0; this.trail=[];
+    this.idleMotion=true;          // 四皇モンごとに待機モーションを切れる
+    this.summon={style:'trainer',cryDelay:0.5,land:[]};  // 出方・鳴くまで・着地のコマ割り
+    this.seqT=null; this.cryT=null;
+    this.durOv=null; this.pendMo=[];   // 技ごとの本体の動き（fx.motions）
+    this.cry=null;                 // {id,vol,rate,data} 出現1.0倍／戦闘不能0.7倍
   }
   /* --- ステータスから導かれる値。すべてここに集約する --- */
   get maxHP(){ return Math.round(40 + this.stats.hp*1.6); }          // 体力 → 最大HP
@@ -1634,38 +1821,100 @@ class Fighter {
   get castScale(){ return 0.70 + (100-this.stats.spd)/100*0.60; }    // 素早さ → 発生の速さ
   get shotScale(){ return 0.60 + this.stats.spd/100*0.90; }          // 素早さ → 弾速
   get flinchRate(){ return Math.max(0.10,Math.min(0.85,0.85-this.stats.def/100*0.75)); } // 防御 → ひるみ耐性
-  play(n){ this.anim=n; this.t=0; this.trail.length=0; }
+  play(n,dur){ this.anim=n; this.t=0; this.trail.length=0;
+    this.durOv=(+dur>0)?+dur:null; }
+  /* 技データの motions を、その瞬間ぶんだけ予約する */
+  scheduleMotions(sp,phase){
+    const ts=Math.max(0.05,Math.min(4,+((sp&&sp.timeScale))||1));
+    const list=(sp&&Array.isArray(sp.motions))?sp.motions:null;
+    if(!list||!list.length){
+      if(phase==='fire') this.play(sp&&sp.generator==='aura'?'charge':'attack');
+      return;
+    }
+    for(const m of list){
+      if((m.at||'fire')!==phase) continue;
+      const d=Math.max(0,+m.off||0);
+      if(d<=0) this.play(m.anim,(+m.dur||0.75)/ts);
+      else this.pendMo.push({t:d/ts,anim:m.anim,dur:(+m.dur||0.75)/ts});
+    }
+  }
+  get landTotal(){ return (this.summon.land||[]).reduce((a,s)=>a+(+s.dur||0),0); }
+  landStep(){
+    if(this.seqT==null) return null;
+    let acc=0;
+    for(const s of (this.summon.land||[])){ acc+=(+s.dur||0); if(this.seqT<acc) return s; }
+    return null;
+  }
   update(dt){
     const def=ANIMS[this.anim]; if(!def) return;
-    this.t+=dt/def.dur;
+    /* 体力が1/3以下やと待機の動きが落ちる（見た目だけ。戦闘計算には触れん） */
+    const k=(this.anim==='idle' && this.ratio<=1/3)?0.85:1;
+    if(this.pendMo.length){
+      for(const p of this.pendMo) p.t-=dt;
+      const due=this.pendMo.filter(p=>p.t<=0);
+      this.pendMo=this.pendMo.filter(p=>p.t>0);
+      for(const p of due) this.play(p.anim,p.dur);
+    }
+    const before=this.t;
+    const D=(this.durOv&&this.durOv>0)?this.durOv:def.dur;
+    this.t+=dt*k/D;
+    if(def.landAt!=null && before<def.landAt && this.t>=def.landAt && this.landTotal>0) this.seqT=0;
+    if(this.seqT!=null){ this.seqT+=dt; if(this.seqT>=this.landTotal) this.seqT=null; }
+    if(this.cryT!=null){ this.cryT-=dt; if(this.cryT<=0){ this.cryT=null; this.playCry(1.0); } }
     if(this.t>=1){
       if(def.loop) this.t%=1;
       else if(def.hold) this.t=1;
-      else { this.anim='idle'; this.t=0; }
+      else { this.anim='idle'; this.t=0; this.durOv=null; }
     }
   }
-  /* 背面画像：自分側は背中が見える。無ければ通常画像で代用する。
+  /* 出現させる。光の柱はトレーナー戦だけ。鳴き声は cryDelay 秒あと */
+  summonIn(){
+    this.play(this.summon.style==='wild'?'appearWild':'appear');
+    this.seqT=null;
+    /* ±0.15秒のゆらぎ。battleTime から決めるけん、同じ試合なら必ず同じ
+       ＝決定論は壊れん。battleRng は消費せん（戦闘の抽選に干渉させんため） */
+    const d=(this.summon.cryDelay!=null)?+this.summon.cryDelay:0.5;
+    this.cryT=cryDelayWith(d, Math.floor(battleTime*1000)+(this.side==='ally'?0:5077));
+  }
+  /* 背面画像：自分側は何をしとっても背中しか見えん。
+     同じ個体を、自分は背中から・相手は正面から見る。攻撃／被弾の写真は
+     「正面から見とる側」にだけ出る。ここを混ぜると自分側だけ攻撃の瞬間に
+     絵と倍率（img.attack）が入れ替わって、大きさがガクッと変わる。
      どのスロットの画像を使ったかも返す（画像ごとに大きさが違うため） */
   resolve(key){
-    if(this.useBack && this.imgs.back){
-      if(key==='normal') return {img:this.imgs.back, key:'back'};
-      if(this.imgs[key]) return {img:this.imgs[key], key};
-      return {img:this.imgs.back, key:'back'};
-    }
+    if(this.useBack)
+      return {img:this.imgs.back||this.imgs.normal||this.ph.back||this.ph.normal, key:'back'};
     if(this.imgs[key]) return {img:this.imgs[key], key};
     if(this.ph[key])   return {img:this.ph[key],   key};
     return {img:this.imgs.normal||this.ph.normal, key:'normal'};
   }
   pick(key){ return this.resolve(key).img; }
+  playCry(rateMul){
+    const c=this.cry; if(!c||!c.id) return;
+    SND.play(c.id,{vol:c.vol==null?1:c.vol,rate:(c.rate==null?1:c.rate)*(rateMul||1)});
+  }
   draw(g){
     const def=ANIMS[this.anim]||ANIMS.idle;
-    const s=sampleAnim(def,Math.min(1,this.t));
-    const rv=this.resolve(s.img); const img=rv.img; if(!img) return;
+    const frozen=(this.anim==='idle' && this.idleMotion===false);
+    const s=sampleAnim(def, frozen?0:Math.min(1,this.t));
+    const lstep=this.landStep();
+    const rv=lstep
+      ? {img:this.imgs[lstep.img]||this.ph[lstep.img]||this.imgs.normal||this.ph.normal,
+         key:lstep.img||'normal'}
+      : this.resolve(s.img);
+    const img=rv.img; if(!img) return;
     const cfg=this.img[rv.key]||{scale:1,dy:0};
     const sc=this.scale*(cfg.scale||1);
     const w=this.L.size*sc, h=this.L.size*sc;
-    const px=this.L.cx + s.dx*this.dir;
-    const py=this.L.platY + 6 + s.dy + this.dy + (cfg.dy||0);
+    /* 着地モーションの震えは本体だけ。背景は技の画面演出が揺らす */
+    let vx=0, vy=0;
+    if(lstep && (+lstep.shake||0)>0){
+      const amp=+lstep.shake, tk=Math.floor(battleTime*46);
+      vx=Math.round((hash3(tk,17,1)-0.5)*2*amp);
+      vy=Math.round((hash3(tk,17,2)-0.5)*2*amp*0.6);
+    }
+    const px=this.L.cx + s.dx*this.dir + vx;
+    const py=this.L.platY + 6 + s.dy + this.dy + (cfg.dy||0) + vy;
 
     // 残像
     if(s.ghost>0.01){
@@ -1679,6 +1928,8 @@ class Fighter {
       }
     } else if(this.trail.length) this.trail.length=0;
 
+    // 出現（召喚）の光。ANIMS.appear と対
+    if(this.anim==='appear') drawSummon(g,this.L.cx,this.L.platY-3,w,Math.min(1,this.t));
     // 影（跳ぶと小さく薄く）
     const air=Math.min(1,Math.max(0,-s.dy)/90);
     g.save(); g.globalAlpha=0.24*(1-air)*(1-air*0.2);
@@ -1962,7 +2213,7 @@ function switchTo(side,idx){
   if(f===cur) return false;
   if(cur && !cur.dead){ cur.charging=null; cur.play('idle'); }
   if(side==='ally') ally=f; else enemy=f;
-  f.charging=null; f.actionTimer=0.7; f.play('jump');
+  f.charging=null; f.actionTimer=0.7; f.summonIn();
   playSys('ui_swap');
   box.play(f.name+'　いけ！');
   AILog.event(side, '交代 → '+f.name+'（コスト'+f.cost+'）');
@@ -2357,10 +2608,29 @@ function pickMove(f,foe){
   return cands[pick].move;
 }
 
+/* 演出素材（fx.parts）の置き場所。技データだけで位置と時間が決まる */
+function fxPoints(f,foe,m){
+  return { from:muzzle(f),
+           to:(m.fx.generator==='aura'?target(f):target(foe)),
+           center:{x:192,y:104} };
+}
+/* 素材は当たり判定を持たん。相殺も回避判定も通さん */
+function pushSub(list,f,name){
+  for(const s2 of list){
+    s2.forSide='none'; s2.owner=f; s2.launchAt=battleTime;
+    s2.powerMul=1; s2.moveName=name; s2.clashed=true; s2.dodgeChecked=true;
+    shots.push(s2);
+  }
+}
+
 function startAttack(f,foe,m){
-  f.play(m.fx.generator==='aura'?'charge':'attack');
+  f.pendMo.length=0;
+  f.scheduleMotions(m.fx,'cast');
+  if(!(m.fx.motions&&m.fx.motions.length))
+    f.play(m.fx.generator==='aura'?'charge':'attack');   // 何も決めとらん技は今までどおり
   f.charging={ move:m, t:m.cast*f.castScale };
   playMovePhase(m.id,'cast',SPEED.battle);
+  pushSub(spawnSubFX(m.fx,'cast',fxPoints(f,foe,m)),f,m.name);
   box.play(f.name+'の　'+m.name+'！');
 }
 
@@ -2374,15 +2644,14 @@ function launch(f,foe,m){
     ? {...m.fx, travel:{...m.fx.travel, speed:Math.round(m.fx.travel.speed*f.shotScale)}}
     : m.fx;
   playMovePhase(m.id,'fire',SPEED.battle);
+  f.scheduleMotions(m.fx,'fire');
+  const pts=fxPoints(f,foe,m);
+  pushSub(spawnSubFX(m.fx,'fire',pts),f,m.name);
   const sh=spawnFX(spec,from,to,builtOf(m.fx),()=>{
     if(support){ box.play(f.name+'の　きあいが　たかまった！'); return; }
     playMovePhase(m.id,'impact',SPEED.battle);
-    if(m.fx.shatter){
-      const sfx2=spawnFX(m.fx.shatter,to,to,{},null);
-      sfx2.forSide='none'; sfx2.owner=f; sfx2.launchAt=battleTime;
-      sfx2.powerMul=1; sfx2.moveName=m.name; sfx2.clashed=true; sfx2.dodgeChecked=true;
-      shots.push(sfx2);
-    }
+    f.scheduleMotions(m.fx,'impact');
+    pushSub(spawnSubFX(m.fx,'impact',pts),f,m.name);   /* 亜空切断のガラス割れ等 */
     applyHit(f,foe,m,sh.powerMul);
   });
   sh.forSide = support ? f.side : foe.side;
@@ -2409,6 +2678,7 @@ function applyHit(atk,def,move,mul){
   }
   def.play(def.hp<=0?'faint':(flinched?'knockback':'hurt'));
   playSys(def.hp<=0?'faint':(flinched?'flinch':'hurt'));
+  if(def.hp<=0) def.playCry(0.7);            // 戦闘不能は鳴き声0.7倍（計画23章）
   AILog.event(def.side, def.name+'に '+dmg.toFixed(1)+' ダメージ（残り '+Math.max(0,def.hp).toFixed(1)+'）'
     +(flinched?' ／ ひるんで技をキャンセル':''));
   if(flinched && def.hp>0) schedule(0.45,()=>box.play(def.name+'は　ひるんだ！'));
@@ -2649,6 +2919,9 @@ function resetBattle(seed){
   for(const f of [...partyA,...partyB]){
     f.dead=false; f.charging=null; f.cd={}; f.mi=0;
     f.hp=f.maxHP; f.actionTimer=0.6; f.dodgeUntil=-1; f.lastMove=null;
+    /* 演出まわりの状態も必ず消す。消し忘れると前の試合を引きずって
+       決定論チェックが落ちる（`f.lastMove` で実際にやらかしとる） */
+    f.seqT=null; f.cryT=null; f.durOv=null; f.pendMo.length=0;
     f.t=0; f.trail.length=0; f.play('idle');
   }
   ally=partyA[0]; enemy=partyB[0];

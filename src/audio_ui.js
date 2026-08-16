@@ -37,6 +37,8 @@ const AUDIO_UI_CSS = `
 .aui-item{display:flex;align-items:center;gap:6px;background:#141922;border:1px solid #2c3442;
   border-radius:4px;padding:9px;margin-bottom:5px;}
 .aui-item.on{border-color:#f0a020;background:#1d1a12;}
+.aui-item.dead{opacity:0.5;}
+.aui-item.dead button{background:#2a2a2a;border-color:#3a3a3a;color:#777;}
 .aui-item .t{flex:1;min-width:0;font-size:11px;color:#dfe6f0;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap;}
 .aui-item .s{font-size:9px;color:#66707f;}
@@ -78,12 +80,17 @@ const SoundPicker = {
       list.innerHTML='';
       for(const id of SND.list(cur)){
         const m=SND.meta(id);
+        /* デコードに失敗した音は選ばせん（選べても鳴らんけん、ただの罠になる） */
+        const dead=SND.ready && !SND.buf[id];
         const d=document.createElement('div');
-        d.className='aui-item'+(id===currentId?' on':'');
-        d.innerHTML='<div class="t">'+m.label+'<div class="s">'+id+'</div></div>'+
-                    '<button>えらぶ</button>';
+        d.className='aui-item'+(id===currentId?' on':'')+(dead?' dead':'');
+        d.innerHTML='<div class="t">'+m.label+
+                    (dead?' <span style="color:#e07070">（この端末では鳴らん）</span>':'')+
+                    '<div class="s">'+id+'</div></div>'+
+                    '<button'+(dead?' disabled':'')+'>えらぶ</button>';
         d.onclick=e=>{
-          if(e.target.tagName==='BUTTON'){ onPick(id); document.body.removeChild(ov); return; }
+          if(dead) return;
+          if(e.target.tagName==='BUTTON'){ onPick(id); close(); return; }
           SND.play(id);
         };
         list.appendChild(d);
@@ -98,9 +105,25 @@ const SoundPicker = {
         cats.appendChild(b);
       }
     }
-    ov.querySelector('[data-a="none"]').onclick=()=>{ onPick(null); document.body.removeChild(ov); };
-    ov.querySelector('[data-a="close"]').onclick=()=>document.body.removeChild(ov);
+    /* 79音のデコードは1〜3秒かかる。その間タップしても鳴らんけん、状態を出す */
+    let poll=null;
+    const close=()=>{ if(poll) clearInterval(poll); poll=null;
+                      if(ov.parentNode) document.body.removeChild(ov); };
+    ov.querySelector('[data-a="none"]').onclick=()=>{ onPick(null); close(); };
+    ov.querySelector('[data-a="close"]').onclick=close;
     drawCats(); drawList();
+    if(!SND.ready){
+      const note=document.createElement('div'); note.className='aui-empty';
+      note.style.cssText='color:#f0a020;padding:4px 2px 8px;';
+      note.textContent='音を読み込みよる… もう少し待って';
+      ov.insertBefore(note, ov.querySelector('.aui-list'));
+      poll=setInterval(()=>{
+        if(!SND.ready) return;
+        clearInterval(poll); poll=null;
+        if(note.parentNode) note.parentNode.removeChild(note);
+        drawList();                       // 鳴らん音に印を付け直す
+      },300);
+    }
   }
 };
 

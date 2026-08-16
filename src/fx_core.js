@@ -323,6 +323,9 @@ class BaseFX{
     Object.assign(this,{sp,f:from,t:to,b:built,onHit});
     this.time=0; this.state='run'; this.hit=false; this.if_=-1; this.parts=[];
     this.rng=new RNG(sp.seed+77);
+    /* 技全体の速さ。技データの値やけん、同じ技なら誰が撃っても同じ速さになる
+       （＝決定論は壊れん）。各 update の頭で dt に掛ける。 */
+    this.ts=Math.max(0.05,Math.min(4,+sp.timeScale||1));
     SCREEN.trigger(sp.screen,'cast');
   }
   doHit(){ if(!this.hit){ this.hit=true; this.if_=0;
@@ -353,6 +356,7 @@ class ProjectileFX extends BaseFX{
     return {x:this.f.x+(this.t.x-this.f.x)*t,
             y:this.f.y+(this.t.y-this.f.y)*t+Math.sin(Math.min(1,t)*Math.PI)*this.sp.travel.arc}; }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     if(!this.hit){
       this.p+=dt/this.dur;
@@ -407,6 +411,7 @@ class BeamFX extends BaseFX{
   endPoint(){ const e=this.extent();
     return {x:this.f.x+(this.t.x-this.f.x)*e, y:this.f.y+(this.t.y-this.f.y)*e}; }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     const s=this.sp;
     if(this.time>=s.charge+s.fire && !this.blocked) this.doHit();
@@ -451,6 +456,7 @@ class BeamFX extends BaseFX{
 class SlashFX extends BaseFX{
   constructor(...a){ super(...a); this.n=0; }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     const s=this.sp, per=s.interval;
     this.n=Math.min(s.count,Math.floor(this.time/per)+1);
@@ -509,6 +515,7 @@ class LightningFX extends BaseFX{
     }
   }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     const tk=Math.floor(this.time*16);
     if(tk!==this.tick){ this.tick=tk; this.gen(tk); }
@@ -533,6 +540,7 @@ class LightningFX extends BaseFX{
 /* ---- aura：強化・回復・状態変化。輪が立ち昇る ---- */
 class AuraFX extends BaseFX{
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     const s=this.sp;
     this.spawn=(this.spawn||0)+dt;
@@ -621,6 +629,7 @@ class ShatterFX extends BaseFX{
     }
   }
   update(dt){
+    dt*=this.ts;                 // 技全体の速さ（sp.timeScale）
     this.stepCommon(dt);
     if(this.time>=0.06) this.doHit();
     if(this.time>=this.sp.duration) this.state='dead';
@@ -686,6 +695,129 @@ function spawnFX(sp,from,to,built,onHit){
     case 'aura':      return new AuraFX(sp,from,to,built,onHit);
     case 'shatter':   return new ShatterFX(sp,from,to,built,onHit);
     default:          return new ProjectileFX(sp,from,to,built,onHit);
+  }
+}
+
+/* =========================================================
+   演出素材（parts）
+   技は「本体ひとつ」やのうて、素材の集まりとして組める。
+   素材ごとに 種類・基準・位置・タイミング を持つ：
+
+     at     'cast' 構え ／ 'fire' 発射 ／ 'impact' 着弾
+     off    その瞬間から何秒あと
+     anchor 'from' 撃った人 ／ 'to' 当たった場所 ／ 'center' 画面の中央
+     dx,dy  基準からのずらし（px）
+
+   **遅延に setTimeout を使わん。** 固定タイムステップの dt で数える。
+   使うと戦闘の決定論が壊れる（掟1・2）。
+   **技ラボ・制作ツール・戦闘は spawnSubFX() だけを使うこと。**
+   呼ぶ側それぞれに書いたら「亜空切断の割れが戦闘にだけ出る」が実際に起きた。
+   ========================================================= */
+
+/* 出るまで待つだけの入れ物。時間が来てはじめて中身を作る（＝画面演出も遅れて出る） */
+class DelayFX{
+  constructor(delay, make, sp){
+    this.delay=delay; this.make=make; this.sp=sp;
+    this.inner=null; this.state='run'; this.hit=false;
+  }
+  update(dt){
+    if(!this.inner){
+      this.delay-=dt;
+      if(this.delay>0) return;
+      this.inner=this.make();
+    }
+    this.inner.update(dt);
+    this.state=this.inner.state;
+    this.hit=this.inner.hit;
+  }
+  draw(g){ if(this.inner) this.inner.draw(g); }
+}
+
+/* 素材の焼いたコマは使い回す。編集中に作り替えたら forgetPart() で捨てる */
+const PART_BUILT = new WeakMap();
+function builtPart(sp){
+  let b=PART_BUILT.get(sp);
+  if(!b){ b=buildEffect(sp); PART_BUILT.set(sp,b); }
+  return b;
+}
+function forgetPart(sp){ if(sp) PART_BUILT.delete(sp); }
+
+const TRAVELS = { projectile:1, beam:1 };     // 飛んでいく種類は行き先が要る
+function partPoints(p, pts){
+  const a=p.anchor||'to';
+  const base = a==='from' ? pts.from : a==='center' ? (pts.center||pts.to) : pts.to;
+  const from = { x:(base.x||0)+(+p.dx||0), y:(base.y||0)+(+p.dy||0) };
+  if(!TRAVELS[p.generator]) return {from, to:from};
+  /* 飛ぶ素材は「基準の反対側」へ向かう。同じ点やと距離0で計算が壊れる */
+  const other = a==='from' ? pts.to : pts.from;
+  let to = {x:other.x, y:other.y};
+  if(Math.hypot(to.x-from.x,to.y-from.y)<1) to={x:from.x+1,y:from.y};
+  return {from, to};
+}
+/* ts = 親の技の速さ。素材の遅れも中身の速さも一緒に伸び縮みさせる */
+function spawnPart(p, pts, ts){
+  const k=Math.max(0.05,Math.min(4,+ts||1));
+  const {from,to}=partPoints(p,pts);
+  const make=()=>{ const o=spawnFX(p, from, to, builtPart(p), null); o.ts*=k; return o; };
+  const d=Math.max(0,+p.off||0)/k;
+  return d>0 ? new DelayFX(d, make, p) : make();
+}
+/* phase の瞬間に出るべき素材を作って返す。呼ぶ側は自分の描画リストへ push する。
+   pts = {from:撃った人, to:当たった場所, center:画面の中央} */
+function spawnSubFX(sp, phase, pts){
+  const out=[];
+  if(!sp||!pts) return out;
+  const ts=+sp.timeScale||1;
+  /* 旧形式 fx.shatter ＝「着弾と同時・当たった場所」の素材1つと同じ扱い */
+  if(sp.shatter && phase==='impact')
+    out.push(spawnPart(Object.assign({},sp.shatter,{anchor:'to',dx:0,dy:0,off:0}), pts, ts));
+  for(const p of (sp.parts||[]))
+    if(p && (p.at||'impact')===phase) out.push(spawnPart(p, pts, ts));
+  return out;
+}
+
+/* ---- 鳴き声のゆらぎ ----
+   毎回きっちり同じ秒数で鳴くと機械っぽい。±CRY_JITTER 秒だけ散らす。
+   **戦闘で Math.random() は使えん**（掟1）けん、種から決める。
+   同じ種なら必ず同じズレになるけん、決定論は壊れん。
+   戦闘は battleTime から、制作ツールは押した時刻から種を作る。 */
+const CRY_JITTER = 0.15;
+function cryJitter(seed, amt){
+  const a = amt==null ? CRY_JITTER : amt;
+  return (hash3(seed|0, 20260816, 7) - 0.5) * 2 * a;
+}
+/* 鳴くまでの秒。マイナスにはせん */
+function cryDelayWith(delay, seed, amt){
+  return Math.max(0, (+delay||0) + cryJitter(seed, amt));
+}
+
+/* ---- 出現（召喚）の光 ----
+   ANIMS は変形しかできん（絵を描けん）けん、光の柱と着地の衝撃はここが描く。
+   ANIMS.appear と対で使う。u は appear の進行度（0〜1）。
+   cx=中心x / groundY=足元のy / w=見た目の幅
+   制作ツール・草むら演出・戦闘の3か所で同じ絵になるよう、ここ1か所に置く。 */
+function drawSummon(g, cx, groundY, w, u){
+  if(!(u>=0) || u>1) return;
+  const BEAM_END=0.50;                       // 着地したら光は消える
+  if(u<BEAM_END){
+    const k=1-u/BEAM_END;
+    g.save();
+    const bw=Math.max(4, w*0.44*k);
+    g.globalAlpha=0.26*k; g.fillStyle='#bfe6ff';
+    g.fillRect(Math.round(cx-bw/2), 0, Math.round(bw), Math.round(groundY));
+    const cw=Math.max(2, bw*0.36);
+    g.globalAlpha=0.80*k; g.fillStyle='#ffffff';
+    g.fillRect(Math.round(cx-cw/2), 0, Math.round(cw), Math.round(groundY));
+    g.restore();
+  }
+  if(u>=0.44){                               // 着地の衝撃：床に輪が広がる
+    const k=Math.min(1,(u-0.44)/0.46);
+    g.save();
+    g.globalAlpha=(1-k)*0.8; g.strokeStyle='#ffffff'; g.lineWidth=2;
+    g.beginPath(); g.ellipse(cx,groundY, w*0.20+k*w*0.80, (w*0.20+k*w*0.80)*0.30, 0,0,Math.PI*2); g.stroke();
+    g.globalAlpha=(1-k)*0.45; g.strokeStyle='#dff0ff'; g.lineWidth=1;
+    g.beginPath(); g.ellipse(cx,groundY, w*0.12+k*w*0.46, (w*0.12+k*w*0.46)*0.30, 0,0,Math.PI*2); g.stroke();
+    g.restore();
   }
 }
 

@@ -21,7 +21,7 @@ node build.js    # src/ → dist/
 | `dist/shioumon_field_test.html` | **戦闘テスト**。AI戦闘・相殺・回避・クォーター制・命令・交代 |
 | `dist/shioumon_effect_lab.html` | **技ラボ**。技エフェクトをJSONで作って即プレビュー |
 | `dist/shioumon_audio_lab.html` | **音ラボ**。どの音をどの瞬間に鳴らすか決める |
-| `dist/shioumon_creator.html` | **四皇モン制作ツール**。性能・技・実機での画像サイズ |
+| `dist/shioumon_creator.html` | **四皇モン制作ツール**。1画面で1体まるごと。写真・影・鳴き声・性能・技クリエーター・草むらへの放流 |
 
 スマホ片手で触る前提のUI。内部解像度 384×288 をニアレストネイバーで拡大しとる。
 
@@ -44,6 +44,7 @@ node build.js    # src/ → dist/
 | `CLAUDE.md` | **AI向けの作業指針**。設計の掟と勘どころ。作業前に必読 |
 | `HANDOFF.md` | 引き継ぎ書。ここまでの経緯・次にやること・過去に踏んだ地雷 |
 | `docs/開発計画_v6.md` | **正典**。全20フェーズの仕様と26個の禁止事項 |
+| `docs/技ネタ_タイプ別.md` | **技エフェクトのネタ帳**。18タイプ×10個を道具の言葉に翻訳したもの |
 | `docs/SFX_MAP.md` | 焼き込み済み効果音79音の一覧 |
 | `docs/CREDITS.md` | 素材クレジット（全部 CC0） |
 
@@ -55,6 +56,8 @@ node build.js    # src/ → dist/
 node build.js                 # ビルド
 node tools/verify_audio.js    # 4画面のロード・音デコード数・JSエラー
 node tools/verify_ui.js       # UI操作 ＋ 決定論チェック
+node tools/verify_creator.js  # 制作ツールを実際に触る（影・写真・技・鳴き声・放流・初期化）
+node tools/serve.js           # dist/ を localhost:8765 で配る（file:// が効かんとき）
 python3 tools/gen_sfx.py      # 効果音バンクの再生成（assets/ が要る）
 ```
 

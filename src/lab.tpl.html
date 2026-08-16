@@ -23,8 +23,6 @@
   button:active{background:var(--accent);color:#12151c;}
   button.on{background:var(--accent);color:#12151c;border-color:var(--accent);}
   button.go{background:#1d4a63;border-color:#2c6d92;color:#cdeaf8;}
-  .gens{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:8px;}
-  .gens button{padding:10px 2px;font-size:10px;}
   .sec{background:var(--panel);border:1px solid var(--line);border-radius:4px;margin-bottom:8px;}
   .sec>h2{font-size:12px;margin:0;color:var(--accent);padding:10px 12px;cursor:pointer;
     display:flex;justify-content:space-between;letter-spacing:1px;}
@@ -57,11 +55,19 @@
 
 <div id="stage"><canvas id="cv" width="384" height="288"></canvas></div>
 
-<div class="gens" id="gens"></div>
+<div id="gens"></div><!-- 中身は movelab.js が .ml-gens で並べる -->
+
 <div class="bar">
   <button id="mFire" class="go">▶ 発射</button>
   <button id="mAuto">自動連射</button>
   <button id="mLoop">拡大再生</button>
+  <select id="fxSpeedSel" title="エフェクトの再生速度"
+    style="flex:0 0 84px;background:#0c0f15;border:1px solid var(--line);color:var(--accent);
+    border-radius:3px;padding:9px 4px;font-size:11px;font-family:inherit;min-width:0;">
+    <option value="0.15">×0.15</option><option value="0.25">×0.25</option>
+    <option value="0.5">×0.5</option><option value="0.85" selected>等速</option>
+    <option value="2">×2</option><option value="4">×4</option>
+  </select>
 </div>
 
 <div class="sec"><h2><span>■ 生成フレーム（原寸）</span><span>▾</span></h2><div>
@@ -74,6 +80,7 @@
 <div class="sec"><h2><span>■ パラメータ</span><span>▾</span></h2><div id="cMain"></div></div>
 <div class="sec"><h2><span>■ パレット</span><span>▾</span></h2><div id="cPal"></div></div>
 <div class="sec"><h2><span>■ 着弾</span><span>▾</span></h2><div id="cImpact"></div></div>
+<div class="sec"><h2><span>■ 演出素材（重ねるエフェクト）</span><span>▾</span></h2><div id="cSub"></div></div>
 <div class="sec"><h2><span>■ 画面演出（背景変化）</span><span>▾</span></h2><div id="cScreen"></div></div>
 
 <div class="sec"><h2><span>■ 音（好きなタイミングで鳴らす）</span><span>▾</span></h2><div>
@@ -82,6 +89,12 @@
   <div id="sndTL"></div>
   <div class="hint">ここで置いた音は<b>音ラボと共通</b>。▶発射を押すと、構え→発射→着弾の実タイミングで鳴る。<br>
   「ずらす」で発射の何秒あとに重ねるかまで決められる。</div>
+</div></div>
+
+<div class="sec"><h2><span>■ 技の保存（制作ツールと共通）</span><span>▾</span></h2><div>
+  <div id="cLib"></div>
+  <div class="hint">ここで保存した技は<b>四皇モン制作ツールの技クリエーターにも出る</b>。<br>
+  技ラボからの保存には戦闘の数値（威力・溜め・CD）が入らんけん、制作ツール側で読んだら数値は既定値になる。</div>
 </div></div>
 
 <div class="sec closed"><h2><span>■ JSON（技データ）</span><span>▾</span></h2><div>
@@ -101,54 +114,15 @@
 /*__SFX_BANK__*/
 /*__MOVES__*/
 /*__AUDIO_UI__*/
+/*__MOVELAB__*/
 
 /* =========================================================
    技ラボ本体
+   UI部品（LABEL / SCHEMA / スライダ類）は movelab.js に出しとる。
+   四皇モン制作ツールの技クリエーターと同じ部品を使う。
    ========================================================= */
-const LABEL={
-  shape:'形',size:'大きさ',frames:'コマ数',wobble:'歪み',core:'コア',spin:'回転',specks:'火の粉',
-  'trail.type':'尾の種類','trail.length':'尾の長さ','trail.rate':'尾の密度','trail.size':'粒の大きさ',
-  'travel.speed':'速度','travel.arc':'弧','travel.spin':'自転',
-  width:'太さ',segments:'分割',waver:'ゆらぎ',charge:'溜め',fire:'伸び',sustain:'持続',fade:'消え',
-  arcDeg:'弧の角度',thickness:'太さ',taper:'端の尖り',hollow:'芯の空洞',jitter:'縁のギザつき',
-  squash:'縦の潰し',count:'連撃',interval:'間隔',spread:'ばらつき',
-  jag:'ギザギザ',branches:'枝分かれ',duration:'継続',fromSky:'空から落とす',
-  rings:'輪の数',rise:'上昇',cracks:'亀裂の数',drift:'飛散速度',spin:'回転',dust:'ガラス粉',
-  'impact.size':'大きさ','impact.frames':'コマ数','impact.shards':'破片',
-  strength:'強さ',dur:'長さ',times:'点滅回数',power:'揺れ幅',color:'色',at:'タイミング',dir:'向き'
-};
-const SCREEN_JP={flash:'閃光',blink:'背景点滅',tint:'背景に色',darken:'暗転',shake:'画面揺れ',lines:'走査線'};
-const SCHEMA={
-  projectile:[['shape','sel',['orb','shard','ring','bolt']],['size','rng',6,96,1,'px'],
-    ['frames','rng',1,12,1,'コマ'],['wobble','rng',0,0.5,0.01],['core','rng',0.1,1.2,0.05],
-    ['spin','rng',0,1,0.05],['specks','rng',0,14,1],
-    ['trail.type','sel',['none','flame','smoke','spark']],['trail.length','rng',2,40,1],
-    ['trail.rate','rng',0.1,3,0.1],['trail.size','rng',0.2,2,0.1],
-    ['travel.speed','rng',40,700,10,'px/s'],['travel.arc','rng',-80,80,1,'px'],
-    ['travel.spin','rng',0,12,0.5]],
-  beam:[['width','rng',3,72,1,'px'],['segments','rng',3,24,1],['waver','rng',0,8,0.2],
-    ['charge','rng',0,1.2,0.05,'秒'],['fire','rng',0.03,0.6,0.01,'秒'],
-    ['sustain','rng',0,1.5,0.05,'秒'],['fade','rng',0.05,1,0.05,'秒']],
-  slash:[['size','rng',24,320,4,'px'],['arcDeg','rng',40,340,5,'°'],['thickness','rng',2,40,1],
-    ['taper','rng',0.3,3,0.1],['hollow','rng',0,0.85,0.05],['jitter','rng',0,0.8,0.02],
-    ['squash','rng',0.4,1.6,0.05],['specks','rng',0,30,1],
-    ['count','rng',1,6,1,'連'],['interval','rng',0.05,0.5,0.01,'秒'],['spread','rng',0,60,2]],
-  lightning:[['width','rng',1,26,1],['jag','rng',0,1.2,0.05],['branches','rng',0,18,1],
-    ['segments','rng',2,7,1],['duration','rng',0.15,1.5,0.05,'秒'],['fromSky','bool']],
-  aura:[['size','rng',30,320,4,'px'],['rings','rng',1,14,1],['rise','rng',10,200,2],
-    ['duration','rng',0.4,3,0.1,'秒']],
-  shatter:[['size','rng',60,360,4,'px'],['cracks','rng',3,40,1,'本'],['jag','rng',0,1.2,0.05],
-    ['drift','rng',0,220,5],['spin','rng',0,14,0.5],['dust','rng',0,120,2,'粒'],
-    ['duration','rng',0.4,2.5,0.05,'秒']]
-};
-const GEN_JP={projectile:'飛び道具',beam:'光線',slash:'斬撃',lightning:'雷',aura:'オーラ',shatter:'空間割れ'};
-
-const get=(o,p)=>p.split('.').reduce((a,k)=>a&&a[k],o);
-const set=(o,p,v)=>{ const ks=p.split('.'); let t=o;
-  for(let i=0;i<ks.length-1;i++) t=t[ks[i]]; t[ks[ks.length-1]]=v; };
-
-let palKey='炎';
 let spec=makeSpec('projectile',918273,'灼熱弾','炎');
+spec.palKey='炎';
 let built=buildEffect(spec);
 
 /* ---- プレビュー画面 ---- */
@@ -192,20 +166,28 @@ const fieldTmp=mkCv(W,216), ftx=fieldTmp.getContext('2d');
 ftx.imageSmoothingEnabled=false;
 let fxs=[], mode='fire', loopT=0, autoT=0;
 let sndOn=false, sndMove='akuu';
+let fxSpeed=0.85;
 function fire(){
   const self=spec.generator==='aura';
+  const F=self?SELF:FROM, T=self?SELF:TO;
+  const pts={from:F, to:T, center:{x:192,y:104}};
+  for(const s2 of spawnSubFX(spec,'cast',pts)) fxs.push(s2);   /* 演出素材。実戦と同じ道を通す */
   const go=()=>{
     if(sndOn) playMovePhase(sndMove,'fire',1);
-    fxs.push(spawnFX(spec, self?SELF:FROM, self?SELF:TO, built,
-      sndOn ? (()=>playMovePhase(sndMove,'impact',1)) : null));
+    for(const s2 of spawnSubFX(spec,'fire',pts)) fxs.push(s2);
+    fxs.push(spawnFX(spec, F, T, built, ()=>{
+      if(sndOn) playMovePhase(sndMove,'impact',1);
+      for(const s2 of spawnSubFX(spec,'impact',pts)) fxs.push(s2);
+    }));
   };
   if(!sndOn){ go(); return; }
   SND.resume();
   playMovePhase(sndMove,'cast',1);
   const cast=(MOVES[sndMove]||{}).cast||0;
-  if(cast>0.01) setTimeout(go, cast*1000); else go();
+  if(cast>0.01) setTimeout(go, cast*1000/fxSpeed); else go();
 }
 function frame(dt){
+  dt*=fxSpeed;            // スロー／倍速はここ1か所
   SCREEN.update(dt);
   ftx.clearRect(0,0,W,216);
   ftx.drawImage(bgCv,0,0);
@@ -241,7 +223,7 @@ function frame(dt){
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillText(spec.name,14,228);
   ctx.fillStyle='#8b97a8'; ctx.font='11px "DotGothic16",monospace';
-  ctx.fillText(`${spec.generator} / seed ${spec.seed} / ${palKey}`,14,250);
+  ctx.fillText(`${spec.generator} / seed ${spec.seed} / ${spec.palKey||'—'}`,14,250);
   ctx.fillStyle='#f0a020';
   ctx.fillText(mode==='loop'?'拡大再生':(mode==='auto'?'自動連射':'発射モード'),14,266);
 }
@@ -254,168 +236,24 @@ let last=performance.now();
 
 /* ---- コントロール ---- */
 const $=id=>document.getElementById(id);
-function rebuild(){ built=buildEffect(spec); drawFrames(); $('json').value=JSON.stringify(spec,null,2); }
+function rebuild(){ built=buildEffect(spec); mlFrames($('frames'),built);
+  $('json').value=JSON.stringify(spec,null,2); }
 
-function ctlRange(host,path,min,max,step,unit){
-  const d=document.createElement('div'); d.className='ctl';
-  d.innerHTML=`<label>${LABEL[path]||path}</label><input type=range min=${min} max=${max} step=${step}><span class=v></span>`;
-  const r=d.querySelector('input'), v=d.querySelector('.v');
-  const show=()=>{ const g0=get(spec,path); r.value=g0;
-    v.textContent=(step<1?(+g0).toFixed(2):g0)+(unit||''); };
-  r.oninput=()=>{ set(spec,path,step<1?parseFloat(r.value):parseInt(r.value,10)); show(); rebuild(); };
-  host.appendChild(d); show();
-}
-function ctlSel(host,path,opts){
-  const d=document.createElement('div'); d.className='ctl';
-  d.innerHTML=`<label>${LABEL[path]||path}</label><select>${opts.map(o=>`<option>${o}</option>`).join('')}</select>`;
-  const s=d.querySelector('select'); s.value=get(spec,path);
-  s.onchange=()=>{ set(spec,path,s.value); rebuild(); };
-  host.appendChild(d);
-}
-function ctlBool(host,path){
-  const d=document.createElement('div'); d.className='ctl';
-  d.innerHTML=`<label>${LABEL[path]||path}</label><button style="flex:1"></button>`;
-  const b=d.querySelector('button');
-  const show=()=>{ b.textContent=get(spec,path)?'ON':'OFF'; b.classList.toggle('on',!!get(spec,path)); };
-  b.onclick=()=>{ set(spec,path,!get(spec,path)); show(); rebuild(); };
-  host.appendChild(d); show();
-}
-function ctlText(host,label,g0,s0){
-  const d=document.createElement('div'); d.className='ctl';
-  d.innerHTML=`<label>${label}</label><input type=text>`;
-  const t=d.querySelector('input'); t.value=g0();
-  t.oninput=()=>{ s0(t.value); rebuild(); };
-  host.appendChild(d);
-}
-
+/* movelab.js の部品へ渡す窓口 */
+const labCtx={
+  spec  :()=>spec,
+  set   :sp=>{ spec=sp; },
+  change:()=>rebuild(),
+  rebuild:()=>buildControls()
+};
 function buildControls(){
-  // generator 切替
-  const gs=$('gens'); gs.innerHTML='';
-  Object.keys(SCHEMA).forEach(k=>{
-    const b=document.createElement('button');
-    b.textContent=GEN_JP[k]; b.classList.toggle('on',spec.generator===k);
-    b.onclick=()=>{ const nm=spec.name, sd=spec.seed;
-      spec=makeSpec(k,sd,GEN_JP[k]==='飛び道具'?nm:GEN_JP[k]+'テスト',palKey);
-      buildControls(); rebuild(); };
-    gs.appendChild(b);
-  });
-
-  const b=$('cBase'); b.innerHTML='';
-  ctlText(b,'技名',()=>spec.name,v=>spec.name=v);
-  ctlText(b,'ID',()=>spec.id,v=>spec.id=v);
-  const rb=document.createElement('div'); rb.className='bar';
-  rb.innerHTML='<button>シード変更</button><button>シード戻す</button>';
-  const bs=rb.querySelectorAll('button');
-  bs[0].onclick=()=>{ spec.seed=(spec.seed*7919+13)%999983; rebuild(); };
-  bs[1].onclick=()=>{ spec.seed=918273; rebuild(); };
-  b.appendChild(rb);
-
-  const m=$('cMain'); m.innerHTML='';
-  for(const row of SCHEMA[spec.generator]){
-    const [path,type]=row;
-    if(type==='rng') ctlRange(m,path,row[2],row[3],row[4],row[5]);
-    else if(type==='sel') ctlSel(m,path,row[2]);
-    else if(type==='bool') ctlBool(m,path);
-  }
-
-  const p=$('cPal'); p.innerHTML='';
-  const pre=document.createElement('div'); pre.className='pre';
-  Object.keys(PALETTES).forEach(k=>{
-    const bt=document.createElement('button'); bt.textContent=k;
-    bt.classList.toggle('on',palKey===k);
-    bt.onclick=()=>{ palKey=k; spec.palette=[...PALETTES[k]];
-      if(spec.impact) spec.impact.palette=[...PALETTES[k]];
-      buildControls(); rebuild(); };
-    pre.appendChild(bt);
-  });
-  p.appendChild(pre);
-  const row=document.createElement('div'); row.className='pal';
-  spec.palette.forEach((c,i)=>{
-    const w=document.createElement('div');
-    w.innerHTML=`<input type=color value="${c}">`;
-    w.querySelector('input').oninput=e=>{ spec.palette[i]=e.target.value; rebuild(); };
-    row.appendChild(w);
-  });
-  p.appendChild(row);
-  const lb=document.createElement('div'); lb.className='hint';
-  lb.textContent='左＝中心（明るい）→ 右＝外周（暗い）。この並び順が立体感を作る。';
-  p.appendChild(lb);
-
-  buildScreenControls();
-
-  const im=$('cImpact'); im.innerHTML='';
-  if(spec.impact){
-    ctlRange(im,'impact.size',12,340,2,'px');
-    ctlRange(im,'impact.frames',2,24,1,'コマ');
-    ctlRange(im,'impact.shards',0,60,1);
-  } else {
-    im.innerHTML='<div class="hint">このgeneratorは着弾エフェクトを持たん（補助技扱い）。</div>';
-  }
-}
-function buildScreenControls(){
-  const host=$('cScreen'); host.innerHTML='';
-  if(!spec.screen) spec.screen={};
-  for(const k of Object.keys(SCREEN_DEFAULTS)){
-    const wrap=document.createElement('div');
-    wrap.style.cssText='border:1px solid #262e3b;border-radius:3px;padding:8px;margin-bottom:7px;';
-    const head=document.createElement('div'); head.className='ctl'; head.style.marginBottom='0';
-    head.innerHTML='<label style="width:auto;flex:1;color:#dfe6f0">'+SCREEN_JP[k]+'</label>'
-                  +'<button style="width:74px;flex:none"></button>';
-    const bt=head.querySelector('button');
-    const on=()=>!!spec.screen[k];
-    const paint=()=>{ bt.textContent=on()?'ON':'OFF'; bt.classList.toggle('on',on()); };
-    bt.onclick=()=>{ if(on()) delete spec.screen[k];
-      else spec.screen[k]=JSON.parse(JSON.stringify(SCREEN_DEFAULTS[k]));
-      buildScreenControls(); rebuild(); };
-    wrap.appendChild(head); paint();
-    if(on()){
-      const body=document.createElement('div'); body.style.marginTop='8px';
-      const cfg=spec.screen[k];
-      for(const key of Object.keys(SCREEN_DEFAULTS[k])){
-        if(key==='color'){
-          const d=document.createElement('div'); d.className='ctl';
-          d.innerHTML='<label>色</label><input type=color value="'+cfg.color+'" style="flex:1;height:30px;border:1px solid #2c3442;background:none;border-radius:3px;padding:0">';
-          d.querySelector('input').oninput=e=>{ cfg.color=e.target.value; rebuild(); };
-          body.appendChild(d);
-        } else if(key==='at'){
-          const d=document.createElement('div'); d.className='ctl';
-          d.innerHTML='<label>タイミング</label><select><option value="cast">技を出した時</option><option value="impact">当たった時</option></select>';
-          const sel=d.querySelector('select'); sel.value=cfg.at;
-          sel.onchange=()=>{ cfg.at=sel.value; rebuild(); };
-          body.appendChild(d);
-        } else if(key==='dir'){
-          const d=document.createElement('div'); d.className='ctl';
-          d.innerHTML='<label>向き</label><select><option value="h">横線</option><option value="v">縦線</option></select>';
-          const sel=d.querySelector('select'); sel.value=cfg.dir;
-          sel.onchange=()=>{ cfg.dir=sel.value; rebuild(); };
-          body.appendChild(d);
-        } else {
-          const RG={strength:[0,1,0.05],dur:[0.05,2,0.05],times:[1,16,1],power:[1,26,1]};
-          const [mn,mx,st]=RG[key]||[0,1,0.05];
-          const d=document.createElement('div'); d.className='ctl';
-          d.innerHTML='<label>'+(LABEL[key]||key)+'</label><input type=range min='+mn+' max='+mx+' step='+st+'><span class=v></span>';
-          const r=d.querySelector('input'), v=d.querySelector('.v');
-          const show=()=>{ r.value=cfg[key]; v.textContent=st<1?(+cfg[key]).toFixed(2):cfg[key]; };
-          r.oninput=()=>{ cfg[key]=st<1?parseFloat(r.value):parseInt(r.value,10); show(); rebuild(); };
-          body.appendChild(d); show();
-        }
-      }
-      wrap.appendChild(body);
-    }
-    host.appendChild(wrap);
-  }
-  const h=document.createElement('div'); h.className='hint';
-  h.textContent='背景の点滅・色付け・暗転・揺れは「技エフェクトの一部」として技データに入る。大技ほど画面を派手に動かせる。';
-  host.appendChild(h);
-}
-
-function drawFrames(){
-  const host=$('frames'); host.innerHTML='';
-  const add=c=>{ const n=mkCv(c.width,c.height); n.getContext('2d').drawImage(c,0,0); host.appendChild(n); };
-  if(built.body) built.body.forEach(add);
-  if(built.body&&built.impact){ const sp=document.createElement('div'); sp.style.width='12px'; host.appendChild(sp); }
-  if(built.impact) built.impact.forEach(add);
-  if(!built.body&&!built.impact) host.innerHTML='<div class="hint" style="margin:0">毎フレーム描画型（焼いたコマなし）</div>';
+  $('gens').innerHTML='';    mlGens($('gens'),labCtx);
+  $('cBase').innerHTML='';   mlBase($('cBase'),labCtx); mlTimeScale($('cBase'),labCtx);
+  $('cMain').innerHTML='';   mlParams($('cMain'),labCtx);
+  $('cPal').innerHTML='';    mlPalette($('cPal'),labCtx);
+  $('cImpact').innerHTML=''; mlImpact($('cImpact'),labCtx);
+  mlParts($('cSub'),labCtx);
+  mlScreen($('cScreen'),labCtx);
 }
 
 document.querySelectorAll('.sec>h2').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('closed'));
@@ -461,7 +299,17 @@ function buildSndTL(){
   buildSndTL();
 })();
 
-buildControls(); rebuild(); setMode('fire'); fire();
+$('fxSpeedSel').onchange=e=>{ fxSpeed=parseFloat(e.target.value)||1; };
+function buildLib(){
+  mlLibrary($('cLib'),{
+    name:()=>spec.name,
+    rec:()=>({ name:spec.name, fx:JSON.parse(JSON.stringify(spec)), battle:null,
+               audio:JSON.parse(JSON.stringify(AUDIO_CFG.moves[sndMove]||[])) }),
+    load:(rec)=>{ if(!rec.fx||!rec.fx.generator){ alert("エフェクトが入っとらん"); return; }
+      spec=rec.fx; buildControls(); rebuild(); buildLib(); }
+  });
+}
+buildControls(); rebuild(); buildLib(); setMode('fire'); fire();
 </script>
 </body>
 </html>
