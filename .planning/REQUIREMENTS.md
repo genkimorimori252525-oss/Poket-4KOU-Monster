@@ -77,17 +77,52 @@
 
 ## Traceability
 
-ロードマップ作成時に埋める。
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| （未割当） | — | Pending |
+| FIX-01 | Phase 1 | Pending |
+| FIX-02 | Phase 1 | Pending |
+| FIX-03 | Phase 1 | Pending |
+| FIX-04 | Phase 1 | Pending |
+| FIX-05 | Phase 1 | Pending |
+| FIX-06 | Phase 1 | Pending |
+| FIX-07 | Phase 1 | Pending |
+| SHELL-01 | Phase 2 | Pending |
+| SHELL-02 | Phase 2 | Pending |
+| SHELL-03 | Phase 2 | Pending |
+| SHELL-04 | Phase 2 | Pending |
+| SAVE-01 | Phase 3 | Pending |
+| SAVE-02 | Phase 3 | Pending |
+| SAVE-03 | Phase 3 | Pending |
+| SAVE-04 | Phase 3 | Pending |
+| SAVE-05 | Phase 3 | Pending |
+| SAVE-06 | Phase 3 | Pending |
+| SAVE-07 | Phase 3 | Pending |
+| WIRE-01 | Phase 3 | Pending |
+| WIRE-02 | Phase 3 | Pending |
+| WIRE-03 | Phase 3 | Pending |
+| WIRE-04 | Phase 3 | Pending |
+| WIRE-05 | Phase 3 | Pending |
+| MOVE-01 | Phase 4 | Pending |
+| MOVE-02 | Phase 4 | Pending |
+| MOVE-03 | Phase 4 | Pending |
+| MOVE-04 | Phase 4 | Pending |
+| MOVE-05 | Phase 4 | Pending |
+| MOVE-06 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 29 total
-- Mapped to phases: 0
-- Unmapped: 29 ⚠️
+- Mapped to phases: 29 ✓
+- Unmapped: 0
+
+**Phase 別内訳:**
+
+| Phase | 名前 | 要件 | 件数 |
+|-------|------|------|------|
+| Phase 1 | 足場の地ならし | FIX-01〜07 | 7 |
+| Phase 2 | 開発シェル | SHELL-01〜04 | 4 |
+| Phase 3 | ファイル保存と戦闘への配線 | SAVE-01〜07, WIRE-01〜05 | 12 |
+| Phase 4 | 技の分類と既定モーション | MOVE-01〜06 | 6 |
 
 ---
 *Requirements defined: 2026-08-17*
-*Last updated: 2026-08-17 after initial definition*
+*Last updated: 2026-08-17 after roadmap creation (traceability filled)*
