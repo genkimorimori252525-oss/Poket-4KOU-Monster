@@ -35,9 +35,33 @@ node build.js        # src/ → dist/ に4つのHTMLを吐く
 | `dist/shioumon_audio_lab.html` | 音ラボ（音の割り当て） |
 | `dist/shioumon_creator.html` | 四皇モン制作ツール |
 
+### 開発シェル（アイコン一発で開くダッシュボード）
+
+```bash
+npm run dev          # 専用ウィンドウ（Chromium --app）でダッシュボードが開く。ポートは 8766
+npm run dev:icon     # 初回だけ。デスクトップに起動用アイコンを置く
+npm run build:dev    # 軽量ビルド → dist-dev/（音は dist-dev/se/ へ外出し）
+```
+
+ダッシュボードから4画面へ入れる。保存したものの一覧・置き場の使用量・検証の結果とその古さ・
+軽量ビルドの実測値が1画面に出る。開いた時に1回読むだけで、自動更新はせん。
+
+**`dist-dev/` は開発用で、`file://` では音が鳴らん。** 音をファイル（`dist-dev/se/*.ogg`）で
+持っとるけん、`fetch` が通るサーバー経由でしか鳴らせん。
+**単体で開ける・外部参照ゼロの掟を守っとるのは `dist/` のほう**で、そっちは今までどおり。
+ダッシュボードの入口も「軽い版」（`dist-dev/`）と「焼き込み版」（`dist/`）の2本に分けとる。
+
+`devshell/` はプロジェクト固有の値を `devshell/shell.config.json` 1ファイルに閉じ込めとるけん、
+まるごとコピーして設定を書き換えれば別のプロジェクトでも動く（`devshell/README.md` に実演記録あり）。
+
 検証：
 
 ```bash
+npm run verify                # 4段を順に走らせ、結果を .verify-status.json に残す（ダッシュボードに出る）
+npm run verify:raw            # 素の4段連鎖（結果を残さん。中身は下の4本と同じ）
+npm run check:untouched       # dist/ の4ファイルと src/sfx_bank.js が HEAD と一致しとるか
+npm run verify:dev            # dist-dev/ の音が「鳴らした瞬間に1つだけ読まれる」かを見る
+
 node tools/verify_audio.js    # 4画面のロード・音デコード数・JSエラー
 node tools/verify_ui.js       # UI操作＋決定論チェック
 node tools/verify_creator.js  # 制作ツールを実際に触る（影・写真・技・鳴き声・放流・初期化）
@@ -45,7 +69,16 @@ node tools/verify_resolve.js  # 戦闘と制作ツールのresolve()が同じ判
 # Chromium が見つからんときは PW_CHROMIUM=/path/to/chrome を付ける
 ```
 
+**4本とも、エラーを見つけたら非ゼロで落ちる。** `npm run verify` の連鎖は最初に落ちた段で止まる。
+「通った」は本当に通ったという意味やけん、落ちたら直す（黙って先へ進めん）。
+
+`npm run check:untouched` は `git status` を使わん。Windows の `core.autocrlf` で
+git の stat キャッシュが陳腐化して**中身が同じなのに M と誤報告される**ことがあるけん、
+`git hash-object` で中身のハッシュを直接突き合わせとる。`git status` が `M` と言うても
+このゲートが「同じ」と言うなら中身は同一。
+
 `file://` でブラウザ検証が効かん環境なら `node tools/serve.js`（dist/ を localhost:8765 で配る）。
+開発シェルのサーバー（8766）とは別物で、検証チェーンはどちらにも依存しとらん（`file://` 直読み）。
 
 効果音バンクの再生成（`assets/` の CC0素材が要る）：
 
