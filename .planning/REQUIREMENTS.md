@@ -45,9 +45,9 @@
 - [x] **FIX-02**: `audiolab.tpl.html:359` の `confirm()` が二度押し方式に置き換わる（掟：ダイアログを分かれ道に置かない）
 - [x] **FIX-03**: `verify_audio.js` と `verify_ui.js` が、エラーを検出したときに非ゼロで終了する
 - [x] **FIX-04**: `audiolab.tpl.html` から未使用の `ANIMS` インクルードが外れる
-- [ ] **FIX-05**: `CLAUDE.md:216` の「鳴き声は読み込み時に自動で圧縮」という記述が、実装（手動・意図的）に合わせて訂正される
-- [ ] **FIX-06**: Google Fonts の外部ロードが解消される、または「外部参照ゼロ」の例外として明示的に記録される
-- [ ] **FIX-07**: `battle.tpl.html:474` と `creator.tpl.html:464` の `resolve()` 重複が解消される、または食い違いを検出できる仕組みが入る
+- [x] **FIX-05**: `CLAUDE.md:216` の「鳴き声は読み込み時に自動で圧縮」という記述が、実装（手動・意図的）に合わせて訂正される
+- [x] **FIX-06**: Google Fonts の外部ロードが解消される、または「外部参照ゼロ」の例外として明示的に記録される
+- [x] **FIX-07**: `battle.tpl.html:474` と `creator.tpl.html:464` の `resolve()` 重複が解消される、または食い違いを検出できる仕組みが入る
 
 ## v2 Requirements
 
@@ -83,9 +83,9 @@
 | FIX-02 | Phase 1 | Complete |
 | FIX-03 | Phase 1 | Complete |
 | FIX-04 | Phase 1 | Complete |
-| FIX-05 | Phase 1 | Pending |
-| FIX-06 | Phase 1 | Pending |
-| FIX-07 | Phase 1 | Pending |
+| FIX-05 | Phase 1 | Complete |
+| FIX-06 | Phase 1 | Complete |
+| FIX-07 | Phase 1 | Complete |
 | SHELL-01 | Phase 2 | Pending |
 | SHELL-02 | Phase 2 | Pending |
 | SHELL-03 | Phase 2 | Pending |
