@@ -26,6 +26,11 @@ button.go{background:#1d5a3a;border-color:#2c8a5c;color:#d0f5e4;}
 .entryRow{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
 .entryRow .label{font-size:11px;color:var(--dim);flex:1;}
 .entryRow button{flex:none;padding:9px 18px;}
+.stageRow{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-bottom:4px;}
+.stageRow .hint{margin:0;}
+/* .sec>h2 の既定色は accent(警告色と共用)。verifyHead は古さの合図に accent を使うので、
+   通常時は既定色ではなく text にしとかんと「古い」時との区別が付かん。 */
+#verifyHead{color:var(--text);}
 </style>
 </head>
 <body>
@@ -37,6 +42,13 @@ button.go{background:#1d5a3a;border-color:#2c8a5c;color:#d0f5e4;}
     <div>
       <div id="screens"></div>
       <div class="hint" id="screensHint"></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2 id="verifyHead">検証</h2>
+    <div>
+      <div id="verifyBody"></div>
     </div>
   </div>
 </div>
@@ -75,7 +87,91 @@ button.go{background:#1d5a3a;border-color:#2c8a5c;color:#d0f5e4;}
     row.appendChild(btn);
     screensEl.appendChild(row);
   });
+
+  loadVerifyStatus();
 })();
+
+var DAY_MS = 24 * 60 * 60 * 1000;
+
+function formatAge(ms) {
+  if (ms == null) return null;
+  var sec = Math.floor(ms / 1000);
+  if (sec < 60) return sec + '秒前';
+  var min = Math.floor(sec / 60);
+  if (min < 60) return min + '分前';
+  var hour = Math.floor(min / 60);
+  if (hour < 24) return hour + '時間前';
+  var day = Math.floor(hour / 24);
+  return day + '日前';
+}
+
+async function loadVerifyStatus() {
+  var headEl = document.getElementById('verifyHead');
+  var bodyEl = document.getElementById('verifyBody');
+  var status = null;
+  try {
+    var res = await fetch('/__shell/status');
+    status = await res.json();
+  } catch (e) {
+    headEl.textContent = '検証';
+    bodyEl.innerHTML = '<div class="hint">検証結果を読めんかった: ' + e + '</div>';
+    return;
+  }
+
+  if (!status.verify) {
+    headEl.textContent = '検証';
+    headEl.style.color = '';
+    bodyEl.innerHTML = '<div class="hint">まだ一度も走っとらん。<code>npm run verify</code> を叩いて</div>';
+    return;
+  }
+
+  var v = status.verify;
+  var stages = v.stages || [];
+  var total = stages.length;
+  var passCount = stages.filter(function (s) { return s.ok === true; }).length;
+  var allPass = v.ok === true;
+  var age = formatAge(status.verifyAgeMs);
+  var stale = status.verifyAgeMs != null && status.verifyAgeMs > DAY_MS;
+
+  var headText = (allPass ? (total + '段すべて通過') : (passCount + '/' + total + '段通過'));
+  if (age) headText += '・' + age;
+  if (stale) headText += '（古い）';
+  headEl.textContent = headText;
+  headEl.style.color = stale ? 'var(--accent)' : '';
+
+  bodyEl.innerHTML = '';
+  stages.forEach(function (s) {
+    var color, label;
+    if (s.skipped) {
+      color = 'var(--dim)';
+      label = '走っとらん';
+    } else if (s.ok) {
+      color = 'var(--mk)';
+      label = '通過';
+    } else {
+      color = 'var(--accent)';
+      label = '失敗(終了コード ' + s.exitCode + ')';
+    }
+    var secs = s.ms != null ? Math.round(s.ms / 100) / 10 : null;
+
+    var row = document.createElement('div');
+    row.className = 'stageRow';
+
+    var left = document.createElement('span');
+    left.style.color = color;
+    left.textContent = s.label + '　' + label;
+    row.appendChild(left);
+
+    if (secs != null) {
+      var right = document.createElement('span');
+      right.className = 'hint';
+      right.textContent = secs + '秒';
+      row.appendChild(right);
+    }
+
+    bodyEl.appendChild(row);
+  });
+}
 </script>
 </body>
 </html>

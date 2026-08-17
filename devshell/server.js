@@ -43,6 +43,17 @@ function text(body, status, contentType) {
   });
 }
 
+function readJsonSafe(absPath) {
+  // ファイルが無い・壊れとる場合は例外を投げず null を返す。loadSlots() 系の
+  // read-with-fallback idiom と同じ考え方（PATTERNS「localStorage read-with-fallback idiom」）。
+  try {
+    if (!fs.existsSync(absPath)) return null;
+    return JSON.parse(fs.readFileSync(absPath, 'utf8'));
+  } catch (e) {
+    return null;
+  }
+}
+
 function serveFromRoot(rel, rootAbs) {
   const resolved = path.resolve(rootAbs, rel);
   // 兄弟ディレクトリ名の接頭辞一致（dist と dist-dev2 のような食い違い）も塞ぐ。T-02-04
@@ -76,6 +87,15 @@ Bun.serve({
     }
     if (pathname === '/__shell/config.json') {
       return text(fs.readFileSync(CONFIG_PATH, 'utf8'), 200, MIME['.json']);
+    }
+    if (pathname === '/__shell/status') {
+      const now = new Date();
+      const verify = readJsonSafe(path.resolve(REPO_ROOT, CONFIG.verifyStatus));
+      const verifyAgeMs = verify && verify.finishedAt ? now - new Date(verify.finishedAt) : null;
+      const build = readJsonSafe(path.resolve(REPO_ROOT, CONFIG.buildInfo));
+      const buildAgeMs = build && build.builtAt ? now - new Date(build.builtAt) : null;
+      const status = { verify, verifyAgeMs, build, buildAgeMs, now: now.toISOString() };
+      return text(JSON.stringify(status), 200, MIME['.json']);
     }
 
     for (const root of ROOTS) {

@@ -9,7 +9,8 @@
     "dev": "bun devshell/launch.js",
     "dev:serve": "bun devshell/server.js",
     "dev:icon": "powershell -NoProfile -ExecutionPolicy Bypass -File devshell/install-shortcut.ps1",
-    "verify": "node tools/verify_audio.js && node tools/verify_ui.js && node tools/verify_creator.js && node tools/verify_resolve.js",
+    "verify": "node devshell/verify-report.js",
+    "verify:raw": "node tools/verify_audio.js && node tools/verify_ui.js && node tools/verify_creator.js && node tools/verify_resolve.js",
     "verify:creator": "node tools/verify_creator.js",
     "verify:resolve": "node tools/verify_resolve.js",
     "sfx": "python3 tools/gen_sfx.py"
