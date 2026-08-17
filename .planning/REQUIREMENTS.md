@@ -25,7 +25,8 @@
 
 ### 起動と軽量化（SHELL）
 
-- [ ] **SHELL-01**: デスクトップのアイコンをダブルクリックすると、タブもURLバーも無い専用ウィンドウで制作ツールが開く
+- [ ] **SHELL-01**: デスクトップのアイコンをダブルクリックすると、タブもURLバーも無い専用ウィンドウが Chromium で開く
+- [ ] **SHELL-05**: その専用ウィンドウに**ダッシュボード**が出る —— 作った四皇モンの一覧と最終更新、技の本数、保存容量、検証が通っているか、そして4画面（戦闘／技ラボ／音ラボ／制作ツール）への入口
 - [ ] **SHELL-02**: 開発用の軽量ビルドが `dist-dev/` に出る。`src/sfx_bank.js` と `dist/` の4ファイルは1バイトも変わらない
 - [ ] **SHELL-03**: 開発用ビルドの各HTMLが現状（693〜864KB）から大幅に軽くなり、音は鳴らす分だけ後から読まれる
 - [ ] **SHELL-04**: サーバーの起動が1コマンドで済み、この土台一式を次のプロジェクトへコピーして使える
@@ -90,6 +91,7 @@
 | SHELL-02 | Phase 2 | Pending |
 | SHELL-03 | Phase 2 | Pending |
 | SHELL-04 | Phase 2 | Pending |
+| SHELL-05 | Phase 2 | Pending |
 | SAVE-01 | Phase 3 | Pending |
 | SAVE-02 | Phase 3 | Pending |
 | SAVE-03 | Phase 3 | Pending |
@@ -111,8 +113,8 @@
 
 **Coverage:**
 
-- v1 requirements: 29 total
-- Mapped to phases: 29 ✓
+- v1 requirements: 30 total
+- Mapped to phases: 30 ✓
 - Unmapped: 0
 
 **Phase 別内訳:**
@@ -120,10 +122,10 @@
 | Phase | 名前 | 要件 | 件数 |
 |-------|------|------|------|
 | Phase 1 | 足場の地ならし | FIX-01〜07 | 7 |
-| Phase 2 | 開発シェル | SHELL-01〜04 | 4 |
+| Phase 2 | 開発シェル | SHELL-01〜05 | 5 |
 | Phase 3 | ファイル保存と戦闘への配線 | SAVE-01〜07, WIRE-01〜05 | 12 |
 | Phase 4 | 技の分類と既定モーション | MOVE-01〜06 | 6 |
 
 ---
 *Requirements defined: 2026-08-17*
-*Last updated: 2026-08-17 after roadmap creation (traceability filled)*
+*Last updated: 2026-08-18 — Phase 1 完了、SHELL-05（ダッシュボード）を追加*

@@ -55,16 +55,17 @@ Phase 3 の「通った」が信用できない。7件とも独立した小さ�
 
 ### Phase 2: 開発シェル
 
-**Goal**: 制作ツールがアイコン一発の専用ウィンドウで開き、開発用の画面が軽く立ち上がる
+**Goal**: アイコン一発でダッシュボードが専用ウィンドウに出て、そこから開く開発用の画面が軽く立ち上がる
 **Mode:** mvp
 **Depends on**: Phase 1
-**Requirements**: SHELL-01, SHELL-02, SHELL-03, SHELL-04
+**Requirements**: SHELL-01, SHELL-02, SHELL-03, SHELL-04, SHELL-05
 **Success Criteria** (what must be TRUE):
 
-  1. デスクトップのアイコンをダブルクリックすると、タブも URL バーも無い専用ウィンドウで制作ツールが開く
+  1. デスクトップのアイコンをダブルクリックすると、タブも URL バーも無い専用ウィンドウが Chromium で開く
   2. `dist-dev/` の各画面が現状（693〜864KB）から大幅に軽くなり、体感で明らかに速く開く。音は鳴らした瞬間に初めて読み込まれる
   3. `dist-dev/` を作った後も、`dist/` の4ファイルと `src/sfx_bank.js` が**1バイトも変わっていない**（`git status` に出てこない）
   4. サーバーが1コマンドで立ち上がり、この土台一式を別のプロジェクトフォルダへコピーしても同じ手順で動く
+  5. その専用ウィンドウにダッシュボードが出て、作った四皇モンの一覧と最終更新・技の本数・保存容量・検証が通っているかが一目で分かり、そこから4画面それぞれへ入れる
 
 **Plans**: TBD
 
@@ -119,19 +120,19 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. 足場の地ならし | 3/3 | In Progress|  |
+| 1. 足場の地ならし | 3/3 | Complete | 2026-08-18 |
 | 2. 開発シェル | 0/TBD | Not started | - |
 | 3. ファイル保存と戦闘への配線 | 0/TBD | Not started | - |
 | 4. 技の分類と既定モーション | 0/TBD | Not started | - |
 
 ## Coverage
 
-v1 requirements: **29/29 マップ済み**（孤児なし・重複なし）
+v1 requirements: **30/30 マップ済み**（孤児なし・重複なし）
 
 | カテゴリ | 件数 | Phase |
 |---|---|---|
 | FIX-01〜07 | 7 | Phase 1 |
-| SHELL-01〜04 | 4 | Phase 2 |
+| SHELL-01〜05 | 5 | Phase 2 |
 | SAVE-01〜07 | 7 | Phase 3 |
 | WIRE-01〜05 | 5 | Phase 3 |
 | MOVE-01〜06 | 6 | Phase 4 |
