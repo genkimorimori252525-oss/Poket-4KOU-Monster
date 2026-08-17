@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>開発シェル</title>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1218;--panel:#191e27;--line:#2c3442;--text:#dfe6f0;--dim:#8b97a8;--accent:#f0a020;--mk:#7ad6a0;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"DotGothic16","MS Gothic","Hiragino Kaku Gothic ProN",monospace;}
+body{padding:10px 10px 60px;}
+h1{font-size:14px;margin:2px 0 8px;color:var(--accent);letter-spacing:1px;}
+.wrap{max-width:720px;margin:0 auto;}
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:4px;margin-bottom:8px;}
+.sec>h2{font-size:12px;margin:0;color:var(--accent);padding:10px 12px;cursor:pointer;
+  display:flex;justify-content:space-between;letter-spacing:1px;}
+.sec>div{padding:0 12px 12px;}
+.sec.closed>div{display:none;}
+.hint{font-size:10px;color:var(--dim);line-height:1.6;margin-top:6px;}
+button{background:#252d3a;border:1px solid var(--line);color:var(--text);border-radius:3px;
+  padding:9px 6px;font-size:11px;font-family:inherit;cursor:pointer;}
+button:active{background:var(--mk);color:#0f1218;}
+button.go{background:#1d5a3a;border-color:#2c8a5c;color:#d0f5e4;}
+.entryRow{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.entryRow .label{font-size:11px;color:var(--dim);flex:1;}
+.entryRow button{flex:none;padding:9px 18px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="pageTitle">開発シェル</h1>
+
+  <div class="sec">
+    <h2>画面</h2>
+    <div>
+      <div id="screens"></div>
+      <div class="hint" id="screensHint"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async function () {
+  var cfg = null;
+  try {
+    var res = await fetch('/__shell/config.json');
+    cfg = await res.json();
+  } catch (e) {
+    document.getElementById('screensHint').textContent = '設定を読めんかった: ' + e;
+    return;
+  }
+
+  document.title = cfg.projectName + ' 開発シェル';
+  document.getElementById('pageTitle').textContent = cfg.projectName;
+
+  var screensEl = document.getElementById('screens');
+  (cfg.screens || []).forEach(function (s) {
+    var row = document.createElement('div');
+    row.className = 'entryRow';
+
+    var label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = s.label;
+
+    var btn = document.createElement('button');
+    btn.className = 'go';
+    btn.textContent = '開く';
+    btn.addEventListener('click', function () {
+      location.href = '/' + s.file;
+    });
+
+    row.appendChild(label);
+    row.appendChild(btn);
+    screensEl.appendChild(row);
+  });
+})();
+</script>
+</body>
+</html>
