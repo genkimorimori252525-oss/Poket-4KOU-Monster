@@ -336,6 +336,26 @@ $('upl').onchange=e=>{
   });
 };
 
+/* 二度押しで消す。confirm() はブラウザに「このページのダイアログを表示しない」を効かされると
+   黙って false を返す。そうなると何を押しても消えん。ダイアログに頼らん。
+   （src/movelab.js の mlArmDelete() と同じ形。音ラボは MOVELAB トークンを取り込んでおらず
+    その関数をそのまま呼べないため、ここに同じ形を書き写す） */
+function alArmDelete(btn, onDo, armedText){
+  let armed=false, timer=null;
+  const base=btn.textContent, baseW=btn.style.width, baseTitle=btn.title||'';
+  const reset=()=>{ armed=false; btn.textContent=base; btn.title=baseTitle;
+    btn.style.width=baseW; btn.style.background='';
+    if(timer){ clearTimeout(timer); timer=null; } };
+  btn.onclick=e=>{
+    if(e) e.stopPropagation();
+    if(armed){ reset(); onDo(); return; }
+    armed=true;
+    btn.textContent=armedText||'消す？'; btn.title='もう一度押すと決まる';
+    btn.style.width='auto'; btn.style.background='#7a2020';
+    timer=setTimeout(reset,3500);
+  };
+}
+
 /* ---- ボタン ---- */
 $('play').onclick=()=>playMove();
 $('mute').onclick=e=>{ muted=!muted; e.target.textContent='音 '+(muted?'OFF':'ON');
@@ -355,9 +375,10 @@ $('btnShare').onclick=()=>{ if(navigator.share) navigator.share({title:'四皇�
 $('btnDl').onclick=()=>{ const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify(cfgOut(),null,1)],{type:'application/json'}));
   a.download='shioumon_audio_cfg.json'; a.click(); };
-$('btnReset').onclick=()=>{ if(!confirm('初期設定に戻す？　今の割り当ては消える')) return;
+alArmDelete($('btnReset'),()=>{
   audioApply(JSON.parse(JSON.stringify(AUDIO_CFG_DEFAULT)));
-  buildMoveList(); buildTL(); buildSys(); save(); };
+  buildMoveList(); buildTL(); buildSys(); save();
+},'戻す？');
 document.querySelectorAll('.sec>h2').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('closed'));
 
 function buildSys(){ renderSysMap($('sysMap'), AUDIO_CFG.system, save); }
