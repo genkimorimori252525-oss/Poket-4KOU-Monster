@@ -23,14 +23,22 @@ button{background:#252d3a;border:1px solid var(--line);color:var(--text);border-
   padding:9px 6px;font-size:11px;font-family:inherit;cursor:pointer;}
 button:active{background:var(--mk);color:#0f1218;}
 button.go{background:#1d5a3a;border-color:#2c8a5c;color:#d0f5e4;}
-.entryRow{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+button[disabled]{color:var(--dim);border-color:#232a35;background:#1a1f28;cursor:not-allowed;}
+button[disabled]:active{background:#1a1f28;color:var(--dim);}
+.entryRow{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
 .entryRow .label{font-size:11px;color:var(--dim);flex:1;}
-.entryRow button{flex:none;padding:9px 18px;}
+.entryRow button{flex:none;padding:9px 14px;}
 .stageRow{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-bottom:4px;}
 .stageRow .hint{margin:0;}
+.row{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-bottom:3px;gap:8px;}
+.row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.row .sub{color:var(--dim);flex:none;}
+.tot{font-size:11px;color:var(--mk);margin-bottom:6px;}
+.bar{height:5px;background:#232a35;border-radius:3px;overflow:hidden;margin:5px 0 3px;}
+.bar>i{display:block;height:100%;background:var(--mk);}
 /* .sec>h2 の既定色は accent(警告色と共用)。verifyHead は古さの合図に accent を使うので、
    通常時は既定色ではなく text にしとかんと「古い」時との区別が付かん。 */
-#verifyHead{color:var(--text);}
+#verifyHead,#buildHead{color:var(--text);}
 </style>
 </head>
 <body>
@@ -47,51 +55,37 @@ button.go{background:#1d5a3a;border-color:#2c8a5c;color:#d0f5e4;}
 
   <div class="sec">
     <h2 id="verifyHead">検証</h2>
+    <div><div id="verifyBody"></div></div>
+  </div>
+
+  <div class="sec">
+    <h2 id="monsHead">保存したもの</h2>
     <div>
-      <div id="verifyBody"></div>
+      <div id="monsBody"></div>
+      <div class="hint" id="monsHint"></div>
     </div>
+  </div>
+
+  <div class="sec">
+    <h2>置き場</h2>
+    <div><div id="usageBody"></div></div>
+  </div>
+
+  <div class="sec">
+    <h2 id="buildHead">軽量ビルド</h2>
+    <div><div id="buildBody"></div></div>
   </div>
 </div>
 
 <script>
-(async function () {
-  var cfg = null;
-  try {
-    var res = await fetch('/__shell/config.json');
-    cfg = await res.json();
-  } catch (e) {
-    document.getElementById('screensHint').textContent = '設定を読めんかった: ' + e;
-    return;
-  }
-
-  document.title = cfg.projectName + ' 開発シェル';
-  document.getElementById('pageTitle').textContent = cfg.projectName;
-
-  var screensEl = document.getElementById('screens');
-  (cfg.screens || []).forEach(function (s) {
-    var row = document.createElement('div');
-    row.className = 'entryRow';
-
-    var label = document.createElement('span');
-    label.className = 'label';
-    label.textContent = s.label;
-
-    var btn = document.createElement('button');
-    btn.className = 'go';
-    btn.textContent = '開く';
-    btn.addEventListener('click', function () {
-      location.href = '/' + s.file;
-    });
-
-    row.appendChild(label);
-    row.appendChild(btn);
-    screensEl.appendChild(row);
-  });
-
-  loadVerifyStatus();
-})();
-
+/* この画面は「見るだけ」。localStorage へ書き戻す経路は作らん
+   （setItem / removeItem / clear をここに書かん。「見る」操作でデータを書き換えん —— 掟）。
+   固有のキー名やラベルもここには書かん。全部 shell.config.json から取る（別プロジェクトへ持ち出せるように）。 */
+var CFG = null;
 var DAY_MS = 24 * 60 * 60 * 1000;
+var QUOTA = 5 * 1024 * 1024;   /* localStorage の実務上の上限。おおむね5MB */
+
+function kb(n) { return Math.round(n / 1024) + ' KB'; }
 
 function formatAge(ms) {
   if (ms == null) return null;
@@ -101,77 +95,282 @@ function formatAge(ms) {
   if (min < 60) return min + '分前';
   var hour = Math.floor(min / 60);
   if (hour < 24) return hour + '時間前';
-  var day = Math.floor(hour / 24);
-  return day + '日前';
+  return Math.floor(hour / 24) + '日前';
 }
 
-async function loadVerifyStatus() {
-  var headEl = document.getElementById('verifyHead');
-  var bodyEl = document.getElementById('verifyBody');
-  var status = null;
+/* 壊れた1キーで画面が真っ白にならんように、読みは全部 try/catch で安全な既定値へ落とす
+   （制作ツールの loadSlots() と同じ idiom）。 */
+function rawOf(key) {
+  try { return localStorage.getItem(key) || ''; } catch (e) { return ''; }
+}
+function readStore(entry) {
+  var raw = rawOf(entry.key);
+  if (!raw) return entry.shape === 'array' ? [] : {};
   try {
-    var res = await fetch('/__shell/status');
-    status = await res.json();
+    var outer = JSON.parse(raw);
+    if (entry.shape === 'map-of-json-strings') {
+      var o = {};
+      for (var k in outer) { try { o[k] = JSON.parse(outer[k]); } catch (e) { o[k] = null; } }
+      return o;
+    }
+    return outer;   /* map-of-objects / array / object はそのまま */
   } catch (e) {
-    headEl.textContent = '検証';
-    bodyEl.innerHTML = '<div class="hint">検証結果を読めんかった: ' + e + '</div>';
+    return entry.shape === 'array' ? [] : {};
+  }
+}
+function rawSizeOf(entry, name) {
+  try {
+    var outer = JSON.parse(rawOf(entry.key));
+    var v = outer && outer[name];
+    return typeof v === 'string' ? v.length : JSON.stringify(v || '').length;
+  } catch (e) { return 0; }
+}
+
+(async function () {
+  try {
+    CFG = await (await fetch('/__shell/config.json')).json();
+  } catch (e) {
+    document.getElementById('screensHint').textContent = '設定を読めんかった: ' + e;
     return;
   }
+  document.title = CFG.projectName + ' 開発シェル';
+  document.getElementById('pageTitle').textContent = CFG.projectName;
 
+  var status = null;
+  try { status = await (await fetch('/__shell/status')).json(); } catch (e) { status = null; }
+
+  drawScreens(status);
+  drawVerify(status);
+  drawStores();
+  drawUsage();
+  drawBuild(status);
+})();
+
+/* ---- 画面への入口。軽い版（dist-dev/）と焼き込み版（dist/）の2本 ---- */
+function drawScreens(status) {
+  var el = document.getElementById('screens');
+  var hasDev = !!(status && status.build);
+  (CFG.screens || []).forEach(function (s) {
+    var row = document.createElement('div');
+    row.className = 'entryRow';
+    var label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = s.label;
+    row.appendChild(label);
+
+    var light = document.createElement('button');
+    light.className = 'go';
+    light.textContent = '軽い版';
+    if (hasDev) light.addEventListener('click', function () { location.href = '/dev/' + s.file; });
+    else light.disabled = true;      /* 押しても404になるボタンは出さん */
+    row.appendChild(light);
+
+    var baked = document.createElement('button');
+    baked.textContent = '焼き込み版';
+    baked.addEventListener('click', function () { location.href = '/' + s.file; });
+    row.appendChild(baked);
+
+    el.appendChild(row);
+  });
+  document.getElementById('screensHint').innerHTML = hasDev
+    ? '軽い版は音をファイルで持っとるけん、サーバー経由でしか鳴らん。'
+      + '単体で開けるんは焼き込み版のほう（外部参照ゼロの掟を守っとるのはこっち）。'
+    : 'まだ軽量ビルドを作っとらん。<code>npm run build:dev</code> を叩いたら「軽い版」が使えるようになる。';
+}
+
+/* ---- 検証。合否だけやのうて必ず古さも出す ---- */
+function drawVerify(status) {
+  var headEl = document.getElementById('verifyHead');
+  var bodyEl = document.getElementById('verifyBody');
+  if (!status) { bodyEl.innerHTML = '<div class="hint">検証結果を読めんかった</div>'; return; }
   if (!status.verify) {
-    headEl.textContent = '検証';
-    headEl.style.color = '';
     bodyEl.innerHTML = '<div class="hint">まだ一度も走っとらん。<code>npm run verify</code> を叩いて</div>';
     return;
   }
-
-  var v = status.verify;
-  var stages = v.stages || [];
-  var total = stages.length;
+  var v = status.verify, stages = v.stages || [];
   var passCount = stages.filter(function (s) { return s.ok === true; }).length;
-  var allPass = v.ok === true;
   var age = formatAge(status.verifyAgeMs);
   var stale = status.verifyAgeMs != null && status.verifyAgeMs > DAY_MS;
-
-  var headText = (allPass ? (total + '段すべて通過') : (passCount + '/' + total + '段通過'));
-  if (age) headText += '・' + age;
-  if (stale) headText += '（古い）';
-  headEl.textContent = headText;
+  var head = (v.ok === true ? (stages.length + '段すべて通過') : (passCount + '/' + stages.length + '段通過'));
+  if (age) head += '・' + age;
+  if (stale) head += '（古い）';
+  headEl.textContent = head;
   headEl.style.color = stale ? 'var(--accent)' : '';
 
   bodyEl.innerHTML = '';
   stages.forEach(function (s) {
-    var color, label;
-    if (s.skipped) {
-      color = 'var(--dim)';
-      label = '走っとらん';
-    } else if (s.ok) {
-      color = 'var(--mk)';
-      label = '通過';
-    } else {
-      color = 'var(--accent)';
-      label = '失敗(終了コード ' + s.exitCode + ')';
-    }
-    var secs = s.ms != null ? Math.round(s.ms / 100) / 10 : null;
-
+    var color = s.skipped ? 'var(--dim)' : (s.ok ? 'var(--mk)' : 'var(--accent)');
+    var label = s.skipped ? '走っとらん' : (s.ok ? '通過' : '失敗(終了コード ' + s.exitCode + ')');
     var row = document.createElement('div');
     row.className = 'stageRow';
-
     var left = document.createElement('span');
     left.style.color = color;
     left.textContent = s.label + '　' + label;
     row.appendChild(left);
-
-    if (secs != null) {
+    if (s.ms != null) {
       var right = document.createElement('span');
       right.className = 'hint';
-      right.textContent = secs + '秒';
+      right.textContent = Math.round(s.ms / 100) / 10 + '秒';
       row.appendChild(right);
     }
-
     bodyEl.appendChild(row);
   });
 }
+
+/* ---- 保存したもの。読むのはここだけ（サーバーからは見えん。まだファイルやないけん） ---- */
+function drawStores() {
+  var bodyEl = document.getElementById('monsBody');
+  var headEl = document.getElementById('monsHead');
+  var stores = CFG.storage || [];
+  if (!stores.length) {
+    headEl.textContent = '保存したもの';
+    bodyEl.innerHTML = '<div class="hint">この設定には保存の項目が無い（shell.config.json の storage が空）</div>';
+    document.getElementById('monsHint').textContent = '';
+    return;
+  }
+
+  bodyEl.innerHTML = '';
+  var listed = 0;
+
+  stores.forEach(function (entry) {
+    var data = readStore(entry);
+
+    if (entry.shape === 'map-of-json-strings') {
+      /* 1件ずつ並べる。名前・その1件の保存サイズ・数えたい配列の合計本数 */
+      var names = Object.keys(data || {});
+      listed += names.length;
+      var tot = document.createElement('div');
+      tot.className = 'tot';
+      tot.textContent = entry.label + '　' + names.length + '件';
+      bodyEl.appendChild(tot);
+      names.forEach(function (nm) {
+        var v = data[nm] || {};
+        var n = 0;
+        (entry.countFields || []).forEach(function (f) {
+          if (Array.isArray(v[f])) n += v[f].length;
+        });
+        var row = document.createElement('div');
+        row.className = 'row';
+        var a = document.createElement('span'); a.className = 'nm'; a.textContent = nm;
+        var b = document.createElement('span'); b.className = 'sub';
+        b.textContent = kb(rawSizeOf(entry, nm)) + (entry.countFields ? '　技 ' + n + '本' : '');
+        row.appendChild(a); row.appendChild(b);
+        bodyEl.appendChild(row);
+      });
+    } else {
+      /* 件数だけ出す。上の1件ごとの本数とは別の数字やけん、行を分ける */
+      var cnt = Array.isArray(data) ? data.length
+              : (data && typeof data === 'object' ? Object.keys(data).length : 0);
+      var row2 = document.createElement('div');
+      row2.className = 'row';
+      var c = document.createElement('span'); c.className = 'nm'; c.textContent = entry.label;
+      var d = document.createElement('span'); d.className = 'sub'; d.textContent = cnt + '件';
+      row2.appendChild(c); row2.appendChild(d);
+      bodyEl.appendChild(row2);
+      listed += cnt;
+    }
+  });
+
+  headEl.textContent = '保存したもの';
+
+  /* 空に見えるときの理由。これは飾りやのうて、故障との誤認を防ぐための一行。
+     出典は CLAUDE.md「保存データは開き方（オリジン）ごとに別の箱」。 */
+  var hint = '';
+  if (!listed) {
+    hint += '<b>何も見つからんときは、こわれとるんやなくて「開き方（オリジン）が違う箱」を見とる'
+         + '可能性がある。</b>この画面は <code>http://localhost</code> の箱しか見えん。'
+         + '<code>file://</code> で開いて保存した分は別の箱に入っとって、こっちからは見えん'
+         + '（消えとるわけやない）。Phase 3 でファイル保存に移したら1つにまとまる。<br>';
+  }
+  hint += '「最終更新」はここには出しとらん —— <b>Phase 3 送り</b>。'
+       + '今の保存データに時刻の欄が無いけん、ここで足すと保存の形を変えることになる。'
+       + 'Phase 3 でファイルになれば、ファイルの更新時刻がそのまま正確な最終更新になる。';
+  document.getElementById('monsHint').innerHTML = hint;
+}
+
+/* ---- 置き場。Phase 3 が解こうとしとる問題そのものやけん、育つのが見えるようにする ---- */
+function drawUsage() {
+  var el = document.getElementById('usageBody');
+  var used = 0;
+  try { for (var k in localStorage) used += (localStorage[k] || '').length; } catch (e) {}
+
+  var pct = Math.round((used / QUOTA) * 100);
+  var head = document.createElement('div');
+  head.className = 'tot';
+  head.textContent = '合計 ' + kb(used) + '　（上限およそ ' + kb(QUOTA) + ' の ' + pct + '%）';
+  if (pct >= 80) head.style.color = 'var(--accent)';
+  el.appendChild(head);
+
+  var bar = document.createElement('div');
+  bar.className = 'bar';
+  var fill = document.createElement('i');
+  fill.style.width = Math.min(100, pct) + '%';
+  if (pct >= 80) fill.style.background = 'var(--accent)';
+  bar.appendChild(fill);
+  el.appendChild(bar);
+
+  var known = 0;
+  (CFG.storage || []).forEach(function (entry) {
+    var n = rawOf(entry.key).length;
+    known += n;
+    var row = document.createElement('div');
+    row.className = 'row';
+    var a = document.createElement('span'); a.className = 'nm'; a.textContent = entry.label;
+    var b = document.createElement('span'); b.className = 'sub'; b.textContent = kb(n);
+    row.appendChild(a); row.appendChild(b);
+    el.appendChild(row);
+  });
+  if (used - known > 0) {
+    var row3 = document.createElement('div');
+    row3.className = 'row';
+    var e1 = document.createElement('span'); e1.className = 'nm'; e1.textContent = 'その他';
+    var e2 = document.createElement('span'); e2.className = 'sub'; e2.textContent = kb(used - known);
+    row3.appendChild(e1); row3.appendChild(e2);
+    el.appendChild(row3);
+  }
+}
+
+/* ---- 軽量ビルドの実測。無いものは0やのうて「まだ作っとらん」と出す ---- */
+function drawBuild(status) {
+  var headEl = document.getElementById('buildHead');
+  var el = document.getElementById('buildBody');
+  var b = status && status.build;
+  if (!b) {
+    headEl.textContent = '軽量ビルド';
+    el.innerHTML = '<div class="hint">まだ作っとらん。<code>npm run build:dev</code> で作れる</div>';
+    return;
+  }
+  var age = formatAge(status.buildAgeMs);
+  var stale = status.buildAgeMs != null && status.buildAgeMs > DAY_MS;
+  headEl.textContent = '軽量ビルド' + (age ? '・' + age : '') + (stale ? '（古い）' : '');
+  headEl.style.color = stale ? 'var(--accent)' : '';
+
+  var byFile = {};
+  (CFG.screens || []).forEach(function (s) { byFile[s.file] = s.label; });
+
+  (b.screens || []).forEach(function (s) {
+    var pct = Math.round((1 - s.ratio) * 100);
+    var row = document.createElement('div');
+    row.className = 'row';
+    var a = document.createElement('span'); a.className = 'nm';
+    a.textContent = byFile[s.file] || s.file;
+    var c = document.createElement('span'); c.className = 'sub';
+    c.style.color = 'var(--mk)';
+    c.textContent = kb(s.distBytes) + ' → ' + kb(s.devBytes) + '　' + pct + '%減';
+    row.appendChild(a); row.appendChild(c);
+    el.appendChild(row);
+  });
+
+  var se = document.createElement('div');
+  se.className = 'hint';
+  se.textContent = '音は ' + b.sounds + ' 本 / ' + kb(b.seBytes) + ' を外へ出して、鳴らす分だけ後から読む';
+  el.appendChild(se);
+}
+
+/* 見出しを押したら畳む。自動更新はせん（開いた時に1回読むだけ）。 */
+document.querySelectorAll('.sec>h2').forEach(function (h) {
+  h.addEventListener('click', function () { h.parentNode.classList.toggle('closed'); });
+});
 </script>
 </body>
 </html>
