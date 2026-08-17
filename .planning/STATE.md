@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-current_phase: 1
-current_phase_name: 足場の地ならし
-status: executing
-stopped_at: Completed 01-03-PLAN.md (Phase 1 complete)
-last_updated: "2026-08-17T15:03:38.975Z"
-last_activity: 2026-08-17
-last_activity_desc: ROADMAP.md 作成（29件の v1 要件を4フェーズへ全件マップ）
-state_head: e9d4a8e8859a8f9c2cdc84f6911c85d2b6a864f4
+current_phase: 2
+current_phase_name: 開発シェル
+status: ready
+stopped_at: Phase 1 complete and verified (5/5 passed) — ready to plan Phase 2
+last_updated: "2026-08-18T00:00:00.000Z"
+last_activity: 2026-08-18
+last_activity_desc: Phase 1 完了（FIX-01〜07 全件、検証 5/5 passed）
+state_head: 55b7adc
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
   completed_plans: 3
-  percent: 0
+  percent: 25
 ---
 
 # Project State
@@ -23,16 +23,32 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-17)
 
 **Core value:** にーくらが作ったもの（四皇モン・技・音）が、容量を気にせず保存でき、実際の戦闘に出てくること
-**Current focus:** Phase 1 — 足場の地ならし
+**Current focus:** Phase 2 — 開発シェル
 
 ## Current Position
 
-Phase: 1 of 4 (足場の地ならし)
-Plan: 3 of 3 in current phase
-Status: Ready to execute
-Last activity: 2026-08-17 — ROADMAP.md 作成（29件の v1 要件を4フェーズへ全件マップ）
+Phase: 2 of 4 (開発シェル) — 未着手
+Plan: 0 of ? in current phase
+Status: Ready to plan
+Last activity: 2026-08-18 — Phase 1 完了（FIX-01〜07 全件、検証 5/5 passed）
 
-Progress: [██████████] 100%
+Progress: [██░░░░░░░░] 25%（1/4 フェーズ完了）
+
+### Phase 1 完了記録（2026-08-18）
+
+FIX-01〜07 の7件すべて完了。検証は SUMMARY をなぞらず**コードベースに対して独立に再実行**して 5/5 passed。
+
+- `tools/verify_audio.js` / `verify_ui.js` が JS エラーで非ゼロ終了するようになった（従来は常に exit 0）
+- D-08（オーナー承認）: 決定論チェック `det.ok` の失敗も非ゼロ終了に含まれる
+- `tools/verify_resolve.js` 新設 —— `battle` と `creator` の `resolve()` を36通りで突き合わせる。
+  故意に食い違わせると16件を名指しで検出（16は手計算の予測と一致。`key='back'` を直接要求する
+  ケースは両実装が必然的に同じ値へ収束するため、full/none の2セットで差が出ない）
+- `npm run verify` は4段（audio → ui → creator → resolve）。最初の失敗で連鎖が止まる
+- `src/fx_audio.js`（デッド15KB）削除、`audiolab.tpl.html` の未使用 `ANIMS` 除去
+- 音ラボのリセットが `confirm()` から二度押し（`alArmDelete()`）へ
+- `CLAUDE.md` を実装に合わせて訂正（鳴き声圧縮は手動・意図的／Google Fonts は「外部参照ゼロ」の唯一の明示例外）
+
+**不可触物件の確認:** `src/sfx_bank.js` は codebase-map 時点（`403b730`）と SHA256 完全一致。
 
 ## Performance Metrics
 
