@@ -58,13 +58,27 @@ const KEYS = ['normal','attack','hurt','back','summon','shiranai'];
   await pg2.goto(DIST_URL + 'shioumon_creator.html');
   await pg2.waitForTimeout(1200);
   const cre = await pg2.evaluate(({ SETS, PHV, KEYS }) => {
-    previewKey = '';                               // 制作ツールだけの上書き。戦闘に対応物が無い
-    for(const k of Object.keys(ph)) delete ph[k];  // ph は const。中身だけ入れ替える
-    Object.assign(ph, PHV);
-    const out = {};
-    for(const sn in SETS) for(const back of [false,true]) for(const k of KEYS){
-      const r = resolve(k, back, { anim:'attack' }, { imgs:SETS[sn] });
-      out[sn+'|'+back+'|'+k] = String(r && r.img) + ' / ' + String(r && r.key);
+    /* ⚠ ここはページが生きたまま走る。ph と previewKey は制作ツール本体が
+       毎フレームの描画で使っとる本物の状態やけん、借りたら**必ず同じ同期ブロックの中で返す**。
+       この関数の中に await は1つも無いけん、途中で requestAnimationFrame が割り込む余地は無い。
+       返し忘れると、evaluate が返ってから pg2.close() までの間に描画が1フレーム走った時だけ
+       drawImage('pN') が TypeError を投げる —— タイミング次第で落ちたり落ちんかったりする、
+       一番たちの悪い形になる（実際に3回中2回落ちた）。 */
+    const savedPreviewKey = previewKey;
+    const savedPh = Object.assign({}, ph);
+    let out = {};
+    try {
+      previewKey = '';                               // 制作ツールだけの上書き。戦闘に対応物が無い
+      for(const k of Object.keys(ph)) delete ph[k];  // ph は const。中身だけ入れ替える
+      Object.assign(ph, PHV);
+      for(const sn in SETS) for(const back of [false,true]) for(const k of KEYS){
+        const r = resolve(k, back, { anim:'attack' }, { imgs:SETS[sn] });
+        out[sn+'|'+back+'|'+k] = String(r && r.img) + ' / ' + String(r && r.key);
+      }
+    } finally {
+      previewKey = savedPreviewKey;
+      for(const k of Object.keys(ph)) delete ph[k];
+      Object.assign(ph, savedPh);
     }
     return out;
   }, { SETS, PHV:PH, KEYS });
