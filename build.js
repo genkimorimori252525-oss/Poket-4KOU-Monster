@@ -27,7 +27,6 @@ const MODULES = {
   '/*__AUDIO_UI__*/': read('audio_ui.js'),
   '/*__MOVELAB__*/' : read('movelab.js'),
   '/*__STARTER__*/' : read('starter_moves.js'),
-  '/*__FX_AUDIO__*/': read('fx_audio.js'),   // 旧・手続き音源（現在は未使用）
 };
 
 const TARGETS = [
