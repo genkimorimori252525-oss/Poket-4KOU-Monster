@@ -13,7 +13,10 @@
     "verify:raw": "node tools/verify_audio.js && node tools/verify_ui.js && node tools/verify_creator.js && node tools/verify_resolve.js",
     "verify:creator": "node tools/verify_creator.js",
     "verify:resolve": "node tools/verify_resolve.js",
-    "sfx": "python3 tools/gen_sfx.py"
+    "sfx": "python3 tools/gen_sfx.py",
+    "build:dev": "node build.js --dev",
+    "check:untouched": "node tools/check_untouched.js",
+    "verify:dev": "node tools/verify_dev.js"
   },
   "devDependencies": {
     "playwright": "^1.62.1"
