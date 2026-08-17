@@ -37,7 +37,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `src/fx_audio.js` と `build.js` のトークン、`audiolab.tpl.html` の未使用 `ANIMS` が消えた状態で `node build.js` が通り、4画面が今まで通り開く
   4. `battle.tpl.html` と `creator.tpl.html` の `resolve()` が食い違ったとき、検証がそれを検出して落ちる（今は黙って絵と倍率が入れ替わる）
   5. `CLAUDE.md` と掟の記述が実装と一致している——鳴き声の圧縮は「手動・意図的」と書かれ、Google Fonts の外部ロードは解消されるか「外部参照ゼロ」の明示的な例外として記録されている
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — 検証の網を張る（FIX-03）。`verify_audio.js` / `verify_ui.js` を JS エラーで非ゼロ終了させ、故意に壊して落ちることを実証する【wave 1・tracer】
+- [ ] 01-02-PLAN.md — 掟違反とデッドコードを消す（FIX-01 / FIX-02 / FIX-04）。旧音源の削除、未使用インクルードの除去、初期化ボタンの二度押し化【wave 2】
+- [ ] 01-03-PLAN.md — `resolve()` の食い違い検出と掟の記述の訂正（FIX-05 / FIX-06 / FIX-07）【wave 3】
 
 **このフェーズを最初に置く理由**: Phase 3 はこのプロジェクトで一番危ない作業（保存先の移動＋既存データ移行）で、
 その安全網が `verify_*.js` と `resolve()` の一致。両方が今は壊れている。先に直しておかないと、
@@ -100,7 +105,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. 足場の地ならし | 0/TBD | Not started | - |
+| 1. 足場の地ならし | 0/3 | Planned | - |
 | 2. 開発シェル | 0/TBD | Not started | - |
 | 3. ファイル保存と戦闘への配線 | 0/TBD | Not started | - |
 | 4. 技の分類と既定モーション | 0/TBD | Not started | - |
