@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 1
 current_phase_name: 足場の地ならし
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-08-17T13:51:07.085Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-08-17T14:27:55.814Z"
 last_activity: 2026-08-17
 last_activity_desc: ROADMAP.md 作成（29件の v1 要件を4フェーズへ全件マップ）
-state_head: 58c76ec56515205538adc82fa3f230e336edf381
+state_head: 395c6ddd6f6f65175ade5a70595356553ce5a3a0
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-17)
 ## Current Position
 
 Phase: 1 of 4 (足場の地ならし)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Ready to execute
 Last activity: 2026-08-17 — ROADMAP.md 作成（29件の v1 要件を4フェーズへ全件マップ）
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [███░░░░░░░] 33%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01-groundwork P01 | 20min | 2 tasks | 2 files |
+| Phase 01-groundwork P02 | 約35分 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,9 @@ Recent decisions affecting current work:
 - [PROJECT]: `dist/` の base64 焼き込みは維持し、軽量版は `dist-dev/` に別出し
 - [Phase 1]: D-08（オーナー承認・2026-08-17）: 決定論チェック(det.ok)の失敗も verify_ui.js の非ゼロ終了に含めた。新しい終了経路・新しい判定基準は作らず、既存の allErrs へ合流させるだけに留めた
 - [Phase 1]: Task 2 は「壊れたら落ちる」ことをコード査読ではなく実行記録（4回ぶんの終了コード＋stderr）で証明する形にした（D-07）
+- [Phase 1]: 01-02: Task1のprecondition偽陽性(dist/のgit status M)はWindowsのcore.autocrlf=trueによるindex statキャッシュ陳腐化と判明。git hash-objectでHEADと内容完全一致を確認しgit update-index --refreshで解消(内容変更なし)
+- [Phase 1]: 01-02: FIX-02のalArmDelete armedText文言は計画の明示指示どおり「戻す？」を採用(creator.tpl.html自身のデフォルト「消す？」とは不一致だが、より具体的な指示を優先)
+- [Phase 1]: 01-02: FIX-02をTDDのRED(test:検査追加、旧実装でexit=1を実行確認)→GREEN(feat:alArmDelete実装、exit=0)の2コミットに分離して記録
 
 ### Pending Todos
 
@@ -100,6 +104,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-08-17T13:51:07.064Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-08-17T14:27:55.799Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
