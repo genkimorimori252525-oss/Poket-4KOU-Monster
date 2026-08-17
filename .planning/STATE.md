@@ -27,12 +27,29 @@ See: .planning/PROJECT.md (updated 2026-08-17)
 
 ## Current Position
 
-Phase: 2 of 4 (開発シェル) — 未着手
+Phase: 3 of 4 (ファイル保存と戦闘への配線) — 未着手
 Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-08-18 — Phase 1 完了（FIX-01〜07 全件、検証 5/5 passed）
+Status: **停止中** —— にーくらによる localStorage のバックアップ待ち
+Last activity: 2026-08-18 — Phase 2 完了（SHELL-01〜05 全件）
 
-Progress: [██░░░░░░░░] 25%（1/4 フェーズ完了）
+Progress: [█████░░░░░] 50%（2/4 フェーズ完了）
+
+### ⚠ Phase 3 に入る前に必要なこと
+
+**にーくら本人の手が要る。** Phase 3 は保存先を localStorage からファイルへ移す工事で、
+移行元（作った四皇モン・技・音設定）はブラウザの中にあり **git の外**にある。Claude からは見えない。
+
+制作ツールを開いて F12 → Console で下記を実行し、落ちた JSON をプロジェクトフォルダへ置くこと。
+
+```js
+(()=>{const d=JSON.stringify(Object.fromEntries(Object.entries(localStorage)),null,1);const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([d],{type:"application/json"}));a.download="shioumon_backup_"+Date.now()+".json";a.click();})()
+```
+
+**保存データは開き方（オリジン）ごとに別の箱**やけん、`file://` と `http://localhost` の
+心当たりのある開き方すべてで取ること（その箱が空なら `{}` だけの JSON が落ちてくる）。
+
+落ちた JSON をリポジトリ内に置いてもらえれば、移行コードを**実物のデータ構造を見ながら**書ける。
+推測で書かずに済むし、SAVE-07（1件も失わずに移行する）の検証にも使える。
 
 ### Phase 1 完了記録（2026-08-18）
 
