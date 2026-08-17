@@ -1,11 +1,18 @@
 ---
-gsd_state_version: '1.0'  # placeholder; syncStateFrontmatter overwrites on first state.* call
-status: planning
+gsd_state_version: 1.0
+current_phase: 1
+current_phase_name: 足場の地ならし
+status: executing
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-08-17T13:51:07.085Z"
+last_activity: 2026-08-17
+last_activity_desc: ROADMAP.md 作成（29件の v1 要件を4フェーズへ全件マップ）
+state_head: 58c76ec56515205538adc82fa3f230e336edf381
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,15 +28,16 @@ See: .planning/PROJECT.md (updated 2026-08-17)
 ## Current Position
 
 Phase: 1 of 4 (足場の地ならし)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
+Plan: 1 of 3 in current phase
+Status: Ready to execute
 Last activity: 2026-08-17 — ROADMAP.md 作成（29件の v1 要件を4フェーズへ全件マップ）
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: -
 - Total execution time: 0.0 hours
@@ -41,10 +49,16 @@ Progress: [░░░░░░░░░░] 0%
 | - | - | - | - |
 
 **Recent Trend:**
+
 - Last 5 plans: -
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01-groundwork P01 | 20min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -58,6 +72,8 @@ Recent decisions affecting current work:
 - [Roadmap]: MOVE-* は Phase 1 にしか依存しない。Phase 2/3 と独立に進められる
 - [PROJECT]: ChromiumOS は採用しない。ローカルサーバー＋`--app` 専用ウィンドウで3条件（軽い・保存できる・Claude に都合がいい）を満たす
 - [PROJECT]: `dist/` の base64 焼き込みは維持し、軽量版は `dist-dev/` に別出し
+- [Phase 1]: D-08（オーナー承認・2026-08-17）: 決定論チェック(det.ok)の失敗も verify_ui.js の非ゼロ終了に含めた。新しい終了経路・新しい判定基準は作らず、既存の allErrs へ合流させるだけに留めた
+- [Phase 1]: Task 2 は「壊れたら落ちる」ことをコード査読ではなく実行記録（4回ぶんの終了コード＋stderr）で証明する形にした（D-07）
 
 ### Pending Todos
 
@@ -84,6 +100,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-08-17
-Stopped at: ROADMAP.md / STATE.md 作成完了、REQUIREMENTS.md のトレーサビリティ更新済み
+Last session: 2026-08-17T13:51:07.064Z
+Stopped at: Completed 01-01-PLAN.md
 Resume file: None
