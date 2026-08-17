@@ -18,6 +18,10 @@ if(process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
     const errs = [];
     pg.on('pageerror', e => errs.push('PAGEERROR ' + e.message));
     pg.on('console', m => { if (m.type() === 'error' && !/ERR_CONNECTION/.test(m.text())) errs.push('C ' + m.text()); });
+    /* confirm() が分かれ道に残っとらんかの検査で使う。全部つっぱねる設定で走らせる
+       （tools/verify_creator.js と同じ形） */
+    const dialogs = [];
+    pg.on('dialog', d => { dialogs.push(d.message()); d.dismiss(); });
     await pg.goto(DIST_URL + 'shioumon_audio_lab.html');
     await pg.waitForTimeout(800);
     await pg.click('#play');
@@ -42,7 +46,35 @@ if(process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
     await pg.screenshot({ path: shot('ui_audiolab_added.png'), fullPage: true });
     // システム音の割り当てUI
     const nSys = await pg.locator('#sysMap .aui-sys').count();
-    console.log('■ 音ラボ', JSON.stringify({ pickerOpen, nEntries, saved, nSys, errs }));
+
+    /* ---- FIX-02: 「初期設定に戻す」二度押し検査 ----
+       「■ 設定JSON」は初期状態で閉じている（CSSで中身が display:none）ので、
+       先に見出しを押して開かないと #btnReset が押せない。 */
+    await pg.locator('.sec>h2', { hasText: '設定JSON' }).click();
+    await pg.waitForTimeout(150);
+    const movesBefore = await pg.evaluate(() => JSON.stringify(AUDIO_CFG.moves));
+    const movesDefault = await pg.evaluate(() => JSON.stringify(AUDIO_CFG_DEFAULT.moves));
+    if (movesBefore === movesDefault) allErrs.push('[音ラボ] 二度押し検査の前提が崩れとる: 押す前から AUDIO_CFG.moves が初期値と同じ');
+    const labelBefore = await pg.locator('#btnReset').textContent();
+    await pg.click('#btnReset');
+    await pg.waitForTimeout(250);
+    const movesAfter1 = await pg.evaluate(() => JSON.stringify(AUDIO_CFG.moves));
+    const labelAfter1 = await pg.locator('#btnReset').textContent();
+    if (movesAfter1 !== movesBefore) allErrs.push('[音ラボ] 1回目の押下で割り当てが変わった（二度押しになっとらん）');
+    if (labelAfter1 === labelBefore) allErrs.push('[音ラボ] 1回目の押下でボタンの表示が変わっとらん');
+    await pg.click('#btnReset');
+    await pg.waitForTimeout(250);
+    const movesAfter2 = await pg.evaluate(() => JSON.stringify(AUDIO_CFG.moves));
+    if (movesAfter2 !== movesDefault) allErrs.push('[音ラボ] 2回目の押下で初期設定に戻っとらん');
+    if (dialogs.length) allErrs.push('[音ラボ] confirm/alert等のダイアログが' + dialogs.length + '件出た: ' + dialogs.slice(0, 3).join(', '));
+    const resetTwoPress = {
+      firstPressUnchanged: movesAfter1 === movesBefore,
+      labelChangedOnFirstPress: labelAfter1 !== labelBefore,
+      secondPressMatchesDefault: movesAfter2 === movesDefault,
+      dialogs: dialogs.length,
+    };
+
+    console.log('■ 音ラボ', JSON.stringify({ pickerOpen, nEntries, saved, nSys, errs, resetTwoPress }));
     errs.forEach(e => allErrs.push('[音ラボ] ' + e));
     await pg.close();
   }
