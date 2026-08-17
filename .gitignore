@@ -9,3 +9,11 @@ node_modules/
 #   ・kenney.nl   "Web Game SFX (CC0)"         → assets/webgamesfxcc0kenney/
 assets/webgameattacksfxcc0/
 assets/webgamesfxcc0kenney/
+
+# 開発シェルのブラウザプロファイルと、検証結果の一時ファイル。
+# どちらも「今このマシンで起きとること」であって、リポジトリの状態やない。
+.devshell/
+.verify-status.json
+
+# 開発用の軽量ビルド(node build.js --dev の出力)。dist/ と違うて中身は焼き込みやない。
+dist-dev/
