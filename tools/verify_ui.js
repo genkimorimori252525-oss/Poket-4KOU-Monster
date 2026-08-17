@@ -10,6 +10,7 @@ const LAUNCH = { args:['--autoplay-policy=no-user-gesture-required'] };
 if(process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
 (async () => {
   const b = await chromium.launch(LAUNCH);
+  const allErrs = [];
 
   /* ---------- 音ラボ ---------- */
   {
@@ -42,6 +43,7 @@ if(process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
     // システム音の割り当てUI
     const nSys = await pg.locator('#sysMap .aui-sys').count();
     console.log('■ 音ラボ', JSON.stringify({ pickerOpen, nEntries, saved, nSys, errs }));
+    errs.forEach(e => allErrs.push('[音ラボ] ' + e));
     await pg.close();
   }
 
@@ -60,6 +62,7 @@ if(process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
     const st = await pg.evaluate(() => ({ sndOn, sndMove, tl: document.querySelectorAll('#sndTL .aui-card').length }));
     await pg.screenshot({ path: shot('ui_lab_sound.png'), fullPage: true });
     console.log('■ 技ラボ', JSON.stringify({ ...st, errs }));
+    errs.forEach(e => allErrs.push('[技ラボ] ' + e));
     await pg.close();
   }
 
@@ -84,8 +87,17 @@ if(process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
     }));
     await pg.screenshot({ path: shot('ui_battle_sound.png') });
     console.log('■ 戦闘', JSON.stringify({ det, info, errs: errs.slice(0, 5) }));
+    errs.forEach(e => allErrs.push('[戦闘] ' + e));
+    // 決定論チェック（D-08）：det.ok が false なら、JSエラーが無くても allErrs へ積む
+    if (!det.ok) allErrs.push('[戦闘] 決定論チェック失敗 len=' + det.len + ' at=' + det.at);
     await pg.close();
   }
 
   await b.close();
+  if (allErrs.length) {
+    console.error('verify_ui: ' + allErrs.length + '件のエラー');
+    allErrs.forEach(e => console.error(e));
+  }
+  // 表示用に切り詰めた errs.slice(...) は終了判定に使わない（全件は allErrs で判定する）
+  process.exit(allErrs.length ? 1 : 0);
 })();

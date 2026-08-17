@@ -11,6 +11,7 @@ if(process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
 (async () => {
   const b = await chromium.launch(LAUNCH);
   const results = {};
+  const allErrs = [];
   for (const [name, file] of [
     ['音ラボ',   'shioumon_audio_lab.html'],
     ['技ラボ',   'shioumon_effect_lab.html'],
@@ -44,8 +45,16 @@ if(process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
     });
     await pg.screenshot({ path: shot('v_' + file.replace(/\.html$/, '') + '.png'), fullPage: false });
     results[name] = { decoded, ...info, errs: errs.slice(0, 6) };
+    // 表示用の errs.slice(...) は見た目の切り詰め。終了判定は切り詰めていない errs を allErrs へ移して行う
+    errs.forEach(e => allErrs.push('[' + name + '] ' + e));
     await pg.close();
   }
   console.log(JSON.stringify(results, null, 2));
   await b.close();
+  if (allErrs.length) {
+    console.error('verify_audio: ' + allErrs.length + '件のエラー');
+    allErrs.forEach(e => console.error(e));
+  }
+  // 表示用に切り詰めた errs.slice(...) は終了判定に使わない（全件は allErrs で判定する）
+  process.exit(allErrs.length ? 1 : 0);
 })();
