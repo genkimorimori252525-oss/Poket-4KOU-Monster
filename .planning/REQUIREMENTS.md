@@ -25,11 +25,11 @@
 
 ### 起動と軽量化（SHELL）
 
-- [ ] **SHELL-01**: デスクトップのアイコンをダブルクリックすると、タブもURLバーも無い専用ウィンドウが Chromium で開く
-- [ ] **SHELL-05**: その専用ウィンドウに**ダッシュボード**が出る —— 作った四皇モンの一覧と最終更新、技の本数、保存容量、検証が通っているか、そして4画面（戦闘／技ラボ／音ラボ／制作ツール）への入口
-- [ ] **SHELL-02**: 開発用の軽量ビルドが `dist-dev/` に出る。`src/sfx_bank.js` と `dist/` の4ファイルは1バイトも変わらない
-- [ ] **SHELL-03**: 開発用ビルドの各HTMLが現状（693〜864KB）から大幅に軽くなり、音は鳴らす分だけ後から読まれる
-- [ ] **SHELL-04**: サーバーの起動が1コマンドで済み、この土台一式を次のプロジェクトへコピーして使える
+- [x] **SHELL-01**: デスクトップのアイコンをダブルクリックすると、タブもURLバーも無い専用ウィンドウが Chromium で開く
+- [x] **SHELL-05**: その専用ウィンドウに**ダッシュボード**が出る —— 作った四皇モンの一覧と最終更新、技の本数、保存容量、検証が通っているか、そして4画面（戦闘／技ラボ／音ラボ／制作ツール）への入口
+- [x] **SHELL-02**: 開発用の軽量ビルドが `dist-dev/` に出る。`src/sfx_bank.js` と `dist/` の4ファイルは1バイトも変わらない
+- [x] **SHELL-03**: 開発用ビルドの各HTMLが現状（693〜864KB）から大幅に軽くなり、音は鳴らす分だけ後から読まれる
+- [x] **SHELL-04**: サーバーの起動が1コマンドで済み、この土台一式を次のプロジェクトへコピーして使える
 
 ### 技の分類とモーション（MOVE）
 
@@ -87,11 +87,11 @@
 | FIX-05 | Phase 1 | Complete |
 | FIX-06 | Phase 1 | Complete |
 | FIX-07 | Phase 1 | Complete |
-| SHELL-01 | Phase 2 | Pending |
-| SHELL-02 | Phase 2 | Pending |
-| SHELL-03 | Phase 2 | Pending |
-| SHELL-04 | Phase 2 | Pending |
-| SHELL-05 | Phase 2 | Pending |
+| SHELL-01 | Phase 2 | Complete |
+| SHELL-02 | Phase 2 | Complete |
+| SHELL-03 | Phase 2 | Complete |
+| SHELL-04 | Phase 2 | Complete |
+| SHELL-05 | Phase 2 | Complete |
 | SAVE-01 | Phase 3 | Pending |
 | SAVE-02 | Phase 3 | Pending |
 | SAVE-03 | Phase 3 | Pending |
