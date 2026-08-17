@@ -6,8 +6,9 @@
   "scripts": {
     "build": "node build.js",
     "serve": "node tools/serve.js",
-    "verify": "node tools/verify_audio.js && node tools/verify_ui.js && node tools/verify_creator.js",
+    "verify": "node tools/verify_audio.js && node tools/verify_ui.js && node tools/verify_creator.js && node tools/verify_resolve.js",
     "verify:creator": "node tools/verify_creator.js",
+    "verify:resolve": "node tools/verify_resolve.js",
     "sfx": "python3 tools/gen_sfx.py"
   },
   "devDependencies": {
