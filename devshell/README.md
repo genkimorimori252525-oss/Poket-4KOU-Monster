@@ -40,6 +40,52 @@
    「今このマシンで起きとること」であって、リポジトリの状態やない）
 5. `npm run dev`
 
+## 実際にやって確かめた（2026-08-18）
+
+上の手順は「動くはず」やのうて、**一時フォルダへ本当にコピーして動かした記録**。
+
+置いたのは `devshell/` 一式と、次の2つだけ。このプロジェクトの `dist/` も保存データも持っていっとらん。
+
+`package.json`（これだけで足りた）:
+
+```json
+{ "name": "pt", "private": true, "scripts": { "dev:serve": "bun devshell/server.js" } }
+```
+
+`site/index.html`（配る中身が1つあればよい）:
+
+```html
+<!doctype html><meta charset=utf-8><title>見本</title><h1>ok</h1>
+```
+
+`shell.config.json` の書き換えはこの5か所だけ:
+
+```json
+{
+  "projectName": "べつのプロジェクト",
+  "port": 8795,
+  "roots":   [{ "prefix": "/", "dir": "site" }],
+  "screens": [{ "label": "見本", "file": "index.html" }],
+  "storage": [],
+  "verifyStages": []
+}
+```
+
+`bun devshell/server.js` で立てた結果:
+
+```
+/                     -> 200
+/index.html           -> 200
+/__shell/config.json  -> 200
+/__shell/status       -> 200
+ダッシュボードの見出し: べつのプロジェクト
+```
+
+**`storage` と `verifyStages` を空配列にしても壊れん**ことをここで確かめとる。次のプロジェクトには
+四皇モンも `verify_*.js` も無いけん、空で成立せんかったら持ち出せんことになる。空のときは
+`verify=null` / `build=null` が返って、ダッシュボードは数字を出さずに「まだ無い」と書く
+（0 や「-」でごまかさん）。
+
 ## 前提
 
 - **Bun**（サーバーと起動スクリプトを走らせる）
