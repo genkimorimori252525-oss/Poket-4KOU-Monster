@@ -20,6 +20,7 @@ const read = f => {
 
 /* 置換トークン → 元ファイル */
 const MODULES = {
+  '/*__STORE__*/'   : read('store_bridge.js'),
   '/*__FX_CORE__*/' : read('fx_core.js'),
   '/*__SFX_BANK__*/': read('sfx_bank.js'),
   '/*__MOVES__*/'   : read('moves.js'),
