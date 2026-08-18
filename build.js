@@ -25,6 +25,7 @@ const MODULES = {
   '/*__SFX_BANK__*/': read('sfx_bank.js'),
   '/*__RANGE__*/'   : read('move_range.js'),
   '/*__MOVES__*/'   : read('moves.js'),
+  '/*__COST__*/'    : read('cost.js'),
   '/*__ANIMS__*/'   : read('anims.js'),
   '/*__AUDIO_UI__*/': read('audio_ui.js'),
   '/*__MOVELAB__*/' : read('movelab.js'),

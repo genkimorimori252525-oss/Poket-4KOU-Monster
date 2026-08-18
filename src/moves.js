@@ -99,16 +99,11 @@ const MOVES = {
 };
 
 /* =========================================================
-   CostCalculator（仮式・Phase 15 で本採用）
-   賢さは有利にも不利にも働くため重みを低くしてある（計画18.5）
+   CostCalculator は `src/cost.js` へ移した（Phase 1・2026-08-19）
+
+   理由は計画18.5 の警告 ——「コストは損失額と獲得額の両方を決める。
+   不当に安い個体は三重取りして確実に壊れる」。コスト経済を載せる前に、
+   式を1箇所へ集めて差し替えられる形にしておく必要があった。
+
+   `costOf()` は cost.js が同じ名前で出しとるけん、呼び出し側は変わっとらん。
    ========================================================= */
-const COST_W={atk:1.15,def:0.95,hp:1.00,spd:1.05,eva:0.90,int:0.85};
-function costOf(m){
-  let sum=0; for(const k in COST_W) sum+=(m.stats[k]||0)*COST_W[k];
-  const avg=sum/6;
-  const base=27*Math.pow(Math.max(1,avg)/50, 2.45);
-  const ids=(m.moves||[]).map(x=>typeof x==='string'?x:x.id);
-  const mv=ids.reduce((a,id)=>a+(MOVES[id]?MOVES[id].power:0),0)*0.12
-           + Math.max(0,ids.length-1)*2;
-  return { cost:Math.max(1,Math.round(base+mv)), avg, base, mv };
-}
