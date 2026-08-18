@@ -1,0 +1,142 @@
+{
+  "id": "Rottuo",
+  "name": "ロッツォ",
+  "types": [
+    "ノーマル",
+    "（なし）"
+  ],
+  "stats": {
+    "atk": 60,
+    "def": 9,
+    "hp": 73,
+    "spd": 93,
+    "eva": 51,
+    "int": 3
+  },
+  "per": {
+    "aggr": 90,
+    "caut": 6,
+    "loyal": 87,
+    "self": 7
+  },
+  "moves": [
+    "Punch"
+  ],
+  "customMoves": [
+    {
+      "id": "Punch",
+      "name": "殴打",
+      "type": "フェアリー",
+      "power": 35,
+      "cast": 1,
+      "cooldown": 6.9,
+      "tags": [],
+      "fx": {
+        "generator": "shatter",
+        "size": 190,
+        "cracks": 40,
+        "jag": 0,
+        "drift": 220,
+        "spin": 0,
+        "dust": 0,
+        "duration": 1.15,
+        "impact": null,
+        "id": "Punch",
+        "name": "殴打",
+        "seed": 918273,
+        "palette": [
+          "#ffffff",
+          "#ffd44a",
+          "#ff7a18",
+          "#c8260c"
+        ],
+        "screen": {},
+        "palKey": "炎",
+        "timeScale": 1,
+        "motions": [
+          {
+            "anim": "charge",
+            "at": "cast",
+            "off": 0,
+            "dur": 3
+          },
+          {
+            "anim": "attack",
+            "at": "fire",
+            "off": 0,
+            "dur": 0.5
+          }
+        ],
+        "parts": []
+      },
+      "audio": []
+    }
+  ],
+  "cry": {
+    "id": "cry_Rottuo",
+    "vol": 1.1,
+    "rate": 0.9,
+    "label": "ロッツォの声",
+    "file": "Rottuo/cry.webm",
+    "mime": "audio/webm;codecs=opus"
+  },
+  "scale": 1,
+  "dy": 0,
+  "idleMotion": true,
+  "summon": {
+    "style": "trainer",
+    "cryDelay": 0.5,
+    "land": []
+  },
+  "shadow": {
+    "scale": 1.58,
+    "flat": 1,
+    "dx": 0,
+    "dy": 0,
+    "alpha": 0.15,
+    "follow": 0.6
+  },
+  "img": {
+    "normal": {
+      "scale": 1.9,
+      "dy": 18
+    },
+    "attack": {
+      "scale": 1.9,
+      "dy": 18
+    },
+    "hurt": {
+      "scale": 1.9,
+      "dy": 18
+    },
+    "back": {
+      "scale": 1.72,
+      "dy": 17
+    },
+    "summon": {
+      "scale": 1.9,
+      "dy": 18
+    }
+  },
+  "derived": {
+    "normal": false,
+    "attack": true,
+    "hurt": true,
+    "back": false,
+    "summon": true
+  },
+  "images": {
+    "normal": {
+      "file": "Rottuo/normal.webp",
+      "mime": "image/webp"
+    },
+    "attack": null,
+    "hurt": null,
+    "back": {
+      "file": "Rottuo/back.webp",
+      "mime": "image/webp"
+    },
+    "summon": null
+  },
+  "_slot": "ロッツォ"
+}

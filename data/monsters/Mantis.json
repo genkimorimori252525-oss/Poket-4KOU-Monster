@@ -1,0 +1,134 @@
+{
+  "id": "Mantis",
+  "name": "かまきり",
+  "types": [
+    "フェアリー",
+    "（なし）"
+  ],
+  "stats": {
+    "atk": 12,
+    "def": 15,
+    "hp": 10,
+    "spd": 75,
+    "eva": 75,
+    "int": 45
+  },
+  "per": {
+    "aggr": 93,
+    "caut": 3,
+    "loyal": 4,
+    "self": 15
+  },
+  "moves": [
+    "slash"
+  ],
+  "customMoves": [],
+  "cry": {
+    "id": "cry_Mantis",
+    "vol": 0.55,
+    "rate": 1,
+    "label": "かまきりの声",
+    "file": "Mantis/cry.webm",
+    "mime": "audio/webm;codecs=opus"
+  },
+  "scale": 1,
+  "dy": 0,
+  "idleMotion": false,
+  "summon": {
+    "style": "trainer",
+    "cryDelay": 0.5,
+    "land": [
+      {
+        "img": "normal",
+        "dur": 0.1,
+        "shake": 0
+      },
+      {
+        "img": "summon",
+        "dur": 0.1,
+        "shake": 0
+      },
+      {
+        "img": "normal",
+        "dur": 0.1,
+        "shake": 0
+      },
+      {
+        "img": "summon",
+        "dur": 0.1,
+        "shake": 0
+      },
+      {
+        "img": "normal",
+        "dur": 0.1,
+        "shake": 0
+      },
+      {
+        "img": "summon",
+        "dur": 0.1,
+        "shake": 0
+      },
+      {
+        "img": "normal",
+        "dur": 0.1,
+        "shake": 0
+      },
+      {
+        "img": "summon",
+        "dur": 0.5,
+        "shake": 2
+      }
+    ]
+  },
+  "shadow": {
+    "scale": 1.24,
+    "flat": 0.22,
+    "dx": 0,
+    "dy": 0,
+    "alpha": 0.24,
+    "follow": 0.6
+  },
+  "img": {
+    "normal": {
+      "scale": 1.22,
+      "dy": 8
+    },
+    "attack": {
+      "scale": 1,
+      "dy": 0
+    },
+    "hurt": {
+      "scale": 1,
+      "dy": 0
+    },
+    "back": {
+      "scale": 1.22,
+      "dy": 0
+    },
+    "summon": {
+      "scale": 1.22,
+      "dy": 8
+    }
+  },
+  "derived": {
+    "normal": false,
+    "attack": true,
+    "hurt": true,
+    "back": true,
+    "summon": false
+  },
+  "images": {
+    "normal": {
+      "file": "Mantis/normal.webp",
+      "mime": "image/webp"
+    },
+    "attack": null,
+    "hurt": null,
+    "back": null,
+    "summon": {
+      "file": "Mantis/summon.webp",
+      "mime": "image/webp"
+    }
+  },
+  "_slot": "かまきり"
+}

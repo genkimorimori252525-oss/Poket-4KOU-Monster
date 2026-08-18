@@ -1,0 +1,249 @@
+{
+  "id": "BAZERGIUS",
+  "name": "バゼルギウス",
+  "types": [
+    "ほのお",
+    "ひこう"
+  ],
+  "stats": {
+    "atk": 60,
+    "def": 60,
+    "hp": 25,
+    "spd": 32,
+    "eva": 65,
+    "int": 7
+  },
+  "per": {
+    "aggr": 65,
+    "caut": 11,
+    "loyal": 67,
+    "self": 75
+  },
+  "moves": [
+    "shakunetsu"
+  ],
+  "customMoves": [
+    {
+      "id": "Bomb",
+      "name": "爆撃",
+      "type": "ひこう",
+      "power": 50,
+      "cast": 1,
+      "cooldown": 8,
+      "tags": [],
+      "fx": {
+        "generator": "projectile",
+        "shape": "orb",
+        "size": 22,
+        "frames": 6,
+        "wobble": 0.16,
+        "core": 0.5,
+        "spin": 0.15,
+        "specks": 5,
+        "trail": {
+          "type": "flame",
+          "length": 14,
+          "rate": 0.8,
+          "size": 0.8
+        },
+        "travel": {
+          "speed": 230,
+          "arc": -26,
+          "spin": 0
+        },
+        "impact": {
+          "size": 56,
+          "frames": 9,
+          "shards": 14,
+          "palette": [
+            "#ffffff",
+            "#ffd44a",
+            "#ff7a18",
+            "#c8260c"
+          ]
+        },
+        "id": "Bomb",
+        "name": "爆撃",
+        "seed": 918273,
+        "palette": [
+          "#ffffff",
+          "#ffd44a",
+          "#ff7a18",
+          "#c8260c"
+        ],
+        "screen": {},
+        "palKey": "炎",
+        "timeScale": 1,
+        "motions": [
+          {
+            "anim": "fly",
+            "at": "fire",
+            "off": 0,
+            "dur": 2
+          }
+        ],
+        "parts": []
+      },
+      "audio": []
+    },
+    {
+      "id": "shakunetsu",
+      "name": "灼熱弾",
+      "type": "ほのお",
+      "power": 26,
+      "cast": 0.3,
+      "cooldown": 2.4,
+      "tags": [
+        "遠距離向き",
+        "連発向き",
+        "迎撃向き"
+      ],
+      "fx": {
+        "generator": "projectile",
+        "shape": "orb",
+        "size": 22,
+        "frames": 6,
+        "wobble": 0.16,
+        "core": 0.5,
+        "spin": 0.15,
+        "specks": 5,
+        "trail": {
+          "type": "flame",
+          "length": 14,
+          "rate": 0.8,
+          "size": 0.8
+        },
+        "travel": {
+          "speed": 230,
+          "arc": -26,
+          "spin": 0
+        },
+        "impact": {
+          "size": 56,
+          "frames": 9,
+          "shards": 14,
+          "palette": [
+            "#ffffff",
+            "#ffd44a",
+            "#ff7a18",
+            "#c8260c"
+          ]
+        },
+        "id": "shakunetsu",
+        "name": "灼熱弾",
+        "seed": 918273,
+        "palette": [
+          "#ffffff",
+          "#ffd44a",
+          "#ff7a18",
+          "#c8260c"
+        ],
+        "screen": {
+          "shake": {
+            "power": 5,
+            "dur": 0.28,
+            "at": "impact"
+          },
+          "tint": {
+            "color": "#ff6a10",
+            "strength": 0.28,
+            "dur": 0.35,
+            "at": "impact"
+          }
+        },
+        "timeScale": 1,
+        "motions": [],
+        "parts": []
+      },
+      "audio": null
+    }
+  ],
+  "cry": {
+    "id": "cry_BAZERGIUS",
+    "vol": 0.95,
+    "rate": 1,
+    "label": "バゼルギウスの声",
+    "file": "BAZERGIUS/cry.mp3",
+    "mime": "audio/mpeg"
+  },
+  "scale": 1,
+  "dy": 0,
+  "idleMotion": true,
+  "summon": {
+    "style": "trainer",
+    "cryDelay": 0.5,
+    "land": [
+      {
+        "img": "summon",
+        "dur": 0.4,
+        "shake": 0
+      },
+      {
+        "img": "normal",
+        "dur": 0.3,
+        "shake": 0
+      },
+      {
+        "img": "summon",
+        "dur": 0.4,
+        "shake": 0
+      },
+      {
+        "img": "normal",
+        "dur": 0.45,
+        "shake": 2
+      }
+    ]
+  },
+  "shadow": {
+    "scale": 1.24,
+    "flat": 1,
+    "dx": 0,
+    "dy": 0,
+    "alpha": 0.24,
+    "follow": 0.55
+  },
+  "img": {
+    "normal": {
+      "scale": 1.3,
+      "dy": 0
+    },
+    "attack": {
+      "scale": 1.3,
+      "dy": 0
+    },
+    "hurt": {
+      "scale": 1.3,
+      "dy": 0
+    },
+    "back": {
+      "scale": 1.3,
+      "dy": 0
+    },
+    "summon": {
+      "scale": 1.74,
+      "dy": -19
+    }
+  },
+  "derived": {
+    "normal": false,
+    "attack": true,
+    "hurt": true,
+    "back": true,
+    "summon": false
+  },
+  "images": {
+    "normal": {
+      "file": "BAZERGIUS/normal.webp",
+      "mime": "image/webp"
+    },
+    "attack": null,
+    "hurt": null,
+    "back": null,
+    "summon": {
+      "file": "BAZERGIUS/summon.webp",
+      "mime": "image/webp"
+    }
+  },
+  "_slot": "バゼルギウス"
+}

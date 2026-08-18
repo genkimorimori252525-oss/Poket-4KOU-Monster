@@ -1,0 +1,238 @@
+{
+  "master": 0.55,
+  "moves": {
+    "shakunetsu": [
+      {
+        "id": "exp_short",
+        "at": "fire",
+        "off": 0,
+        "vol": 0.7,
+        "rate": 1.1
+      },
+      {
+        "id": "exp_short",
+        "at": "impact",
+        "off": 0,
+        "vol": 0.9,
+        "rate": 1
+      }
+    ],
+    "suidan": [
+      {
+        "id": "shot_pop",
+        "at": "fire",
+        "off": 0,
+        "vol": 0.9,
+        "rate": 0.9
+      },
+      {
+        "id": "exp_crunch",
+        "at": "impact",
+        "off": 0,
+        "vol": 0.8,
+        "rate": 1.1
+      }
+    ],
+    "beam": [
+      {
+        "id": "beam_charge",
+        "at": "cast",
+        "off": 0,
+        "vol": 0.8,
+        "rate": 1
+      },
+      {
+        "id": "laser_large",
+        "at": "fire",
+        "off": 0,
+        "vol": 0.9,
+        "rate": 1
+      },
+      {
+        "id": "exp_mid",
+        "at": "impact",
+        "off": 0,
+        "vol": 0.9,
+        "rate": 1
+      }
+    ],
+    "slash": [
+      {
+        "id": "slash1",
+        "at": "fire",
+        "off": 0,
+        "vol": 1,
+        "rate": 1
+      },
+      {
+        "id": "impact1",
+        "at": "impact",
+        "off": 0,
+        "vol": 0.9,
+        "rate": 1
+      }
+    ],
+    "bolt": [
+      {
+        "id": "zap1",
+        "at": "cast",
+        "off": 0,
+        "vol": 0.7,
+        "rate": 1
+      },
+      {
+        "id": "zap2",
+        "at": "fire",
+        "off": 0,
+        "vol": 0.9,
+        "rate": 0.9
+      },
+      {
+        "id": "exp_low",
+        "at": "impact",
+        "off": 0,
+        "vol": 0.9,
+        "rate": 1
+      }
+    ],
+    "akuu": [
+      {
+        "id": "warp",
+        "at": "cast",
+        "off": 0,
+        "vol": 0.8,
+        "rate": 0.8
+      },
+      {
+        "id": "slash2",
+        "at": "fire",
+        "off": 0,
+        "vol": 1,
+        "rate": 0.85
+      },
+      {
+        "id": "laser_sharp",
+        "at": "fire",
+        "off": 0.06,
+        "vol": 0.6,
+        "rate": 0.7
+      },
+      {
+        "id": "clash1",
+        "at": "impact",
+        "off": 0,
+        "vol": 0.9,
+        "rate": 1.3
+      },
+      {
+        "id": "exp_crunch",
+        "at": "impact",
+        "off": 0.1,
+        "vol": 0.7,
+        "rate": 0.9
+      }
+    ],
+    "Dance": [],
+    "mv2": [
+      {
+        "id": "warp",
+        "at": "cast",
+        "off": 0,
+        "vol": 0.8,
+        "rate": 0.8
+      },
+      {
+        "id": "slash2",
+        "at": "fire",
+        "off": 0,
+        "vol": 1,
+        "rate": 0.85
+      },
+      {
+        "id": "laser_sharp",
+        "at": "fire",
+        "off": 0.06,
+        "vol": 0.6,
+        "rate": 0.7
+      },
+      {
+        "id": "clash1",
+        "at": "impact",
+        "off": 0,
+        "vol": 0.9,
+        "rate": 1.3
+      },
+      {
+        "id": "exp_crunch",
+        "at": "impact",
+        "off": 0.1,
+        "vol": 0.7,
+        "rate": 0.9
+      }
+    ],
+    "Bomb": []
+  },
+  "system": {
+    "ui_tab": {
+      "id": "ui_click",
+      "vol": 0.8
+    },
+    "ui_pick": {
+      "id": "ui_select",
+      "vol": 0.9
+    },
+    "ui_order": {
+      "id": "ui_confirm",
+      "vol": 0.9
+    },
+    "ui_swap": {
+      "id": "ui_switch",
+      "vol": 0.9
+    },
+    "ui_drawer": {
+      "id": "ui_open",
+      "vol": 0.7
+    },
+    "q_start": {
+      "id": "jingle_up",
+      "vol": 0.9
+    },
+    "q_end": {
+      "id": "jingle_down",
+      "vol": 0.9
+    },
+    "hurt": {
+      "id": "hurt2",
+      "vol": 0.9
+    },
+    "flinch": {
+      "id": "hurt1",
+      "vol": 0.9
+    },
+    "faint": {
+      "id": "faint_mon",
+      "vol": 1
+    },
+    "dodge": {
+      "id": "shot_air",
+      "vol": 0.7,
+      "rate": 1.2
+    },
+    "clash": {
+      "id": "clash1",
+      "vol": 1
+    },
+    "pierce": {
+      "id": "metal_hit",
+      "vol": 0.9
+    },
+    "win": {
+      "id": "jingle_win",
+      "vol": 1
+    },
+    "lose": {
+      "id": "jingle_lose",
+      "vol": 1
+    }
+  }
+}

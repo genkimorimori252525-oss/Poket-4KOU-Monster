@@ -1,0 +1,266 @@
+{
+  "id": "PALKIA",
+  "name": "パルキア",
+  "types": [
+    "ドラゴン",
+    "みず"
+  ],
+  "stats": {
+    "atk": 35,
+    "def": 55,
+    "hp": 80,
+    "spd": 45,
+    "eva": 25,
+    "int": 25
+  },
+  "per": {
+    "aggr": 75,
+    "caut": 25,
+    "loyal": 30,
+    "self": 24
+  },
+  "moves": [
+    "beam",
+    "mv2"
+  ],
+  "customMoves": [
+    {
+      "id": "mv2",
+      "name": "亜空切断",
+      "type": "ドラゴン",
+      "power": 20,
+      "cast": 0.42,
+      "cooldown": 5,
+      "tags": [
+        "近距離向き",
+        "高威力",
+        "とどめ向き",
+        "瀕死時危険"
+      ],
+      "fx": {
+        "generator": "shatter",
+        "size": 190,
+        "cracks": 26,
+        "jag": 0.5,
+        "drift": 82,
+        "spin": 4,
+        "dust": 46,
+        "duration": 1.15,
+        "impact": null,
+        "id": "mv2",
+        "name": "亜空切断",
+        "seed": 918273,
+        "palette": [
+          "#e0d0ff",
+          "#9b7ad6",
+          "#5227a0",
+          "#160a30"
+        ],
+        "screen": {
+          "darken": {
+            "strength": 0.62,
+            "dur": 0.45,
+            "at": "cast"
+          },
+          "lines": {
+            "color": "#d8a8ff",
+            "strength": 0.45,
+            "dur": 0.4,
+            "at": "cast",
+            "dir": "v"
+          },
+          "flash": {
+            "color": "#f4e0ff",
+            "strength": 0.92,
+            "dur": 0.16,
+            "at": "impact"
+          },
+          "shake": {
+            "power": 10,
+            "dur": 0.42,
+            "at": "impact"
+          },
+          "tint": {
+            "color": "#7a3ad0",
+            "strength": 0.34,
+            "dur": 0.55,
+            "at": "impact"
+          }
+        },
+        "palKey": "闇",
+        "parts": [
+          {
+            "generator": "shatter",
+            "size": 190,
+            "cracks": 26,
+            "jag": 0.5,
+            "drift": 82,
+            "spin": 4,
+            "dust": 46,
+            "duration": 1.15,
+            "impact": null,
+            "id": "shatter_918294",
+            "name": "空間割れ",
+            "seed": 918287,
+            "palette": [
+              "#e0d0ff",
+              "#9b7ad6",
+              "#5227a0",
+              "#160a30"
+            ],
+            "at": "impact",
+            "off": 0,
+            "anchor": "to",
+            "dx": 0,
+            "dy": 0
+          },
+          {
+            "generator": "slash",
+            "size": 204,
+            "arcDeg": 210,
+            "thickness": 30,
+            "count": 1,
+            "interval": 0.13,
+            "spread": 26,
+            "taper": 1.1,
+            "hollow": 0,
+            "jitter": 0.18,
+            "squash": 1,
+            "specks": 10,
+            "impact": {
+              "size": 12,
+              "frames": 7,
+              "shards": 8,
+              "palette": [
+                "#e0d0ff",
+                "#9b7ad6",
+                "#5227a0",
+                "#160a30"
+              ]
+            },
+            "id": "slash_918294",
+            "name": "斬撃",
+            "seed": 52812,
+            "palette": [
+              "#e0d0ff",
+              "#9b7ad6",
+              "#5227a0",
+              "#160a30"
+            ],
+            "at": "cast",
+            "off": 0.29,
+            "anchor": "center",
+            "dx": -22,
+            "dy": 0
+          }
+        ],
+        "motions": [],
+        "timeScale": 1
+      },
+      "audio": [
+        {
+          "id": "warp",
+          "at": "cast",
+          "off": 0,
+          "vol": 0.8,
+          "rate": 0.8
+        },
+        {
+          "id": "slash2",
+          "at": "fire",
+          "off": 0,
+          "vol": 1,
+          "rate": 0.85
+        },
+        {
+          "id": "laser_sharp",
+          "at": "fire",
+          "off": 0.06,
+          "vol": 0.6,
+          "rate": 0.7
+        },
+        {
+          "id": "clash1",
+          "at": "impact",
+          "off": 0,
+          "vol": 0.9,
+          "rate": 1.3
+        },
+        {
+          "id": "exp_crunch",
+          "at": "impact",
+          "off": 0.1,
+          "vol": 0.7,
+          "rate": 0.9
+        }
+      ]
+    }
+  ],
+  "cry": {
+    "id": "cry_PALKIA",
+    "vol": 0.5,
+    "rate": 1,
+    "label": "パルキアの声",
+    "file": "PALKIA/cry.webm",
+    "mime": "audio/webm;codecs=opus"
+  },
+  "scale": 1,
+  "dy": 0,
+  "idleMotion": true,
+  "summon": {
+    "style": "trainer",
+    "cryDelay": 0.65,
+    "land": []
+  },
+  "shadow": {
+    "scale": 1.1,
+    "flat": 1,
+    "dx": 0,
+    "dy": 0,
+    "alpha": 0.24,
+    "follow": 0.6
+  },
+  "img": {
+    "normal": {
+      "scale": 1.1,
+      "dy": 0
+    },
+    "attack": {
+      "scale": 1.1,
+      "dy": 0
+    },
+    "hurt": {
+      "scale": 1.1,
+      "dy": 0
+    },
+    "back": {
+      "scale": 1.8,
+      "dy": 40
+    },
+    "summon": {
+      "scale": 1.1,
+      "dy": 0
+    }
+  },
+  "derived": {
+    "normal": false,
+    "attack": true,
+    "hurt": true,
+    "back": false,
+    "summon": true
+  },
+  "images": {
+    "normal": {
+      "file": "PALKIA/normal.webp",
+      "mime": "image/webp"
+    },
+    "attack": null,
+    "hurt": null,
+    "back": {
+      "file": "PALKIA/back.webp",
+      "mime": "image/webp"
+    },
+    "summon": null
+  },
+  "_slot": "パルキア"
+}

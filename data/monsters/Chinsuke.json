@@ -1,0 +1,139 @@
+{
+  "id": "Chinsuke",
+  "name": "ちんすけ",
+  "types": [
+    "かくとう",
+    "かくとう"
+  ],
+  "stats": {
+    "atk": 100,
+    "def": 70,
+    "hp": 75,
+    "spd": 1,
+    "eva": 1,
+    "int": 50
+  },
+  "per": {
+    "aggr": 10,
+    "caut": 80,
+    "loyal": 5,
+    "self": 80
+  },
+  "moves": [
+    "Punch"
+  ],
+  "customMoves": [
+    {
+      "id": "Punch",
+      "name": "殴打",
+      "type": "フェアリー",
+      "power": 35,
+      "cast": 1,
+      "cooldown": 6.9,
+      "tags": [],
+      "fx": {
+        "generator": "shatter",
+        "size": 190,
+        "cracks": 40,
+        "jag": 0,
+        "drift": 220,
+        "spin": 0,
+        "dust": 0,
+        "duration": 1.15,
+        "impact": null,
+        "id": "Punch",
+        "name": "殴打",
+        "seed": 918273,
+        "palette": [
+          "#ffffff",
+          "#ffd44a",
+          "#ff7a18",
+          "#c8260c"
+        ],
+        "screen": {},
+        "palKey": "炎",
+        "timeScale": 1,
+        "motions": [
+          {
+            "anim": "charge",
+            "at": "cast",
+            "off": 0,
+            "dur": 3
+          },
+          {
+            "anim": "attack",
+            "at": "fire",
+            "off": 0,
+            "dur": 0.5
+          }
+        ],
+        "parts": []
+      },
+      "audio": []
+    }
+  ],
+  "cry": {
+    "id": "cry_Chinsuke",
+    "vol": 1.1,
+    "rate": 0.9,
+    "label": "ちんすけの声",
+    "file": "Chinsuke/cry.webm",
+    "mime": "audio/webm;codecs=opus"
+  },
+  "scale": 1,
+  "dy": 0,
+  "idleMotion": true,
+  "summon": {
+    "style": "wild",
+    "cryDelay": 0.5,
+    "land": []
+  },
+  "shadow": {
+    "scale": 2.26,
+    "flat": 1,
+    "dx": 0,
+    "dy": 0,
+    "alpha": 0.35,
+    "follow": 0.6
+  },
+  "img": {
+    "normal": {
+      "scale": 1.72,
+      "dy": 17
+    },
+    "attack": {
+      "scale": 1.72,
+      "dy": 17
+    },
+    "hurt": {
+      "scale": 1.72,
+      "dy": 17
+    },
+    "back": {
+      "scale": 1.72,
+      "dy": 17
+    },
+    "summon": {
+      "scale": 1.72,
+      "dy": 17
+    }
+  },
+  "derived": {
+    "normal": false,
+    "attack": true,
+    "hurt": true,
+    "back": true,
+    "summon": true
+  },
+  "images": {
+    "normal": {
+      "file": "Chinsuke/normal.webp",
+      "mime": "image/webp"
+    },
+    "attack": null,
+    "hurt": null,
+    "back": null,
+    "summon": null
+  },
+  "_slot": "ちんすけ"
+}
