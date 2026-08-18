@@ -84,17 +84,17 @@ const builtOf = m => { if(!BUILT.has(m.id)) BUILT.set(m.id, buildEffect(m)); ret
 
 /* 技データ。数値はここに集約し、コードへ直書きしない */
 const MOVES = {
-  shakunetsu:{ id:'shakunetsu', name:'灼熱弾',   type:'ほのお', power:26, cast:0.30, cooldown:2.4, fx:MOVE_SHAKUNETSU,
+  shakunetsu:{ id:'shakunetsu', range:'ranged', name:'灼熱弾',   type:'ほのお', power:26, cast:0.30, cooldown:2.4, fx:MOVE_SHAKUNETSU,
                tags:['遠距離向き','連発向き','迎撃向き'] },
-  suidan    :{ id:'suidan',     name:'水弾',     type:'みず',   power:22, cast:0.24, cooldown:1.9, fx:MOVE_SUIDAN,
+  suidan    :{ id:'suidan', range:'ranged',     name:'水弾',     type:'みず',   power:22, cast:0.24, cooldown:1.9, fx:MOVE_SUIDAN,
                tags:['遠距離向き','連発向き','低リスク','迎撃向き'] },
-  beam      :{ id:'beam',       name:'白熱光線', type:'でんき', power:40, cast:0.72, cooldown:5.6, fx:MOVE_BEAM,
+  beam      :{ id:'beam', range:'ranged',       name:'白熱光線', type:'でんき', power:40, cast:0.72, cooldown:5.6, fx:MOVE_BEAM,
                tags:['高威力','とどめ向き','瀕死時危険'] },
-  slash     :{ id:'slash',      name:'三連爪',   type:'はがね', power:30, cast:0.18, cooldown:2.8, fx:MOVE_SLASH,
+  slash     :{ id:'slash', range:'melee',      name:'三連爪',   type:'はがね', power:30, cast:0.18, cooldown:2.8, fx:MOVE_SLASH,
                tags:['近距離向き','低リスク'] },
-  bolt      :{ id:'bolt',       name:'落雷',     type:'でんき', power:34, cast:0.68, cooldown:4.6, fx:MOVE_BOLT,
+  bolt      :{ id:'bolt', range:'remote',       name:'落雷',     type:'でんき', power:34, cast:0.68, cooldown:4.6, fx:MOVE_BOLT,
                tags:['高威力','回避されやすい','瀕死時危険'] },
-  akuu      :{ id:'akuu',       name:'亜空切断', type:'ドラゴン', power:44, cast:0.42, cooldown:5.0, fx:MOVE_AKUU,
+  akuu      :{ id:'akuu', range:'melee',       name:'亜空切断', type:'ドラゴン', power:44, cast:0.42, cooldown:5.0, fx:MOVE_AKUU,
                tags:['近距離向き','高威力','とどめ向き','瀕死時危険'] }
 };
 

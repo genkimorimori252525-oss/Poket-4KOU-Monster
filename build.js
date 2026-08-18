@@ -23,6 +23,7 @@ const MODULES = {
   '/*__STORE__*/'   : read('store_bridge.js'),
   '/*__FX_CORE__*/' : read('fx_core.js'),
   '/*__SFX_BANK__*/': read('sfx_bank.js'),
+  '/*__RANGE__*/'   : read('move_range.js'),
   '/*__MOVES__*/'   : read('moves.js'),
   '/*__ANIMS__*/'   : read('anims.js'),
   '/*__AUDIO_UI__*/': read('audio_ui.js'),

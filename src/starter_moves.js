@@ -17,7 +17,7 @@ const STARTER_MOVES = [
 
 /* 1. ひのこ — 飛び道具の基本。尾・火の粉・山なり */
 { name:'ひのこ',
-  battle:{type:'ほのお',power:24,cast:0.25,cooldown:1.8,tags:['遠距離向き','連発向き','迎撃向き']},
+  battle:{range:'ranged',type:'ほのお',power:24,cast:0.25,cooldown:1.8,tags:['遠距離向き','連発向き','迎撃向き']},
   audio:[],
   fx:{ generator:'projectile', id:'hinoko', name:'ひのこ', seed:918273, palKey:'炎',
     shape:'orb', size:18, frames:6, wobble:0.20, core:0.55, spin:0.20, specks:6,
@@ -30,7 +30,7 @@ const STARTER_MOVES = [
 
 /* 2. はっぱカッター — 斬撃の連撃・ばらつき */
 { name:'はっぱカッター',
-  battle:{type:'くさ',power:26,cast:0.20,cooldown:2.0,tags:['遠距離向き','連発向き']},
+  battle:{range:'melee',type:'くさ',power:26,cast:0.20,cooldown:2.0,tags:['遠距離向き','連発向き']},
   audio:[],
   fx:{ generator:'slash', id:'happa', name:'はっぱカッター', seed:7311, palKey:'草',
     size:112, arcDeg:205, thickness:7, taper:1.7, hollow:0, jitter:0.26, squash:0.88,
@@ -42,7 +42,7 @@ const STARTER_MOVES = [
 
 /* 3. 10まんボルト — 雷の枝分かれ・ギザギザ */
 { name:'10まんボルト',
-  battle:{type:'でんき',power:34,cast:0.50,cooldown:3.6,tags:['高威力','回避されやすい']},
+  battle:{range:'remote',type:'でんき',power:34,cast:0.50,cooldown:3.6,tags:['高威力','回避されやすい']},
   audio:[],
   fx:{ generator:'lightning', id:'juuman', name:'10まんボルト', seed:2024, palKey:'雷',
     width:6, jag:0.70, branches:8, segments:5, duration:0.50, fromSky:true,
@@ -55,7 +55,7 @@ const STARTER_MOVES = [
 
 /* 4. ハイドロポンプ — 光線の太さ・うねり・溜め */
 { name:'ハイドロポンプ',
-  battle:{type:'みず',power:42,cast:0.70,cooldown:5.4,tags:['高威力','とどめ向き','瀕死時危険']},
+  battle:{range:'ranged',type:'みず',power:42,cast:0.70,cooldown:5.4,tags:['高威力','とどめ向き','瀕死時危険']},
   audio:[],
   fx:{ generator:'beam', id:'hydro', name:'ハイドロポンプ', seed:5150, palKey:'水',
     width:22, segments:14, waver:4.6, charge:0.45, fire:0.09, sustain:0.50, fade:0.26,
@@ -70,7 +70,7 @@ const STARTER_MOVES = [
 
 /* 5. りゅうのまい — オーラ（自分に置く） */
 { name:'りゅうのまい',
-  battle:{type:'ドラゴン',power:6,cast:0.50,cooldown:7.0,tags:['低リスク']},
+  battle:{range:'remote',type:'ドラゴン',power:6,cast:0.50,cooldown:7.0,tags:['低リスク']},
   audio:[],
   fx:{ generator:'aura', id:'ryuunomai', name:'りゅうのまい', seed:555, palKey:'闇',
     size:96, rings:7, rise:120, duration:1.50,
@@ -81,7 +81,7 @@ const STARTER_MOVES = [
 
 /* 6. じしん — 空間割れ＋画面揺れ */
 { name:'じしん',
-  battle:{type:'じめん',power:40,cast:0.80,cooldown:6.5,tags:['高威力','とどめ向き']},
+  battle:{range:'remote',type:'じめん',power:40,cast:0.80,cooldown:6.5,tags:['高威力','とどめ向き']},
   audio:[],
   fx:{ generator:'shatter', id:'jishin', name:'じしん', seed:31415, palKey:null,
     size:300, cracks:34, jag:0.60, drift:140, spin:3.0, dust:90, duration:1.30,
@@ -93,7 +93,7 @@ const STARTER_MOVES = [
 
 /* 7. タネマシンガン — 演出素材（同じ弾をずらして連射） */
 { name:'タネマシンガン',
-  battle:{type:'くさ',power:22,cast:0.20,cooldown:2.2,tags:['遠距離向き','連発向き','低リスク']},
+  battle:{range:'ranged',type:'くさ',power:22,cast:0.20,cooldown:2.2,tags:['遠距離向き','連発向き','低リスク']},
   audio:[],
   fx:{ generator:'projectile', id:'tanemachine', name:'タネマシンガン', seed:4242, palKey:'草',
     shape:'shard', size:11, frames:4, wobble:0.10, core:0.7, spin:0.6, specks:2,
@@ -132,7 +132,7 @@ const STARTER_MOVES = [
 
 /* 8. トライアタック — 演出素材（色ちがい3枚の組み合わせ） */
 { name:'トライアタック',
-  battle:{type:'ノーマル',power:30,cast:0.35,cooldown:3.2,tags:['遠距離向き','迎撃向き']},
+  battle:{range:'ranged',type:'ノーマル',power:30,cast:0.35,cooldown:3.2,tags:['遠距離向き','迎撃向き']},
   audio:[],
   fx:{ generator:'projectile', id:'tri', name:'トライアタック', seed:333, palKey:'炎',
     shape:'orb', size:16, frames:6, wobble:0.16, core:0.6, spin:0.3, specks:4,
@@ -159,7 +159,7 @@ const STARTER_MOVES = [
 
 /* 9. みらいよち — 演出素材だけで作る時間差 */
 { name:'みらいよち',
-  battle:{type:'エスパー',power:38,cast:0.40,cooldown:6.0,tags:['高威力','とどめ向き']},
+  battle:{range:'ranged',type:'エスパー',power:38,cast:0.40,cooldown:6.0,tags:['高威力','とどめ向き']},
   audio:[],
   fx:{ generator:'projectile', id:'miraiyochi', name:'みらいよち', seed:8080, palKey:'毒',
     shape:'ring', size:14, frames:5, wobble:0.06, core:0.9, spin:0.8, specks:2,
@@ -180,7 +180,7 @@ const STARTER_MOVES = [
 
 /* 10. つばめがえし — 本体の動き（往復横跳び→突き出す） */
 { name:'つばめがえし',
-  battle:{type:'ひこう',power:28,cast:0.30,cooldown:2.6,tags:['近距離向き','低リスク']},
+  battle:{range:'melee',type:'ひこう',power:28,cast:0.30,cooldown:2.6,tags:['近距離向き','低リスク']},
   audio:[],
   fx:{ generator:'slash', id:'tsubame', name:'つばめがえし', seed:1212, palKey:'鋼',
     size:96, arcDeg:150, thickness:9, taper:2.0, hollow:0.15, jitter:0.10, squash:0.85,
@@ -199,7 +199,7 @@ const STARTER_MOVES = [
 
 /* こおり */
 { name:'れいとうビーム',
-  battle:{type:'こおり',power:38,cast:0.55,cooldown:4.4,tags:['高威力','とどめ向き']},
+  battle:{range:'ranged',type:'こおり',power:38,cast:0.55,cooldown:4.4,tags:['高威力','とどめ向き']},
   audio:[],
   fx:{ generator:'beam', id:'reitou', name:'れいとうビーム', seed:6101, palKey:'氷',
     width:13, segments:10, waver:1.4, charge:0.35, fire:0.08, sustain:0.45, fade:0.30,
@@ -211,7 +211,7 @@ const STARTER_MOVES = [
     motions:[ {anim:'charge',at:'cast',off:0,dur:0.55} ] } },
 
 { name:'つららばり',
-  battle:{type:'こおり',power:24,cast:0.20,cooldown:2.2,tags:['遠距離向き','連発向き']},
+  battle:{range:'ranged',type:'こおり',power:24,cast:0.20,cooldown:2.2,tags:['遠距離向き','連発向き']},
   audio:[],
   fx:{ generator:'projectile', id:'tsurara', name:'つららばり', seed:6102, palKey:'氷',
     shape:'shard', size:15, frames:4, wobble:0.06, core:0.85, spin:0.1, specks:3,
@@ -243,7 +243,7 @@ const STARTER_MOVES = [
 
 /* かくとう */
 { name:'インファイト',
-  battle:{type:'かくとう',power:44,cast:0.25,cooldown:4.8,tags:['近距離向き','高威力','瀕死時危険']},
+  battle:{range:'melee',type:'かくとう',power:44,cast:0.25,cooldown:4.8,tags:['近距離向き','高威力','瀕死時危険']},
   audio:[],
   fx:{ generator:'slash', id:'infight', name:'インファイト', seed:6201, palKey:'鋼',
     size:74, arcDeg:130, thickness:11, taper:1.2, hollow:0, jitter:0.34, squash:1.0,
@@ -257,7 +257,7 @@ const STARTER_MOVES = [
               {anim:'attack',at:'fire',off:0.32,dur:0.18} ] } },
 
 { name:'きあいだま',
-  battle:{type:'かくとう',power:40,cast:0.60,cooldown:5.2,tags:['高威力','とどめ向き','回避されやすい']},
+  battle:{range:'ranged',type:'かくとう',power:40,cast:0.60,cooldown:5.2,tags:['高威力','とどめ向き','回避されやすい']},
   audio:[],
   fx:{ generator:'projectile', id:'kiaidama', name:'きあいだま', seed:6202, palKey:null,
     shape:'orb', size:34, frames:8, wobble:0.24, core:0.45, spin:0.35, specks:8,
@@ -278,7 +278,7 @@ const STARTER_MOVES = [
 
 /* どく */
 { name:'ヘドロばくだん',
-  battle:{type:'どく',power:32,cast:0.35,cooldown:3.4,tags:['遠距離向き','迎撃向き']},
+  battle:{range:'ranged',type:'どく',power:32,cast:0.35,cooldown:3.4,tags:['遠距離向き','迎撃向き']},
   audio:[],
   fx:{ generator:'projectile', id:'hedoro', name:'ヘドロばくだん', seed:6301, palKey:'毒',
     shape:'orb', size:26, frames:6, wobble:0.34, core:0.5, spin:0.15, specks:7,
@@ -291,7 +291,7 @@ const STARTER_MOVES = [
     timeScale:1, parts:[], motions:[] } },
 
 { name:'どくどく',
-  battle:{type:'どく',power:8,cast:0.40,cooldown:6.0,tags:['低リスク']},
+  battle:{range:'remote',type:'どく',power:8,cast:0.40,cooldown:6.0,tags:['低リスク']},
   audio:[],
   fx:{ generator:'aura', id:'dokudoku', name:'どくどく', seed:6302, palKey:'毒',
     size:104, rings:3, rise:44, duration:2.20,
@@ -306,7 +306,7 @@ const STARTER_MOVES = [
 
 /* むし */
 { name:'シザークロス',
-  battle:{type:'むし',power:30,cast:0.25,cooldown:2.8,tags:['近距離向き','低リスク']},
+  battle:{range:'melee',type:'むし',power:30,cast:0.25,cooldown:2.8,tags:['近距離向き','低リスク']},
   audio:[],
   fx:{ generator:'slash', id:'scissor', name:'シザークロス', seed:6401, palKey:'草',
     size:104, arcDeg:190, thickness:10, taper:1.5, hollow:0, jitter:0.12, squash:0.95,
@@ -317,7 +317,7 @@ const STARTER_MOVES = [
     timeScale:1, parts:[], motions:[] } },
 
 { name:'ミサイルばり',
-  battle:{type:'むし',power:20,cast:0.18,cooldown:2.0,tags:['遠距離向き','連発向き','低リスク']},
+  battle:{range:'ranged',type:'むし',power:20,cast:0.18,cooldown:2.0,tags:['遠距離向き','連発向き','低リスク']},
   audio:[],
   fx:{ generator:'projectile', id:'missile', name:'ミサイルばり', seed:6402, palKey:'草',
     shape:'shard', size:9, frames:3, wobble:0.08, core:0.8, spin:0.4, specks:1,
@@ -349,7 +349,7 @@ const STARTER_MOVES = [
 
 /* いわ */
 { name:'いわなだれ',
-  battle:{type:'いわ',power:36,cast:0.50,cooldown:4.2,tags:['高威力','回避されやすい']},
+  battle:{range:'remote',type:'いわ',power:36,cast:0.50,cooldown:4.2,tags:['高威力','回避されやすい']},
   audio:[],
   fx:{ generator:'lightning', id:'iwanadare', name:'いわなだれ', seed:6501, palKey:null,
     width:20, jag:0.14, branches:0, segments:2, duration:0.45, fromSky:true,
@@ -373,7 +373,7 @@ const STARTER_MOVES = [
     ] } },
 
 { name:'ストーンエッジ',
-  battle:{type:'いわ',power:38,cast:0.45,cooldown:4.6,tags:['高威力','とどめ向き']},
+  battle:{range:'remote',type:'いわ',power:38,cast:0.45,cooldown:4.6,tags:['高威力','とどめ向き']},
   audio:[],
   fx:{ generator:'lightning', id:'stoneedge', name:'ストーンエッジ', seed:6504, palKey:null,
     width:9, jag:0.18, branches:0, segments:2, duration:0.55, fromSky:false,
@@ -392,7 +392,7 @@ const STARTER_MOVES = [
 
 /* ゴースト */
 { name:'シャドーボール',
-  battle:{type:'ゴースト',power:34,cast:0.40,cooldown:3.6,tags:['遠距離向き','高威力']},
+  battle:{range:'ranged',type:'ゴースト',power:34,cast:0.40,cooldown:3.6,tags:['遠距離向き','高威力']},
   audio:[],
   fx:{ generator:'projectile', id:'shadowball', name:'シャドーボール', seed:6601, palKey:'闇',
     shape:'orb', size:28, frames:7, wobble:0.30, core:0.35, spin:0.5, specks:6,
@@ -405,7 +405,7 @@ const STARTER_MOVES = [
     timeScale:1, parts:[], motions:[] } },
 
 { name:'おにび',
-  battle:{type:'ゴースト',power:12,cast:0.30,cooldown:3.0,tags:['遠距離向き','低リスク']},
+  battle:{range:'ranged',type:'ゴースト',power:12,cast:0.30,cooldown:3.0,tags:['遠距離向き','低リスク']},
   audio:[],
   fx:{ generator:'projectile', id:'onibi', name:'おにび', seed:6602, palKey:null,
     shape:'orb', size:14, frames:8, wobble:0.48, core:0.4, spin:0.9, specks:5,
@@ -418,7 +418,7 @@ const STARTER_MOVES = [
 
 /* あく */
 { name:'つじぎり',
-  battle:{type:'あく',power:30,cast:0.20,cooldown:2.4,tags:['近距離向き','とどめ向き']},
+  battle:{range:'melee',type:'あく',power:30,cast:0.20,cooldown:2.4,tags:['近距離向き','とどめ向き']},
   audio:[],
   fx:{ generator:'slash', id:'tsujigiri', name:'つじぎり', seed:6701, palKey:'闇',
     size:170, arcDeg:120, thickness:8, taper:2.4, hollow:0.30, jitter:0.08, squash:0.72,
@@ -432,7 +432,7 @@ const STARTER_MOVES = [
               {anim:'attack',at:'fire',off:0,dur:0.16} ] } },
 
 { name:'かみくだく',
-  battle:{type:'あく',power:38,cast:0.30,cooldown:3.8,tags:['近距離向き','高威力']},
+  battle:{range:'melee',type:'あく',power:38,cast:0.30,cooldown:3.8,tags:['近距離向き','高威力']},
   audio:[],
   fx:{ generator:'slash', id:'kamikudaku', name:'かみくだく', seed:6702, palKey:'闇',
     size:88, arcDeg:110, thickness:18, taper:1.0, hollow:0.42, jitter:0.20, squash:1.15,
@@ -450,7 +450,7 @@ const STARTER_MOVES = [
 
 /* はがね */
 { name:'ラスターカノン',
-  battle:{type:'はがね',power:40,cast:0.60,cooldown:4.8,tags:['高威力','とどめ向き']},
+  battle:{range:'ranged',type:'はがね',power:40,cast:0.60,cooldown:4.8,tags:['高威力','とどめ向き']},
   audio:[],
   fx:{ generator:'beam', id:'lustercannon', name:'ラスターカノン', seed:6801, palKey:'鋼',
     width:19, segments:9, waver:0.8, charge:0.40, fire:0.07, sustain:0.42, fade:0.22,
@@ -462,7 +462,7 @@ const STARTER_MOVES = [
     motions:[ {anim:'charge',at:'cast',off:0,dur:0.60} ] } },
 
 { name:'メタルクロー',
-  battle:{type:'はがね',power:26,cast:0.20,cooldown:2.2,tags:['近距離向き','低リスク','連発向き']},
+  battle:{range:'melee',type:'はがね',power:26,cast:0.20,cooldown:2.2,tags:['近距離向き','低リスク','連発向き']},
   audio:[],
   fx:{ generator:'slash', id:'metalclaw', name:'メタルクロー', seed:6802, palKey:'鋼',
     size:92, arcDeg:165, thickness:6, taper:1.9, hollow:0, jitter:0.10, squash:0.9,
@@ -474,7 +474,7 @@ const STARTER_MOVES = [
 
 /* フェアリー */
 { name:'ムーンフォース',
-  battle:{type:'フェアリー',power:38,cast:0.50,cooldown:4.6,tags:['高威力','とどめ向き']},
+  battle:{range:'ranged',type:'フェアリー',power:38,cast:0.50,cooldown:4.6,tags:['高威力','とどめ向き']},
   audio:[],
   fx:{ generator:'projectile', id:'moonforce', name:'ムーンフォース', seed:6901, palKey:null,
     shape:'orb', size:30, frames:7, wobble:0.14, core:0.6, spin:0.2, specks:9,
@@ -488,7 +488,7 @@ const STARTER_MOVES = [
     motions:[ {anim:'charge',at:'cast',off:0,dur:0.50} ] } },
 
 { name:'マジカルシャイン',
-  battle:{type:'フェアリー',power:34,cast:0.45,cooldown:4.0,tags:['遠距離向き','高威力']},
+  battle:{range:'ranged',type:'フェアリー',power:34,cast:0.45,cooldown:4.0,tags:['遠距離向き','高威力']},
   audio:[],
   fx:{ generator:'beam', id:'magicalshine', name:'マジカルシャイン', seed:6902, palKey:null,
     width:26, segments:8, waver:1.0, charge:0.30, fire:0.06, sustain:0.36, fade:0.28,
@@ -505,7 +505,7 @@ const STARTER_MOVES = [
 
 /* ノーマル */
 { name:'でんこうせっか',
-  battle:{type:'ノーマル',power:20,cast:0.10,cooldown:1.4,tags:['近距離向き','連発向き','低リスク']},
+  battle:{range:'ranged',type:'ノーマル',power:20,cast:0.10,cooldown:1.4,tags:['近距離向き','連発向き','低リスク']},
   audio:[],
   fx:{ generator:'projectile', id:'denkou', name:'でんこうせっか', seed:7001, palKey:'鋼',
     shape:'bolt', size:13, frames:3, wobble:0.06, core:0.9, spin:0, specks:3,
@@ -519,7 +519,7 @@ const STARTER_MOVES = [
               {anim:'attack',at:'fire',off:0,dur:0.14} ] } },
 
 { name:'はかいこうせん',
-  battle:{type:'ノーマル',power:52,cast:1.00,cooldown:8.0,tags:['高威力','とどめ向き','瀕死時危険']},
+  battle:{range:'ranged',type:'ノーマル',power:52,cast:1.00,cooldown:8.0,tags:['高威力','とどめ向き','瀕死時危険']},
   audio:[],
   fx:{ generator:'beam', id:'hakai', name:'はかいこうせん', seed:7002, palKey:'雷',
     width:34, segments:8, waver:0.6, charge:0.70, fire:0.12, sustain:0.62, fade:0.34,
@@ -536,7 +536,7 @@ const STARTER_MOVES = [
 
 /* ほのお */
 { name:'かえんほうしゃ',
-  battle:{type:'ほのお',power:36,cast:0.45,cooldown:4.0,tags:['遠距離向き','高威力']},
+  battle:{range:'ranged',type:'ほのお',power:36,cast:0.45,cooldown:4.0,tags:['遠距離向き','高威力']},
   audio:[],
   fx:{ generator:'beam', id:'kaen', name:'かえんほうしゃ', seed:7011, palKey:'炎',
     width:24, segments:16, waver:5.2, charge:0.25, fire:0.10, sustain:0.60, fade:0.30,
@@ -548,7 +548,7 @@ const STARTER_MOVES = [
     motions:[ {anim:'attack',at:'fire',off:0,dur:0.80} ] } },
 
 { name:'だいもんじ',
-  battle:{type:'ほのお',power:44,cast:0.60,cooldown:5.6,tags:['高威力','とどめ向き']},
+  battle:{range:'ranged',type:'ほのお',power:44,cast:0.60,cooldown:5.6,tags:['高威力','とどめ向き']},
   audio:[],
   fx:{ generator:'projectile', id:'daimonji', name:'だいもんじ', seed:7012, palKey:'炎',
     shape:'orb', size:36, frames:8, wobble:0.30, core:0.42, spin:0.25, specks:12,
@@ -569,7 +569,7 @@ const STARTER_MOVES = [
 
 /* みず */
 { name:'アクアジェット',
-  battle:{type:'みず',power:24,cast:0.12,cooldown:1.6,tags:['近距離向き','連発向き','低リスク']},
+  battle:{range:'ranged',type:'みず',power:24,cast:0.12,cooldown:1.6,tags:['近距離向き','連発向き','低リスク']},
   audio:[],
   fx:{ generator:'projectile', id:'aquajet', name:'アクアジェット', seed:7021, palKey:'水',
     shape:'bolt', size:20, frames:5, wobble:0.12, core:0.6, spin:0, specks:4,
@@ -582,7 +582,7 @@ const STARTER_MOVES = [
     motions:[ {anim:'attack',at:'fire',off:0,dur:0.18} ] } },
 
 { name:'うずしお',
-  battle:{type:'みず',power:16,cast:0.35,cooldown:4.4,tags:['遠距離向き','低リスク']},
+  battle:{range:'remote',type:'みず',power:16,cast:0.35,cooldown:4.4,tags:['遠距離向き','低リスク']},
   audio:[],
   fx:{ generator:'aura', id:'uzushio', name:'うずしお', seed:7022, palKey:'水',
     size:120, rings:9, rise:34, duration:2.30,
@@ -597,7 +597,7 @@ const STARTER_MOVES = [
 
 /* でんき */
 { name:'エレキボール',
-  battle:{type:'でんき',power:30,cast:0.35,cooldown:3.0,tags:['遠距離向き','迎撃向き']},
+  battle:{range:'ranged',type:'でんき',power:30,cast:0.35,cooldown:3.0,tags:['遠距離向き','迎撃向き']},
   audio:[],
   fx:{ generator:'projectile', id:'elekiball', name:'エレキボール', seed:7031, palKey:'雷',
     shape:'orb', size:26, frames:7, wobble:0.26, core:0.5, spin:0.9, specks:10,
@@ -609,7 +609,7 @@ const STARTER_MOVES = [
     timeScale:1, parts:[], motions:[] } },
 
 { name:'かみなりパンチ',
-  battle:{type:'でんき',power:32,cast:0.22,cooldown:2.8,tags:['近距離向き','低リスク']},
+  battle:{range:'melee',type:'でんき',power:32,cast:0.22,cooldown:2.8,tags:['近距離向き','低リスク']},
   audio:[],
   fx:{ generator:'slash', id:'kaminaripunch', name:'かみなりパンチ', seed:7032, palKey:'雷',
     size:78, arcDeg:100, thickness:20, taper:0.9, hollow:0.20, jitter:0.30, squash:1.1,
@@ -629,7 +629,7 @@ const STARTER_MOVES = [
 
 /* じめん */
 { name:'ドリルライナー',
-  battle:{type:'じめん',power:34,cast:0.25,cooldown:3.0,tags:['近距離向き','低リスク']},
+  battle:{range:'ranged',type:'じめん',power:34,cast:0.25,cooldown:3.0,tags:['近距離向き','低リスク']},
   audio:[],
   fx:{ generator:'projectile', id:'drillliner', name:'ドリルライナー', seed:7041, palKey:null,
     shape:'bolt', size:26, frames:6, wobble:0.10, core:0.7, spin:0, specks:8,
@@ -642,7 +642,7 @@ const STARTER_MOVES = [
     motions:[ {anim:'attack',at:'fire',off:0,dur:0.22} ] } },
 
 { name:'だいちのちから',
-  battle:{type:'じめん',power:38,cast:0.50,cooldown:4.6,tags:['高威力','とどめ向き']},
+  battle:{range:'remote',type:'じめん',power:38,cast:0.50,cooldown:4.6,tags:['高威力','とどめ向き']},
   audio:[],
   fx:{ generator:'lightning', id:'daichi', name:'だいちのちから', seed:7042, palKey:null,
     width:22, jag:0.22, branches:2, segments:3, duration:0.55, fromSky:false,
@@ -660,7 +660,7 @@ const STARTER_MOVES = [
 
 /* ひこう */
 { name:'エアスラッシュ',
-  battle:{type:'ひこう',power:30,cast:0.28,cooldown:2.8,tags:['遠距離向き','連発向き']},
+  battle:{range:'melee',type:'ひこう',power:30,cast:0.28,cooldown:2.8,tags:['遠距離向き','連発向き']},
   audio:[],
   fx:{ generator:'slash', id:'airslash', name:'エアスラッシュ', seed:7051, palKey:'氷',
     size:130, arcDeg:230, thickness:5, taper:2.2, hollow:0.35, jitter:0.06, squash:0.8,
@@ -677,7 +677,7 @@ const STARTER_MOVES = [
     ] } },
 
 { name:'ブレイブバード',
-  battle:{type:'ひこう',power:46,cast:0.40,cooldown:5.4,tags:['近距離向き','高威力','瀕死時危険']},
+  battle:{range:'ranged',type:'ひこう',power:46,cast:0.40,cooldown:5.4,tags:['近距離向き','高威力','瀕死時危険']},
   audio:[],
   fx:{ generator:'projectile', id:'bravebird', name:'ブレイブバード', seed:7053, palKey:'氷',
     shape:'bolt', size:30, frames:6, wobble:0.14, core:0.55, spin:0, specks:10,
@@ -694,7 +694,7 @@ const STARTER_MOVES = [
 
 /* エスパー */
 { name:'サイコキネシス',
-  battle:{type:'エスパー',power:36,cast:0.45,cooldown:4.2,tags:['高威力','とどめ向き']},
+  battle:{range:'remote',type:'エスパー',power:36,cast:0.45,cooldown:4.2,tags:['高威力','とどめ向き']},
   audio:[],
   fx:{ generator:'shatter', id:'psychokinesis', name:'サイコキネシス', seed:7061, palKey:'毒',
     size:210, cracks:20, jag:0.42, drift:95, spin:6.5, dust:52, duration:1.15,
@@ -706,7 +706,7 @@ const STARTER_MOVES = [
     motions:[ {anim:'charge',at:'cast',off:0,dur:0.70} ] } },
 
 { name:'サイコカッター',
-  battle:{type:'エスパー',power:26,cast:0.18,cooldown:2.2,tags:['遠距離向き','連発向き','低リスク']},
+  battle:{range:'melee',type:'エスパー',power:26,cast:0.18,cooldown:2.2,tags:['遠距離向き','連発向き','低リスク']},
   audio:[],
   fx:{ generator:'slash', id:'psychocutter', name:'サイコカッター', seed:7062, palKey:'毒',
     size:100, arcDeg:180, thickness:6, taper:2.0, hollow:0.25, jitter:0.08, squash:0.85,
@@ -718,7 +718,7 @@ const STARTER_MOVES = [
 
 /* ドラゴン */
 { name:'りゅうのはどう',
-  battle:{type:'ドラゴン',power:38,cast:0.45,cooldown:4.4,tags:['遠距離向き','高威力']},
+  battle:{range:'ranged',type:'ドラゴン',power:38,cast:0.45,cooldown:4.4,tags:['遠距離向き','高威力']},
   audio:[],
   fx:{ generator:'beam', id:'ryuunohadou', name:'りゅうのはどう', seed:7071, palKey:'闇',
     width:30, segments:11, waver:2.4, charge:0.30, fire:0.10, sustain:0.46, fade:0.30,
@@ -732,7 +732,7 @@ const STARTER_MOVES = [
               {anim:'attack',at:'fire',off:0,dur:0.55} ] } },
 
 { name:'げきりん',
-  battle:{type:'ドラゴン',power:50,cast:0.30,cooldown:6.2,tags:['近距離向き','高威力','瀕死時危険']},
+  battle:{range:'melee',type:'ドラゴン',power:50,cast:0.30,cooldown:6.2,tags:['近距離向き','高威力','瀕死時危険']},
   audio:[],
   fx:{ generator:'slash', id:'gekirin', name:'げきりん', seed:7072, palKey:'闇',
     size:96, arcDeg:200, thickness:14, taper:1.3, hollow:0.10, jitter:0.40, squash:1.0,
