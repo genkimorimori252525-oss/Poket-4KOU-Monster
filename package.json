@@ -24,7 +24,8 @@
     "verify:range": "node tools/verify_range.js",
     "verify:cost": "node tools/verify_cost.js",
     "cost:baseline": "node tools/cost_baseline.js",
-    "verify:econ": "node tools/verify_econ.js"
+    "verify:econ": "node tools/verify_econ.js",
+    "verify:bar": "node tools/verify_bar.js"
   },
   "devDependencies": {
     "playwright": "^1.62.1"

@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 current_phase: 3
 current_phase_name: 見えるようにする
-status: ready
-stopped_at: Phase 2 完了（経済が動いて決着する）
+status: human_needed
+stopped_at: 3フェーズ完了。にーくらの実戦確認待ち
 last_updated: "2026-08-19T00:00:00.000Z"
 last_activity: 2026-08-19
-last_activity_desc: Phase 2 完了。所持コスト・増減・敗北条件・8Q判定が入った
+last_activity_desc: Phase 3 完了。コストバー2本が出て、減増が見える
 state_head: 76f0925
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 0
   completed_plans: 0
-  percent: 67
+  percent: 100
 ---
 # Project State
 
@@ -23,15 +23,15 @@ See: .planning/PROJECT.md
 
 **Core value:** コストが「編成の枠」やのうて**陣営の体力**として実際に動き、
 高コスト編成と低コスト編成で**違うゲーム**が成立すること
-**Current focus:** Phase 3 —— 上部にコストバー2本。死んだ瞬間ガクッと落ちる
+**Current focus:** 完了条件の確認 —— 高コスト編成 vs 低コスト編成で戦わせる
 
 ## Current Position
 
-Phase: 3 of 3 (見えるようにする)
-Status: 着手前（Phase 1 は完了）
+Phase: 3 of 3 (見えるようにする) — 完了
+Status: 全フェーズ完了 —— **にーくらの実戦確認が残っとる**
 Last activity: 2026-08-19 —— マイルストーン開始
 
-Progress: [███████░░░] 67%（2/3 フェーズ）
+Progress: [██████████] 100%（3/3 フェーズ）
 
 ## 前のマイルストーン（開発基盤）
 

@@ -46,7 +46,8 @@
     "post_planning_gaps": true,
     "security_enforcement": true,
     "security_asvs_level": 1,
-    "security_block_on": "high"
+    "security_block_on": "high",
+    "inline_plan_threshold": 3
   },
   "ship": {
     "pr_body_sections": []
@@ -63,5 +64,12 @@
     "source_grounding_authority": "grep"
   },
   "mode": "yolo",
-  "granularity": "coarse"
+  "granularity": "coarse",
+  "model_overrides": {
+    "gsd-planner": "sonnet",
+    "gsd-plan-checker": "sonnet",
+    "gsd-verifier": "sonnet",
+    "gsd-code-reviewer": "sonnet",
+    "gsd-phase-researcher": "sonnet"
+  }
 }

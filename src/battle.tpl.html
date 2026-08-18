@@ -926,8 +926,11 @@ function drawField(){
   fg.fillText(phase==='interval'?('休憩 '+Math.ceil(phaseLeft)+'s')
                                 :(quarter+'Q  '+Math.ceil(phaseLeft)+'s'),334,7);
 
+  drawCostBars(fg);
+
   drawInfoBox(fg,  9, 12,177,44,enemy,false);
   drawInfoBox(fg,198,128,177,58,ally, true);
+  drawEndBanner(fg);
   if(showGrid){
     fg.strokeStyle='rgba(255,80,80,0.7)'; fg.lineWidth=1.5; fg.setLineDash([3,3]);
     fg.strokeRect(144,30,96,150); fg.setLineDash([]);
@@ -936,6 +939,76 @@ function drawField(){
     fg.strokeStyle='rgba(255,220,80,0.65)'; fg.setLineDash([4,4]);
     fg.beginPath(); fg.moveTo(148,146); fg.lineTo(236,73); fg.stroke(); fg.setLineDash([]);
   }
+}
+
+/* =========================================================
+   所持コストバー（計画18.6・Phase 3）
+
+   「所持コストバーを画面上部に敵味方2本表示する。四皇モンが死んだ瞬間、
+     鳴き声が0.7倍速で鳴り、**コストバーがガクッと落ちる**」
+
+   置き場所は x=190〜288・y=4〜28 —— 効果空間（y=30 から）より上。
+   狭いけん、棒は短く、数字は右に逃がす。
+
+   掟4: **新しい絵は1枚も増やしとらん。** 全部ここで描いとる。
+   ========================================================= */
+const CB = { x:190, y:4, w:98, h:24, barX:194, barW:62, barH:6, numX:285 };
+
+function drawCostBars(g){
+  const max = COST.maxOwn();
+  g.fillStyle='rgba(10,14,20,0.6)'; roundRect(g,CB.x,CB.y,CB.w,CB.h,4); g.fill();
+
+  const row=(side,ty,col)=>{
+    const t=TEAM[side], b=COSTBAR[side];
+    const bx=CB.barX, by=ty, bw=CB.barW, bh=CB.barH;
+
+    /* 目盛りは初期値(150)のところに1本。**今が開始より上か下か**が一目で分かる。
+       上限(300)まで伸びる棒やけん、真ん中が「五分」やない */
+    g.fillStyle='rgba(255,255,255,0.10)'; g.fillRect(bx,by,bw,bh);
+
+    /* 尾 —— 減った分。実値より遅れて縮むけん、失った量がそのまま見える */
+    if(b.ghost > t.own){
+      g.fillStyle='rgba(224,80,112,0.85)';
+      g.fillRect(bx, by, bw*Math.min(1,b.ghost/max), bh);
+    }
+    /* 本体 */
+    g.fillStyle=col;
+    g.fillRect(bx, by, bw*Math.min(1,t.own/max), bh);
+
+    /* 初期値の目盛り */
+    const mk = bx + bw*(COST.ECON.start/max);
+    g.fillStyle='rgba(255,255,255,0.45)'; g.fillRect(mk, by-1, 1, bh+2);
+
+    /* 動いた直後だけ光らせる。**鳴き声0.7倍と同じ瞬間に出る**
+
+       ⚠ ここは最初、棒の上に色を塗り重ねとった。それやと**一番読みたい瞬間に
+       棒が隠れる** —— 落ちた直後こそ「今いくら残っとるか」を見たいのに。
+       塗らずに囲む。情報を消さずに目だけ引く。 */
+    if(b.flash>0){
+      g.strokeStyle = b.dir<0 ? 'rgba(255,120,140,'+(b.flash*1.6)+')'
+                              : 'rgba(150,255,190,'+(b.flash*1.6)+')';
+      g.lineWidth=1;
+      g.strokeRect(bx-1.5, by-1.5, bw+3, bh+3);
+    }
+
+    g.fillStyle = t.own<=0 ? '#e05070' : '#dfe6f0';
+    g.font=F(11); g.textAlign='right'; g.textBaseline='top';
+    g.fillText(Math.round(t.own), CB.numX, by-2);
+  };
+
+  /* 上が相手・下が味方。情報ボックスの並び（相手が上）と揃える */
+  row('enemy', CB.y+5,  '#c08cf0');
+  row('ally',  CB.y+15, '#8fd45c');
+}
+
+/* 決着の理由を出す（WIN-05）。ログだけやと、遊んどる人には何も伝わらん */
+function drawEndBanner(g){
+  if(!over || !endReason) return;
+  const txt = endReason==='全滅' ? 'ぜんめつ'
+            : endReason==='コスト枯渇' ? 'コストぎれ' : 'はんてい';
+  g.fillStyle='rgba(10,14,20,0.72)'; roundRect(g,142,96,100,22,5); g.fill();
+  g.fillStyle='#f0a020'; g.font=F(13); g.textAlign='center'; g.textBaseline='top';
+  g.fillText(txt,192,100);
 }
 
 /* =========================================================
@@ -967,12 +1040,37 @@ const TEAM = {
 };
 let endReason = null;   // '全滅' / 'コスト枯渇' / '判定'
 
+/* バーの見た目だけの状態（計画18.6）。**ここは絵の都合だけ。戦闘の計算には一切戻さん**。
+   ghost = 直前の値。実値より遅れて追いつくけん、減った分が赤い尾になって見える。
+   これが「ガクッと落ちる」の正体 —— バーをゆっくり動かすと逆に落ちて見えん。
+   バーは即座に落として、**失った分を尾で見せる**。 */
+const COSTBAR = {
+  ally:  { ghost: COST.ECON.start, flash: 0, dir: 0 },
+  enemy: { ghost: COST.ECON.start, flash: 0, dir: 0 }
+};
+function stepCostBar(dt){
+  for(const s of ['ally','enemy']){
+    const b=COSTBAR[s], own=TEAM[s].own;
+    /* 尾は減るときだけ遅らせる。増えるときは実値が先に伸びるけん尾は即追いつく */
+    if(b.ghost > own) b.ghost = Math.max(own, b.ghost - Math.max(18, (b.ghost-own)*2.2) * dt);
+    else              b.ghost = own;
+    if(b.flash>0) b.flash = Math.max(0, b.flash - dt);
+  }
+}
+
 /* 所持コストを動かす。**必ずここを通す** —— 直に書き換えたら
    ログに残らんくなって、バランスが崩れたとき追えん（掟9）。 */
 function addCost(side, delta, why){
   const t = TEAM[side];
   const before = t.own;
   t.own = Math.max(0, Math.min(COST.maxOwn(), t.own + delta));
+  /* 動いたことを絵に伝える。尾は before から引きずる（減った分がそのまま尾になる） */
+  const bar = COSTBAR[side];
+  if(bar && t.own !== before){
+    bar.ghost = Math.max(bar.ghost, before);
+    bar.flash = 0.55;
+    bar.dir = t.own < before ? -1 : 1;
+  }
   const sign = delta >= 0 ? '+' : '−';
   AILog.event(side, '所持コスト '+sign+Math.abs(delta).toFixed(1)
     +'（'+before.toFixed(1)+' → '+t.own.toFixed(1)+'）　'+why);
@@ -1612,6 +1710,7 @@ function stepFighter(f,foe,dt){
 function stepBattle(dt){
   battleTime+=dt;
   stepQuarter(dt);
+  stepCostBar(dt);   /* 絵だけの尾。戦闘の計算には戻さん */
   if(phase==='interval') return;
   for(const p of pending) p.t-=dt;
   const due=pending.filter(p=>p.t<=0);
@@ -1646,6 +1745,7 @@ function resetBattle(seed){
   TEAM.ally.own = TEAM.enemy.own = COST.ECON.start;
   TEAM.ally.dealt = TEAM.enemy.dealt = 0;
   endReason = null;
+  for(const s2 of ['ally','enemy']){ COSTBAR[s2].ghost=COST.ECON.start; COSTBAR[s2].flash=0; COSTBAR[s2].dir=0; }
   for(const f of [...partyA,...partyB]){
     f.dead=false; f.charging=null; f.cd={}; f.mi=0;
     f.hp=f.maxHP; f.actionTimer=0.6; f.dodgeUntil=-1; f.lastMove=null;

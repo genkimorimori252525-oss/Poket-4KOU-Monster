@@ -22,3 +22,5 @@ dist-dev/
 # 四皇モンの中身は data/ として git に載っとるけん、これは移行の材料と証拠。
 # betgame4 など別プロジェクトのデータも入っとるけん、このリポジトリには載せん。
 shioumon_backup_*.json
+tools/_shot-*.png
+tools/_bar-shot.png
