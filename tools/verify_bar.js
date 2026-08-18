@@ -28,25 +28,33 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   await pg.goto(DIST_URL + 'shioumon_field_test.html');
   await pg.waitForTimeout(1500);
 
-  /* 棒の色が横に何画素続いとるかを数える。**それが棒の長さ** */
-  const measure = `(function(side){
-    /* ⚠ #cv やのうて fieldCv を読む。drawField() が描くんは裏のキャンバスで、
-       #cv へは loop() が後から合成する。#cv を読むと**合成前の古い絵**を掴む（一度やった） */
-    const g = fieldCv.getContext('2d');
-    const y = side === 'enemy' ? CB.y + 5 + 3 : CB.y + 15 + 3;   // 棒の真ん中の高さ
-    const d = g.getImageData(CB.barX, y, CB.barW, 1).data;
-    let filled = 0, ghost = 0;
-    for (let i = 0; i < CB.barW; i++) {
-      const r = d[i*4], gg = d[i*4+1], bb = d[i*4+2];
-      /* 味方=緑 #8fd45c / 相手=紫 #c08cf0 / 尾=赤 #e05070 */
-      const isBody = side === 'ally' ? (gg > 150 && r < 190 && bb < 140)
-                                     : (r > 150 && bb > 190 && gg < 170);
-      const isGhost = (r > 180 && gg < 120 && bb > 80 && bb < 160);
-      if (isBody) filled++;
-      else if (isGhost) ghost++;
-    }
-    return { filled, ghost, width: CB.barW };
-  })`;
+  /* 棒の色が横に何画素続いとるかを数える。**それが棒の長さ**
+
+     座標は CB_RECT から取る —— **決め打ちせん**。置き場所を動かしても検証が追従する。
+     決め打ちやと、箱の中へ移した途端に古い座標を読んで、
+     製品は正しいのに不合格を出す（実際にやった）。
+
+     ⚠ #cv やのうて fieldCv を読む。drawField() が描くんは裏のキャンバスで、
+        #cv へは loop() が後から合成する。#cv やと合成前の古い絵を掴む（これもやった）。 */
+  const measure = [
+    '(function(side){',
+    '  var r = CB_RECT[side];',
+    '  if (!r) return { filled:-1, ghost:-1, width:0 };',
+    '  var g = fieldCv.getContext("2d");',
+    '  var d = g.getImageData(r.x, r.y + Math.floor(r.h/2), r.w, 1).data;',
+    '  var filled = 0, ghost = 0;',
+    '  for (var i = 0; i < r.w; i++) {',
+    '    var R = d[i*4], G = d[i*4+1], B = d[i*4+2];',
+    '    /* 味方=緑 #5cb85c / 相手=紫 #a05cd0 / 尾=赤 #e05070 */',
+    '    var isBody = side === "ally" ? (G > 140 && R < 150 && B < 150)',
+    '                                 : (R > 130 && R < 200 && B > 180 && G < 130);',
+    '    var isGhost = (R > 190 && G < 120 && B > 80 && B < 150);',
+    '    if (isBody) filled++;',
+    '    else if (isGhost) ghost++;',
+    '  }',
+    '  return { filled: filled, ghost: ghost, width: r.w };',
+    '})'
+  ].join('\n');
 
   /* ---- 1. 開始時、両方の棒が出とるか（BAR-01）---- */
   const start = await pg.evaluate(([m]) => {
@@ -158,9 +166,9 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
     for (let i = 0; i < 60 * 24; i++) { stepBattle(1 / 60); ally.update(1 / 60); enemy.update(1 / 60); }
     drawField();
   });
-  await pg.waitForTimeout(200);
-  const cv = await pg.$('#cv');
-  if (cv) await cv.screenshot({ path: SHOT });
+  /* 絵も裏キャンバスから直に取る。#cv を撮ると合成のタイミング待ちが要って揺れる */
+  const dataUrl = await pg.evaluate(() => fieldCv.toDataURL('image/png'));
+  fs.writeFileSync(SHOT, Buffer.from(dataUrl.split(',')[1], 'base64'));
 
   await pg.close();
   await b.close();

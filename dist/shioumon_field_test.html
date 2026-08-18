@@ -2551,6 +2551,75 @@ function drawInfoBox(g,x,y,w,h,f,showNumbers){
   g.fillStyle=c2; g.fillRect(bx,by,fw,2);
   if(showNumbers){ g.fillStyle='#20242e'; g.font=F(15); g.textAlign='right';
     g.fillText(Math.max(0,Math.round(f.hp))+' / '+f.maxHP,x+w-9,y+38); }
+
+  /* 所持コスト（陣営の体力）。**自分のは自分側の箱に置く。**
+     最初は上部中央に2本まとめて出しとったが、にーくらの指摘で直した ——
+     1箇所に並べると「どっちが自分のか」を一瞬考えないかん。
+     箱の中なら、誰のものかは考えるまでもない。
+
+     箱は自分が誰のものか知っとる（f.side）けん、置き場所も自動で決まる。 */
+  drawOwnCost(g, x, y, w, f, showNumbers);
+}
+
+/* =========================================================
+   所持コストバー（計画18.6・Phase 3）
+
+   「所持コストバーを画面上部に敵味方2本表示する。四皇モンが死んだ瞬間、
+     鳴き声が0.7倍速で鳴り、**コストバーがガクッと落ちる**」
+
+   箱の中の1行として描く。上の「COST 96」は**その個体の値段**、
+   ここの「所持」は**陣営の残り体力**。別物やけん名前を分けとる。
+
+   掟4: 新しい絵は1枚も増やしとらん。全部ここで描いとる。
+   ========================================================= */
+const CB = { dx:9, barDx:34, barW:44, barH:5, numDx:84, rowDy:38, rowDyNum:53 };
+/* 描いた場所をここに控える。**検証に座標を決め打ちさせんため** ——
+   決め打ちやと、置き場所を動かすたびに検証が嘘の合格／不合格を出す。
+   実際に一度、箱の中へ移したときに古い座標を読んで空振りしとる。 */
+const CB_RECT = { ally:null, enemy:null };
+
+function drawOwnCost(g, x, y, w, f, hasNumbers){
+  const side = f.side;
+  const t = TEAM[side], b = COSTBAR[side];
+  if(!t || !b) return;
+  const max = COST.maxOwn();
+  /* HP の数字を出す箱（味方）は、所持の行を**その下**へ逃がす。
+     同じ行に並べたら数字同士がぶつかる（実際にぶつけた） */
+  const by = y + (hasNumbers ? CB.rowDyNum : CB.rowDy) + 2;
+  const bx = x + CB.barDx, bw = CB.barW, bh = CB.barH;
+
+  g.fillStyle='#6a5030'; g.font=F(10); g.textAlign='left'; g.textBaseline='top';
+  g.fillText('所持', x+CB.dx, by-2);
+
+  g.fillStyle='#20242e'; g.fillRect(bx-1,by-1,bw+2,bh+2);
+  g.fillStyle='#5a6070'; g.fillRect(bx,by,bw,bh);
+
+  /* 尾 —— 減った分。実値より遅れて縮むけん、失った量がそのまま見える。
+     **これが「ガクッと落ちた」の正体**。棒をゆっくり動かすと逆に落ちて見えん */
+  if(b.ghost > t.own){
+    g.fillStyle='#e05070';
+    g.fillRect(bx, by, Math.round(bw*Math.min(1,b.ghost/max)), bh);
+  }
+  g.fillStyle = side==='ally' ? '#5cb85c' : '#a05cd0';
+  g.fillRect(bx, by, Math.round(bw*Math.min(1,t.own/max)), bh);
+
+  /* 初期値(150)の目盛り。上限が300やけん、真ん中が「五分」やない */
+  g.fillStyle='rgba(255,255,255,0.55)';
+  g.fillRect(bx + Math.round(bw*(COST.ECON.start/max)), by-1, 1, bh+2);
+
+  /* 動いた直後だけ囲む。**塗り重ねたら、一番読みたい瞬間に棒が隠れる** */
+  if(b.flash>0){
+    g.strokeStyle = b.dir<0 ? 'rgba(224,80,112,'+Math.min(1,b.flash*1.8)+')'
+                            : 'rgba(60,190,110,'+Math.min(1,b.flash*1.8)+')';
+    g.lineWidth=1;
+    g.strokeRect(bx-2.5, by-2.5, bw+5, bh+5);
+  }
+
+  CB_RECT[side] = { x:bx, y:by, w:bw, h:bh };
+
+  g.fillStyle = t.own<=0 ? '#c02040' : '#20242e';
+  g.font=F(11); g.textAlign='left'; g.textBaseline='top';
+  g.fillText(Math.round(t.own), x+CB.numDx, by-3);
 }
 
 class MessageBox {
@@ -2861,7 +2930,7 @@ function drawField(){
       fg.fillText(ready?('撃てる技 '+ready):'次まで '+soon.toFixed(1)+'s',x,y+6);
     }
   }
-  statusBar(enemy, 9, 60,177);
+  statusBar(enemy, 9, 68,177);   /* 箱が伸びたぶん下げる */
   statusBar(ally, 198,190,177);
 
   /* 控えの生存数 */
@@ -2882,10 +2951,9 @@ function drawField(){
   fg.fillText(phase==='interval'?('休憩 '+Math.ceil(phaseLeft)+'s')
                                 :(quarter+'Q  '+Math.ceil(phaseLeft)+'s'),334,7);
 
-  drawCostBars(fg);
 
-  drawInfoBox(fg,  9, 12,177,44,enemy,false);
-  drawInfoBox(fg,198,128,177,58,ally, true);
+  drawInfoBox(fg,  9, 12,177,52,enemy,false);   /* 所持の行のぶん +8 */
+  drawInfoBox(fg,198,118,177,70,ally, true);   /* 所持の行のぶん上へ寄せて伸ばす */
   drawEndBanner(fg);
   if(showGrid){
     fg.strokeStyle='rgba(255,80,80,0.7)'; fg.lineWidth=1.5; fg.setLineDash([3,3]);
@@ -2897,67 +2965,6 @@ function drawField(){
   }
 }
 
-/* =========================================================
-   所持コストバー（計画18.6・Phase 3）
-
-   「所持コストバーを画面上部に敵味方2本表示する。四皇モンが死んだ瞬間、
-     鳴き声が0.7倍速で鳴り、**コストバーがガクッと落ちる**」
-
-   置き場所は x=190〜288・y=4〜28 —— 効果空間（y=30 から）より上。
-   狭いけん、棒は短く、数字は右に逃がす。
-
-   掟4: **新しい絵は1枚も増やしとらん。** 全部ここで描いとる。
-   ========================================================= */
-const CB = { x:190, y:4, w:98, h:24, barX:194, barW:62, barH:6, numX:285 };
-
-function drawCostBars(g){
-  const max = COST.maxOwn();
-  g.fillStyle='rgba(10,14,20,0.6)'; roundRect(g,CB.x,CB.y,CB.w,CB.h,4); g.fill();
-
-  const row=(side,ty,col)=>{
-    const t=TEAM[side], b=COSTBAR[side];
-    const bx=CB.barX, by=ty, bw=CB.barW, bh=CB.barH;
-
-    /* 目盛りは初期値(150)のところに1本。**今が開始より上か下か**が一目で分かる。
-       上限(300)まで伸びる棒やけん、真ん中が「五分」やない */
-    g.fillStyle='rgba(255,255,255,0.10)'; g.fillRect(bx,by,bw,bh);
-
-    /* 尾 —— 減った分。実値より遅れて縮むけん、失った量がそのまま見える */
-    if(b.ghost > t.own){
-      g.fillStyle='rgba(224,80,112,0.85)';
-      g.fillRect(bx, by, bw*Math.min(1,b.ghost/max), bh);
-    }
-    /* 本体 */
-    g.fillStyle=col;
-    g.fillRect(bx, by, bw*Math.min(1,t.own/max), bh);
-
-    /* 初期値の目盛り */
-    const mk = bx + bw*(COST.ECON.start/max);
-    g.fillStyle='rgba(255,255,255,0.45)'; g.fillRect(mk, by-1, 1, bh+2);
-
-    /* 動いた直後だけ光らせる。**鳴き声0.7倍と同じ瞬間に出る**
-
-       ⚠ ここは最初、棒の上に色を塗り重ねとった。それやと**一番読みたい瞬間に
-       棒が隠れる** —— 落ちた直後こそ「今いくら残っとるか」を見たいのに。
-       塗らずに囲む。情報を消さずに目だけ引く。 */
-    if(b.flash>0){
-      g.strokeStyle = b.dir<0 ? 'rgba(255,120,140,'+(b.flash*1.6)+')'
-                              : 'rgba(150,255,190,'+(b.flash*1.6)+')';
-      g.lineWidth=1;
-      g.strokeRect(bx-1.5, by-1.5, bw+3, bh+3);
-    }
-
-    g.fillStyle = t.own<=0 ? '#e05070' : '#dfe6f0';
-    g.font=F(11); g.textAlign='right'; g.textBaseline='top';
-    g.fillText(Math.round(t.own), CB.numX, by-2);
-  };
-
-  /* 上が相手・下が味方。情報ボックスの並び（相手が上）と揃える */
-  row('enemy', CB.y+5,  '#c08cf0');
-  row('ally',  CB.y+15, '#8fd45c');
-}
-
-/* 決着の理由を出す（WIN-05）。ログだけやと、遊んどる人には何も伝わらん */
 function drawEndBanner(g){
   if(!over || !endReason) return;
   const txt = endReason==='全滅' ? 'ぜんめつ'
