@@ -20,7 +20,8 @@
     "migrate": "node tools/migrate_to_files.js",
     "verify:migration": "node tools/verify_migration.js",
     "verify:store": "node tools/verify_store.js",
-    "verify:wire": "node tools/verify_wire.js"
+    "verify:wire": "node tools/verify_wire.js",
+    "verify:range": "node tools/verify_range.js"
   },
   "devDependencies": {
     "playwright": "^1.62.1"
