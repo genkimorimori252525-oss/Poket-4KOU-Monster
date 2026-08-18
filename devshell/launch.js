@@ -95,6 +95,7 @@ async function main() {
   fs.mkdirSync(profileDir, { recursive: true });
 
   console.log('起動: ' + browser);
+  var launchedAt = Date.now();
   var browserProc = Bun.spawn([
     browser,
     '--app=http://127.0.0.1:' + port + '/',
@@ -106,6 +107,19 @@ async function main() {
   ], { stdio: ['ignore', 'ignore', 'ignore'] });
 
   await browserProc.exited;
+
+  /* ⚠ ここは罠がある。同じ --user-data-dir を使っとる Chromium が既に居ると、
+     新しい方は**既存の窓に仕事を渡して即座に終わる**。素直に受け取ると
+     「閉じられた」と読めてしまい、下でサーバーを殺す —— その結果、
+     **窓は生きとるのにサーバーだけ死んだ**状態が残る（実際に一度これで詰まった）。
+
+     すぐ落ちたら「渡した」と見なして、サーバーはそのまま生かしておく。
+     人がほんまに閉じたときは、開いてから数秒では済まん。 */
+  var lived = Date.now() - launchedAt;
+  if (lived < 4000) {
+    console.log(もう開いとる窓に渡した（ + lived + ms）。サーバーは生かしたままにする。);
+    return;
+  }
 
   if (startedByMe && serverProc) {
     serverProc.kill();

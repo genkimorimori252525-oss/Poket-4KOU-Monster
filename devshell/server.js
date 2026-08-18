@@ -254,25 +254,53 @@ Bun.serve({
       return text(JSON.stringify({ projects: out }), 200, MIME['.json']);
     }
 
-    /* ---- そのプロジェクトを開く。config.projects に載っとるものだけ ---- */
+    /* ---- そのプロジェクトを開く。config.projects に載っとるものだけ ----
+       ⚠ ここは一度「嘘をついた」箇所。Windows で shell 無しの spawn は bun.exe を
+       解決できずに失敗するが、その失敗は例外やのうて 'error' イベントで飛ぶ。
+       受け取らんまま ok:true を返しとったけん、**何も起きとらんのに「開いた」と出とった**。
+       今は起動を見届けてから返す。 */
     if (pathname === '/__shell/open' && req.method === 'POST') {
-      return req.text().then((body) => {
+      return req.text().then(async (body) => {
         let want = '';
         try { want = (JSON.parse(body) || {}).dir || ''; } catch (e) {}
         const hit = (CONFIG.projects || []).find((p) => path.resolve(REPO_ROOT, p.dir) === path.resolve(want));
-        if (!hit) return text('その場所は開かん（設定に載っとらん）', 403);
+        if (!hit) return text(JSON.stringify({ ok: false, why: '設定に載っとらん場所' }), 403, MIME['.json']);
         const dir = path.resolve(REPO_ROOT, hit.dir);
         const cp = require('child_process');
-        try {
-          if (fs.existsSync(path.join(dir, 'devshell', 'launch.js'))) {
-            cp.spawn('bun', [path.join('devshell', 'launch.js')], { cwd: dir, detached: true, stdio: 'ignore' }).unref();
-            return text(JSON.stringify({ ok: true, how: 'devshell' }), 200, MIME['.json']);
+        const win = process.platform === 'win32';
+
+        /* 起動して、error が飛ばんかったかを少し待って見る */
+        const trySpawn = (cmd, args, opts) => new Promise((resolve) => {
+          let child;
+          try { child = cp.spawn(cmd, args, Object.assign({ detached: true, stdio: 'ignore', shell: win }, opts)); }
+          catch (e) { return resolve({ ok: false, why: String(e.message || e) }); }
+          let done = false;
+          child.on('error', (e) => { if (!done) { done = true; resolve({ ok: false, why: String(e.message || e) }); } });
+          setTimeout(() => { if (!done) { done = true; try { child.unref(); } catch (e) {} resolve({ ok: true }); } }, 700);
+        });
+
+        const shellPath = path.join(dir, 'devshell', 'launch.js');
+        if (fs.existsSync(shellPath)) {
+          const r = await trySpawn('bun', [path.join('devshell', 'launch.js')], { cwd: dir });
+          if (!r.ok) return text(JSON.stringify({ ok: false, how: 'devshell', why: r.why }), 200, MIME['.json']);
+          /* そのプロジェクトのシェルが実際に立ったかを、自分のポートを見て確かめる */
+          let port = null;
+          try { port = JSON.parse(fs.readFileSync(path.join(dir, 'devshell', 'shell.config.json'), 'utf8')).port; } catch (e) {}
+          if (port) {
+            for (let i = 0; i < 20; i++) {
+              try { const rr = await fetch('http://127.0.0.1:' + port + '/__shell/ping'); if (rr.ok) return text(JSON.stringify({ ok: true, how: 'devshell', port }), 200, MIME['.json']); }
+              catch (e) {}
+              await new Promise((r2) => setTimeout(r2, 400));
+            }
+            return text(JSON.stringify({ ok: false, how: 'devshell', why: 'シェルは起動したが ' + port + ' が応答せん' }), 200, MIME['.json']);
           }
-          cp.spawn('explorer', [dir], { detached: true, stdio: 'ignore' }).unref();
-          return text(JSON.stringify({ ok: true, how: 'explorer' }), 200, MIME['.json']);
-        } catch (e) {
-          return text(JSON.stringify({ ok: false, error: String(e) }), 500, MIME['.json']);
+          return text(JSON.stringify({ ok: true, how: 'devshell' }), 200, MIME['.json']);
         }
+
+        /* シェルを持っとらんプロジェクトはフォルダを開く。これも「開く」の一種 */
+        const r2 = await trySpawn('explorer', [dir], {});
+        /* explorer は開けても非ゼロで終わることがあるけん、error が飛ばんかっただけで良しとする */
+        return text(JSON.stringify({ ok: r2.ok, how: 'folder', why: r2.why || null }), 200, MIME['.json']);
       });
     }
 
