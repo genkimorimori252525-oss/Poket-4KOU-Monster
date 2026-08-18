@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node build.js",
     "serve": "node tools/serve.js",
-    "dev": "bun devshell/launch.js",
+    "dev": "node build.js --dev && bun devshell/launch.js",
     "dev:serve": "bun devshell/server.js",
     "dev:icon": "powershell -NoProfile -ExecutionPolicy Bypass -File devshell/install-shortcut.ps1",
     "verify": "node devshell/verify-report.js",

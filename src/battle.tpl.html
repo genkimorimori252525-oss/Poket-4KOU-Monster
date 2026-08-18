@@ -632,8 +632,12 @@ function drawOwnCost(g, x, y, w, f, hasNumbers){
   const by = y + (hasNumbers ? CB.rowDyNum : CB.rowDy) + 2;
   const bx = x + CB.barDx, bw = CB.barW, bh = CB.barH;
 
-  g.fillStyle='#6a5030'; g.font=F(10); g.textAlign='left'; g.textBaseline='top';
-  g.fillText('所持', x+CB.dx, by-2);
+  /* ラベルも数字も**棒の高さの真ん中**に揃える。
+     textBaseline='top' で座標を手計算しとった頃は、字の上に余白がある書体のせいで
+     見た目が上へずれとった（にーくらの指摘）。中心合わせはブラウザに任せる方が確実。 */
+  const mid = by + bh/2;
+  g.fillStyle='#6a5030'; g.font=F(10); g.textAlign='left'; g.textBaseline='middle';
+  g.fillText('所持', x+CB.dx, mid);
 
   g.fillStyle='#20242e'; g.fillRect(bx-1,by-1,bw+2,bh+2);
   g.fillStyle='#5a6070'; g.fillRect(bx,by,bw,bh);
@@ -662,8 +666,8 @@ function drawOwnCost(g, x, y, w, f, hasNumbers){
   CB_RECT[side] = { x:bx, y:by, w:bw, h:bh };
 
   g.fillStyle = t.own<=0 ? '#c02040' : '#20242e';
-  g.font=F(11); g.textAlign='left'; g.textBaseline='top';
-  g.fillText(Math.round(t.own), x+CB.numDx, by-3);
+  g.font=F(11); g.textAlign='left'; g.textBaseline='middle';
+  g.fillText(Math.round(t.own), x+CB.numDx, mid);
 }
 
 class MessageBox {

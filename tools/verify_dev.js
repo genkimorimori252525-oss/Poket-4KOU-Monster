@@ -5,11 +5,43 @@
    ポートは開発シェルの既定(8766)とずらして、シェルを開いたままでも流せるようにしとる。
 
    npm run verify の4段には入れん。あれは dist/ の正しさを見る連鎖で、
-   dist-dev/ は開発用の派生物やけん別のコマンドにしとく。 */
+   dist-dev/ は開発用の派生物やけん別のコマンドにしとく。
+
+   ⚠ **古さも見る。** ここは一度、dist-dev/ が src/ より8時間古いまま
+   「通過」を返しとった。にーくらが npm run dev で開いても、その日の実装が
+   1つも入っとらん状態やった —— 検証が緑やけん誰も気付かん。
+   中身が正しいかだけ見て、**それが今のソースから建っとるか**を見とらんかった。 */
 const { chromium } = require('playwright');
 const offlineFonts = require('./_pw_offline.js');
 const { spawn } = require('child_process');
 const path = require('path');
+
+/* dist-dev/ が src/ より古かったら、中身を見るまでもなく落とす */
+function checkFresh(root) {
+  const newest = (dir, filter) => {
+    let t = 0;
+    if (!fs.existsSync(dir)) return t;
+    for (const f of fs.readdirSync(dir)) {
+      if (filter && !filter(f)) continue;
+      const p = path.join(dir, f);
+      const st = fs.statSync(p);
+      if (st.isFile() && st.mtimeMs > t) t = st.mtimeMs;
+    }
+    return t;
+  };
+  const src = Math.max(
+    newest(path.join(root, 'src')),
+    newest(root, (f) => f === 'build.js')
+  );
+  const dev = newest(path.join(root, 'dist-dev'), (f) => f.endsWith('.html'));
+  if (!dev) return 'dist-dev/ が無い。node build.js --dev を流して';
+  if (dev < src) {
+    const hours = ((src - dev) / 3600000).toFixed(1);
+    return 'dist-dev/ が src/ より ' + hours + ' 時間古い。'
+         + '**今のソースから建っとらん** —— node build.js --dev を流して';
+  }
+  return null;
+}
 
 const PORT = 8792;
 const BASE = 'http://127.0.0.1:' + PORT;
@@ -38,6 +70,15 @@ try {
 (async () => {
   const allErrs = [];
   const results = {};
+
+  /* 中身を見る前に、まず**今のソースから建っとるか**を見る。
+     古い成果物を検査しても、通ったところで何の保証にもならん。 */
+  const stale = checkFresh(ROOT);
+  if (stale) {
+    console.error('verify_dev: ' + stale);
+    process.exit(1);
+  }
+  console.log('新しさ        dist-dev/ は src/ より新しい');
   const srv = spawn('bun', [path.join('devshell', 'server.js'), String(PORT)],
                     { cwd: ROOT, stdio: 'ignore', shell: process.platform === 'win32' });
   let b = null;
