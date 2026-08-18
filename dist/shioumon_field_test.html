@@ -121,6 +121,14 @@
     <button id="btnFire2">水弾で反撃</button>
     <button id="btnAuto" class="on">自動戦闘 ON</button>
     <button id="btnReset">やりなおし</button>
+    <button id="btnRoster">▣ 編成をえらぶ</button>
+  </div>
+  <div class="sec" id="rosterSec" style="display:none">
+    <h2>編成 —— 制作ツールで作った四皇モンを出す</h2>
+    <div id="rosterList"></div>
+    <div class="hint" id="rosterHint"></div>
+    <button id="btnRosterGo">この編成ではじめる</button>
+    <button id="btnRosterDefault">元のロスターに戻す</button>
   </div>
   <div class="anim" style="grid-template-columns:1fr;margin-top:5px;">
     <button id="btnDet">決定論チェック（同じシードで2回走らせて一致するか）</button>
@@ -1312,6 +1320,134 @@ function makeSpec(gen,seed,name,palKey){
   return d;
 }
 
+/* ============================================================
+   制作ツール → 戦闘 の配線（WIRE-01〜05）
+
+   これまで戦闘に出られたのは ROSTER_A / ROSTER_B にベタ書きされた個体だけやった。
+   制作ツールで作った四皇モンは、影も鳴き声も自作技も、戦闘側から一度も読まれとらんかった。
+
+   ここがその橋。保存済みの個体を戦闘の def へ組み替えて、
+   - 自作技を MOVES と AUDIO_CFG へ登録する（コストも音も内蔵技と同じ道を通る＝掟8）
+   - 写真を Image として積む
+   - 影と鳴き声と召喚の設定をそのまま持ち込む
+   ============================================================ */
+var ROSTER = (function () {
+
+  /* 保存済みの個体を読む。store_bridge が起動時に localStorage へ流し込んどる */
+  function saved() {
+    var out = [];
+    try {
+      var slots = JSON.parse(localStorage.getItem('shioumon_creator_slots') || '{}');
+      Object.keys(slots).forEach(function (slotName) {
+        try {
+          var m = JSON.parse(slots[slotName]);
+          m._slot = slotName;
+          out.push(m);
+        } catch (e) {}
+      });
+    } catch (e) {}
+    return out;
+  }
+
+  /* 自作技を実行時の技表へ入れる。
+     内蔵技と同じ MOVES に入れるけん、コスト計算も音の割り当ても同じ道を通る（掟8）。
+     内蔵IDと同じ id の上書きも、制作ツールと同じふるまいになる。 */
+  function registerMoves(mon) {
+    var ids = [];
+    (mon.customMoves || []).forEach(function (cm) {
+      if (!cm || !cm.id) return;
+      if (typeof MOVES !== 'undefined') MOVES[cm.id] = cm;
+      /* 音は AUDIO_CFG 側が正。個体に抱えさせん（抱えるとにーくらの設定を上書きして壊す） */
+      if (typeof AUDIO_CFG !== 'undefined' && cm.audio && cm.audio.length &&
+          !(AUDIO_CFG.moves && AUDIO_CFG.moves[cm.id])) {
+        AUDIO_CFG.moves = AUDIO_CFG.moves || {};
+        AUDIO_CFG.moves[cm.id] = cm.audio;
+      }
+      ids.push(cm.id);
+    });
+    return ids;
+  }
+
+  /* 保存された個体 → 戦闘の addMember に渡す def */
+  function toDef(mon) {
+    registerMoves(mon);
+    /* moves（内蔵技のID）と customMoves の両方。MOVES に無いIDは落とす */
+    var ids = [];
+    (mon.moves || []).forEach(function (id) { if (typeof MOVES !== 'undefined' && MOVES[id]) ids.push(id); });
+    (mon.customMoves || []).forEach(function (cm) {
+      if (cm && cm.id && ids.indexOf(cm.id) < 0) ids.push(cm.id);
+    });
+    if (!ids.length) ids = ['slash'];        /* 技ゼロやと戦闘が成立せんけん最低1本 */
+
+    return {
+      name: mon.name || mon._slot || mon.id,
+      types: (mon.types && mon.types.length) ? mon.types : ['ノーマル'],
+      stats: mon.stats || {},
+      per: mon.per || {},
+      moves: ids,
+      cost: mon.cost,
+      scale: mon.scale, dy: mon.dy,
+      img: mon.img,                 /* 枠ごとの表示倍率・縦位置 */
+      images: mon.images,           /* 写真そのもの（URL か data URI） */
+      shadow: mon.shadow,           /* WIRE-03 */
+      summon: mon.summon,           /* 出方と鳴くまでの間 */
+      cry: mon.cry,                 /* WIRE-04 */
+      idleMotion: mon.idleMotion,
+      _slot: mon._slot,
+      _id: mon.id
+    };
+  }
+
+  /* 写真を Image として積む。URL でも data URI でも同じ扱い */
+  function attachImages(f, def) {
+    if (!def.images) return;
+    Object.keys(def.images).forEach(function (k) {
+      var src = def.images[k];
+      if (!src || typeof src !== 'string') return;
+      var im = new Image();
+      im.onload = function () { f.imgs[k] = im; };
+      im.src = src;
+    });
+  }
+
+  /* 鳴き声を SoundBank へ登録する。
+
+     ⚠ URL のまま addCustom に渡したらいかん。dist/ の SoundBank.decodeOne() は
+     data URI しか扱えん（atob に URL を食わせて落ちる）。URL を読める版は
+     dist-dev/ のビルド時パッチにしか入っとらんし、**src/sfx_bank.js は手で編集せん掟**やけん、
+     ここで data URI に変えてから渡す。ファイルは数十KBやけん取り込んでも軽い。 */
+  function attachCry(f, def) {
+    if (!def.cry || !def.cry.id || !def.cry.data) return;
+    f.cry = { id: def.cry.id, vol: def.cry.vol, rate: def.cry.rate, data: def.cry.data };
+    if (typeof SND === 'undefined' || SND.custom[def.cry.id]) return;
+    var label = def.cry.label || ((def.name || '') + 'の声');
+    var src = def.cry.data;
+    if (src.slice(0, 5) === 'data:') {
+      try { SND.addCustom(def.cry.id, label, src); } catch (e) {}
+      return;
+    }
+    fetch(src).then(function (r) {
+      if (!r.ok) throw new Error('鳴き声が取れん ' + r.status);
+      var mime = (r.headers.get('content-type') || 'audio/webm').split(';')[0];
+      return r.arrayBuffer().then(function (ab) {
+        var u8 = new Uint8Array(ab), bin = '';
+        for (var i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+        var uri = 'data:' + mime + ';base64,' + btoa(bin);
+        f.cry.data = uri;
+        SND.addCustom(def.cry.id, label, uri);
+      });
+    }).catch(function (e) { console.warn('[ROSTER] 鳴き声を読めんかった', def.cry.id, e); });
+  }
+
+  return {
+    saved: saved,
+    toDef: toDef,
+    attachImages: attachImages,
+    attachCry: attachCry,
+    registerMoves: registerMoves
+  };
+})();
+
 /* ===== sfx_bank.js — CC0効果音バンク（自動生成・編集しないで） ===== */
 const SFX_CATS = [{"id": "shot", "label": "発射・弾"}, {"id": "beam", "label": "光線"}, {"id": "heavy", "label": "大砲・重火力"}, {"id": "explo", "label": "爆発・着弾"}, {"id": "slash", "label": "斬撃"}, {"id": "clash", "label": "金属・相殺"}, {"id": "melee", "label": "打撃・近接"}, {"id": "hurt", "label": "被弾"}, {"id": "faint", "label": "断末魔"}, {"id": "magic", "label": "魔法・電撃・空間"}, {"id": "ui", "label": "UI・システム"}];
 const SFX_SRC = {
@@ -2143,9 +2279,18 @@ class Fighter {
     if(this.anim==='appear') drawSummon(g,this.L.cx,this.L.platY-3,w,Math.min(1,this.t));
     // 影（跳ぶと小さく薄く）
     const air=Math.min(1,Math.max(0,-s.dy)/90);
-    g.save(); g.globalAlpha=0.24*(1-air)*(1-air*0.2);
+    /* 影は四皇モンのデータ（mon.shadow）。持っとらん個体の見た目は今までと1ピクセルも変わらん
+       ように、既定値を現行の値そのものにしとる。follow は踏み込みへの横追従。 */
+    const sh=this.shadow||{};
+    const shScale=(sh.scale!=null)?+sh.scale:1, shFlat=(sh.flat!=null)?+sh.flat:1;
+    const shAlpha=(sh.alpha!=null)?+sh.alpha:0.24;
+    const shDX=(sh.dx!=null)?+sh.dx:0, shDY=(sh.dy!=null)?+sh.dy:0;
+    const shFollow=(sh.follow!=null)?+sh.follow:0;
+    g.save(); g.globalAlpha=shAlpha*(1-air)*(1-air*0.2);
     g.fillStyle='#000';
-    g.beginPath(); g.ellipse(this.L.cx, this.L.platY-3+this.dy+(cfg.dy||0), w*0.30*(1-air*0.35), h*0.10*(1-air*0.35),0,0,Math.PI*2);
+    g.beginPath(); g.ellipse(this.L.cx+shDX+s.dx*this.dir*shFollow,
+                             this.L.platY-3+this.dy+(cfg.dy||0)+shDY,
+                             w*0.30*shScale*(1-air*0.35), h*0.10*shFlat*(1-air*0.35),0,0,Math.PI*2);
     g.fill(); g.restore();
 
     // 本体（足元を基準に拡縮するのが肝）
@@ -2380,8 +2525,13 @@ function addMember(side,def){
   f.scale=def.scale||1; f.dy=def.dy||0;
   if(def.img) for(const k in def.img) f.img[k]={...f.img[k],...def.img[k]};
   f.cost=def.cost||costOf({stats:f.stats,moves:def.moves}).cost;
-  f.moves=def.moves.map(id=>MOVES[id]);
+  f.moves=def.moves.map(id=>MOVES[id]).filter(Boolean);
   f.useBack=(side==='ally');
+  /* ---- 制作ツールで作った個体の持ち物を積む（WIRE-02/03/04） ---- */
+  if(def.shadow) f.shadow={...def.shadow};                 // 影（今まで戦闘は読んどらんかった）
+  if(def.summon) f.summon={...f.summon,...def.summon};     // 出方と鳴くまでの間
+  if(def.idleMotion!==undefined) f.idleMotion=def.idleMotion;
+  if(typeof ROSTER!=='undefined'){ ROSTER.attachImages(f,def); ROSTER.attachCry(f,def); }
   f.hp=f.maxHP;
   (side==='ally'?partyA:partyB).push(f);
   return f;
@@ -3506,6 +3656,75 @@ document.querySelectorAll('[data-m]').forEach(b=>{
 ROSTER_A.forEach(d=>addMember('ally',d));
 ROSTER_B.forEach(d=>addMember('enemy',d));
 ally=partyA[0]; enemy=partyB[0];
+
+/* ---- 編成をえらぶ（WIRE-01）。保存済みの四皇モンを戦闘に出す ---- */
+const rosterPick={ally:[],enemy:[]};
+function rosterRender(){
+  const list=document.getElementById('rosterList');
+  const hint=document.getElementById('rosterHint');
+  if(!list) return;
+  const mons=(typeof ROSTER!=='undefined')?ROSTER.saved():[];
+  list.innerHTML='';
+  if(!mons.length){
+    hint.innerHTML='保存された四皇モンが見つからん。<br>'+
+      '制作ツールで作った分は<b>開き方（オリジン）ごとに別の箱</b>に入っとるけん、'+
+      'サーバー経由（<code>npm run dev</code>）で開いたときだけここに出る。'+
+      'file:// で作った分は Phase 3 の移行でファイルへ移したら見えるようになる。';
+    return;
+  }
+  mons.forEach(m=>{
+    const nm=m._slot||m.name||m.id;
+    const row=document.createElement('div'); row.className='ctl';
+    const lb=document.createElement('label'); lb.textContent=nm;
+    const bA=document.createElement('button'); bA.textContent='手前';
+    const bE=document.createElement('button'); bE.textContent='奥';
+    const upd=()=>{ bA.classList.toggle('on',rosterPick.ally.indexOf(nm)>=0);
+                    bE.classList.toggle('on',rosterPick.enemy.indexOf(nm)>=0); };
+    const tog=(side,other,btn)=>{
+      const i=rosterPick[side].indexOf(nm);
+      if(i>=0) rosterPick[side].splice(i,1); else rosterPick[side].push(nm);
+      const j=rosterPick[other].indexOf(nm); if(j>=0) rosterPick[other].splice(j,1);
+      upd(); hint.textContent='手前 '+rosterPick.ally.length+'体／奥 '+rosterPick.enemy.length+'体';
+    };
+    bA.onclick=()=>tog('ally','enemy',bA);
+    bE.onclick=()=>tog('enemy','ally',bE);
+    upd();
+    row.appendChild(lb); row.appendChild(bA); row.appendChild(bE);
+    list.appendChild(row);
+  });
+  hint.textContent='手前 '+rosterPick.ally.length+'体／奥 '+rosterPick.enemy.length+'体';
+}
+function rosterApply(defsA,defsB){
+  partyA.length=0; partyB.length=0;
+  defsA.forEach(d=>addMember('ally',d));
+  defsB.forEach(d=>addMember('enemy',d));
+  if(!partyA.length||!partyB.length){ return false; }
+  ally=partyA[0]; enemy=partyB[0];
+  resetBattle(4242);
+  return true;
+}
+(function(){
+  const bt=document.getElementById('btnRoster'), sec=document.getElementById('rosterSec');
+  if(!bt) return;
+  bt.onclick=()=>{ const open=sec.style.display==='none';
+                   sec.style.display=open?'':'none'; if(open) rosterRender(); };
+  document.getElementById('btnRosterGo').onclick=()=>{
+    const mons=ROSTER.saved(), by={};
+    mons.forEach(m=>{ by[m._slot||m.name||m.id]=m; });
+    const A=rosterPick.ally.map(n=>ROSTER.toDef(by[n])).filter(Boolean);
+    const B=rosterPick.enemy.map(n=>ROSTER.toDef(by[n])).filter(Boolean);
+    if(!A.length||!B.length){
+      document.getElementById('rosterHint').textContent='手前と奥に1体ずつは要る。';
+      return;
+    }
+    rosterApply(A,B);
+    sec.style.display='none';
+  };
+  document.getElementById('btnRosterDefault').onclick=()=>{
+    rosterApply(ROSTER_A,ROSTER_B);
+    sec.style.display='none';
+  };
+})();
 
 /* パルキアの画像を最初から積んでおく（技定義より後に生成する必要がある） */
 (function(){

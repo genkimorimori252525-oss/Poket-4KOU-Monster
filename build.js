@@ -28,6 +28,7 @@ const MODULES = {
   '/*__AUDIO_UI__*/': read('audio_ui.js'),
   '/*__MOVELAB__*/' : read('movelab.js'),
   '/*__STARTER__*/' : read('starter_moves.js'),
+  '/*__ROSTER__*/'  : read('roster.js'),
 };
 
 const TARGETS = [

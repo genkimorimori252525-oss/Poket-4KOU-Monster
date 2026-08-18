@@ -121,6 +121,14 @@
     <button id="btnFire2">水弾で反撃</button>
     <button id="btnAuto" class="on">自動戦闘 ON</button>
     <button id="btnReset">やりなおし</button>
+    <button id="btnRoster">▣ 編成をえらぶ</button>
+  </div>
+  <div class="sec" id="rosterSec" style="display:none">
+    <h2>編成 —— 制作ツールで作った四皇モンを出す</h2>
+    <div id="rosterList"></div>
+    <div class="hint" id="rosterHint"></div>
+    <button id="btnRosterGo">この編成ではじめる</button>
+    <button id="btnRosterDefault">元のロスターに戻す</button>
   </div>
   <div class="anim" style="grid-template-columns:1fr;margin-top:5px;">
     <button id="btnDet">決定論チェック（同じシードで2回走らせて一致するか）</button>
@@ -240,6 +248,7 @@
 <script>
 /*__STORE__*/
 /*__FX_CORE__*/
+/*__ROSTER__*/
 /*__SFX_BANK__*/
 
 /* =========================================================
@@ -523,9 +532,18 @@ class Fighter {
     if(this.anim==='appear') drawSummon(g,this.L.cx,this.L.platY-3,w,Math.min(1,this.t));
     // 影（跳ぶと小さく薄く）
     const air=Math.min(1,Math.max(0,-s.dy)/90);
-    g.save(); g.globalAlpha=0.24*(1-air)*(1-air*0.2);
+    /* 影は四皇モンのデータ（mon.shadow）。持っとらん個体の見た目は今までと1ピクセルも変わらん
+       ように、既定値を現行の値そのものにしとる。follow は踏み込みへの横追従。 */
+    const sh=this.shadow||{};
+    const shScale=(sh.scale!=null)?+sh.scale:1, shFlat=(sh.flat!=null)?+sh.flat:1;
+    const shAlpha=(sh.alpha!=null)?+sh.alpha:0.24;
+    const shDX=(sh.dx!=null)?+sh.dx:0, shDY=(sh.dy!=null)?+sh.dy:0;
+    const shFollow=(sh.follow!=null)?+sh.follow:0;
+    g.save(); g.globalAlpha=shAlpha*(1-air)*(1-air*0.2);
     g.fillStyle='#000';
-    g.beginPath(); g.ellipse(this.L.cx, this.L.platY-3+this.dy+(cfg.dy||0), w*0.30*(1-air*0.35), h*0.10*(1-air*0.35),0,0,Math.PI*2);
+    g.beginPath(); g.ellipse(this.L.cx+shDX+s.dx*this.dir*shFollow,
+                             this.L.platY-3+this.dy+(cfg.dy||0)+shDY,
+                             w*0.30*shScale*(1-air*0.35), h*0.10*shFlat*(1-air*0.35),0,0,Math.PI*2);
     g.fill(); g.restore();
 
     // 本体（足元を基準に拡縮するのが肝）
@@ -760,8 +778,13 @@ function addMember(side,def){
   f.scale=def.scale||1; f.dy=def.dy||0;
   if(def.img) for(const k in def.img) f.img[k]={...f.img[k],...def.img[k]};
   f.cost=def.cost||costOf({stats:f.stats,moves:def.moves}).cost;
-  f.moves=def.moves.map(id=>MOVES[id]);
+  f.moves=def.moves.map(id=>MOVES[id]).filter(Boolean);
   f.useBack=(side==='ally');
+  /* ---- 制作ツールで作った個体の持ち物を積む（WIRE-02/03/04） ---- */
+  if(def.shadow) f.shadow={...def.shadow};                 // 影（今まで戦闘は読んどらんかった）
+  if(def.summon) f.summon={...f.summon,...def.summon};     // 出方と鳴くまでの間
+  if(def.idleMotion!==undefined) f.idleMotion=def.idleMotion;
+  if(typeof ROSTER!=='undefined'){ ROSTER.attachImages(f,def); ROSTER.attachCry(f,def); }
   f.hp=f.maxHP;
   (side==='ally'?partyA:partyB).push(f);
   return f;
@@ -1886,6 +1909,75 @@ document.querySelectorAll('[data-m]').forEach(b=>{
 ROSTER_A.forEach(d=>addMember('ally',d));
 ROSTER_B.forEach(d=>addMember('enemy',d));
 ally=partyA[0]; enemy=partyB[0];
+
+/* ---- 編成をえらぶ（WIRE-01）。保存済みの四皇モンを戦闘に出す ---- */
+const rosterPick={ally:[],enemy:[]};
+function rosterRender(){
+  const list=document.getElementById('rosterList');
+  const hint=document.getElementById('rosterHint');
+  if(!list) return;
+  const mons=(typeof ROSTER!=='undefined')?ROSTER.saved():[];
+  list.innerHTML='';
+  if(!mons.length){
+    hint.innerHTML='保存された四皇モンが見つからん。<br>'+
+      '制作ツールで作った分は<b>開き方（オリジン）ごとに別の箱</b>に入っとるけん、'+
+      'サーバー経由（<code>npm run dev</code>）で開いたときだけここに出る。'+
+      'file:// で作った分は Phase 3 の移行でファイルへ移したら見えるようになる。';
+    return;
+  }
+  mons.forEach(m=>{
+    const nm=m._slot||m.name||m.id;
+    const row=document.createElement('div'); row.className='ctl';
+    const lb=document.createElement('label'); lb.textContent=nm;
+    const bA=document.createElement('button'); bA.textContent='手前';
+    const bE=document.createElement('button'); bE.textContent='奥';
+    const upd=()=>{ bA.classList.toggle('on',rosterPick.ally.indexOf(nm)>=0);
+                    bE.classList.toggle('on',rosterPick.enemy.indexOf(nm)>=0); };
+    const tog=(side,other,btn)=>{
+      const i=rosterPick[side].indexOf(nm);
+      if(i>=0) rosterPick[side].splice(i,1); else rosterPick[side].push(nm);
+      const j=rosterPick[other].indexOf(nm); if(j>=0) rosterPick[other].splice(j,1);
+      upd(); hint.textContent='手前 '+rosterPick.ally.length+'体／奥 '+rosterPick.enemy.length+'体';
+    };
+    bA.onclick=()=>tog('ally','enemy',bA);
+    bE.onclick=()=>tog('enemy','ally',bE);
+    upd();
+    row.appendChild(lb); row.appendChild(bA); row.appendChild(bE);
+    list.appendChild(row);
+  });
+  hint.textContent='手前 '+rosterPick.ally.length+'体／奥 '+rosterPick.enemy.length+'体';
+}
+function rosterApply(defsA,defsB){
+  partyA.length=0; partyB.length=0;
+  defsA.forEach(d=>addMember('ally',d));
+  defsB.forEach(d=>addMember('enemy',d));
+  if(!partyA.length||!partyB.length){ return false; }
+  ally=partyA[0]; enemy=partyB[0];
+  resetBattle(4242);
+  return true;
+}
+(function(){
+  const bt=document.getElementById('btnRoster'), sec=document.getElementById('rosterSec');
+  if(!bt) return;
+  bt.onclick=()=>{ const open=sec.style.display==='none';
+                   sec.style.display=open?'':'none'; if(open) rosterRender(); };
+  document.getElementById('btnRosterGo').onclick=()=>{
+    const mons=ROSTER.saved(), by={};
+    mons.forEach(m=>{ by[m._slot||m.name||m.id]=m; });
+    const A=rosterPick.ally.map(n=>ROSTER.toDef(by[n])).filter(Boolean);
+    const B=rosterPick.enemy.map(n=>ROSTER.toDef(by[n])).filter(Boolean);
+    if(!A.length||!B.length){
+      document.getElementById('rosterHint').textContent='手前と奥に1体ずつは要る。';
+      return;
+    }
+    rosterApply(A,B);
+    sec.style.display='none';
+  };
+  document.getElementById('btnRosterDefault').onclick=()=>{
+    rosterApply(ROSTER_A,ROSTER_B);
+    sec.style.display='none';
+  };
+})();
 
 /* パルキアの画像を最初から積んでおく（技定義より後に生成する必要がある） */
 (function(){
