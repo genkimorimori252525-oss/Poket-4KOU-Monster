@@ -333,16 +333,40 @@
     a.textContent = '← シェル';
     a.title = '開発シェルのダッシュボードへ戻る';
     a.style.cssText = [
-      'position:fixed', 'top:6px', 'right:6px', 'z-index:99999',
+      'position:fixed', 'top:6px', 'z-index:99999',
       'font:11px/1 "DotGothic16","MS Gothic",monospace',
       'padding:6px 9px', 'border-radius:3px',
-      'background:rgba(25,30,39,0.72)', 'color:#8b97a8',
-      'border:1px solid rgba(44,52,66,0.8)', 'text-decoration:none',
-      'opacity:0.55', 'transition:opacity .12s'
+      'background:rgba(25,30,39,0.85)', 'color:#b8c4d4',
+      'border:1px solid rgba(70,82,102,0.9)', 'text-decoration:none',
+      'opacity:0.8', 'transition:opacity .12s'
     ].join(';');
-    a.addEventListener('mouseenter', function () { a.style.opacity = '1'; a.style.color = '#dfe6f0'; });
-    a.addEventListener('mouseleave', function () { a.style.opacity = '0.55'; a.style.color = '#8b97a8'; });
+    a.addEventListener('mouseenter', function () { a.style.opacity = '1'; a.style.color = '#ffffff'; });
+    a.addEventListener('mouseleave', function () { a.style.opacity = '0.8'; a.style.color = '#b8c4d4'; });
     document.body.appendChild(a);
+
+    /* ⚠ 前は right:6px で窓の右上に固定しとった。窓を広げると
+       **中身は細いまま左に居るのに、リンクだけ遠い右上の隅へ飛ぶ**。
+       消えとるわけやないが、見失う（にーくら「全画面表示だと見えなくなる」）。
+
+       中身の右端に寄せる。窓をどれだけ広げても、ゲームのすぐ横に居る。
+       中身の幅が取れんときだけ窓の右上へ落とす。 */
+    function place() {
+      var anchor = document.getElementById('stage') || document.querySelector('.panel') || document.body;
+      var r = anchor.getBoundingClientRect();
+      var w = a.offsetWidth || 74;
+      if (r.width > 40 && r.right > 40) {
+        a.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, r.right - w)) + 'px';
+        a.style.right = 'auto';
+      } else {
+        a.style.left = 'auto';
+        a.style.right = '6px';
+      }
+    }
+    place();
+    window.addEventListener('resize', place);
+    /* 中身は後から組み上がることがある。少し置いて置き直す */
+    setTimeout(place, 400);
+    setTimeout(place, 1500);
   }
   if (document.body) addBackLink();
   else document.addEventListener('DOMContentLoaded', addBackLink);
