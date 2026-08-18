@@ -121,6 +121,16 @@ async function main() {
       '--window-size=780,900',
       '--no-first-run',
       '--no-default-browser-check',
+      /* Chrome for Testing が出す「自動テスト専用です」の帯を黙らせる。
+         窓の上に常時居座って邪魔やった。
+
+         ⚠ このフラグは「今の Chrome では効かん」と言われがちやが、
+         **実機で確かめたら効いた**（v151.0.7922.34・2周とも帯が消えた）。
+         逆に定番と言われる --test-type は効かんかった。伝聞やのうて測った結果。
+
+         引き換えに他の帯（「ページを復元しますか」など）も出んくなるが、
+         用途が決まった1枚窓やけん、むしろその方がよか。 */
+      '--disable-infobars',
       '--autoplay-policy=no-user-gesture-required',
     ], { stdio: ['ignore', 'ignore', 'ignore'] });
     await proc.exited;
