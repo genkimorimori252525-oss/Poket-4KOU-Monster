@@ -284,7 +284,17 @@ Bun.serve({
 
         const shellPath = path.join(dir, 'devshell', 'launch.js');
         if (fs.existsSync(shellPath)) {
-          const r = await trySpawn('bun', [path.join('devshell', 'launch.js')], { cwd: dir });
+          /* ⚠ 窓を出さずに起動する道が在ればそっちを通す。
+             bun を直に叩くと Windows は**新しいコンソールを開く** —— にーくらの画面に
+             黒い端末が居座る。デスクトップのショートカットは launch.vbs 経由にして
+             それを消したのに、**ハブからの起動だけ古い道を通っとった**。
+
+             wscript は GUI サブシステムやけんコンソールを作らん。
+             （ショートカットで実測済み: 見えとる端末の窓 0） */
+          const vbs = path.join(dir, 'devshell', 'launch.vbs');
+          const r = (win && fs.existsSync(vbs))
+            ? await trySpawn('wscript.exe', [vbs], { shell: false, windowsHide: true })
+            : await trySpawn('bun', [path.join('devshell', 'launch.js')], { cwd: dir, windowsHide: true });
           if (!r.ok) return text(JSON.stringify({ ok: false, how: 'devshell', why: r.why }), 200, MIME['.json']);
           /* そのプロジェクトのシェルが実際に立ったかを、自分のポートを見て確かめる */
           let port = null;
@@ -301,7 +311,7 @@ Bun.serve({
         }
 
         /* シェルを持っとらんプロジェクトはフォルダを開く。これも「開く」の一種 */
-        const r2 = await trySpawn('explorer', [dir], {});
+        const r2 = await trySpawn('explorer.exe', [dir], { shell: false, windowsHide: true });
         /* explorer は開けても非ゼロで終わることがあるけん、error が飛ばんかっただけで良しとする */
         return text(JSON.stringify({ ok: r2.ok, how: 'folder', why: r2.why || null }), 200, MIME['.json']);
       });
