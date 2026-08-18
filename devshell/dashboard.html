@@ -45,7 +45,15 @@ button[disabled]:active{background:#1a1f28;color:var(--dim);}
 <div class="wrap">
   <h1 id="pageTitle">開発シェル</h1>
 
-  <div class="sec">
+  <div class="sec" id="projSec" style="display:none">
+    <h2 id="projHead">プロジェクト</h2>
+    <div>
+      <div id="projBody"></div>
+      <div class="hint" id="projHint"></div>
+    </div>
+  </div>
+
+  <div class="sec" id="screenSec">
     <h2>画面</h2>
     <div>
       <div id="screens"></div>
@@ -116,6 +124,7 @@ function formatAge(ms) {
   var data = null;
   try { data = await loadData(); } catch (e) { data = null; }
 
+  await drawProjects();
   drawScreens(status);
   drawVerify(status);
   drawStores(data);
@@ -152,6 +161,95 @@ async function loadData() {
     audio: await one('audio/config.json'),
     scene: await one('audio/scene.json')
   };
+}
+
+/* ---- プロジェクト一覧（ハブのとき）。種類を問わん共通の状態だけ出す ----
+   そのプロジェクトにしか無いもの（保存の中身・ビルド成果）は出さん。種類が違えば無いけん。
+   config.projects が無ければこのパネルごと出さん＝今までどおりのプロジェクト用シェル。 */
+async function drawProjects() {
+  if (!(CFG.projects || []).length) return;
+  var sec = document.getElementById('projSec');
+  var body = document.getElementById('projBody');
+  sec.style.display = '';
+  /* ハブのときは「画面」パネルが空になるけん畳んでおく */
+  if (!(CFG.screens || []).length) document.getElementById('screenSec').style.display = 'none';
+
+  var data;
+  try { data = await (await fetch('/__shell/projects')).json(); }
+  catch (e) { body.innerHTML = '<div class="hint">プロジェクトを読めんかった: ' + e + '</div>'; return; }
+
+  var list = data.projects || [];
+  document.getElementById('projHead').textContent = 'プロジェクト　' + list.length + '件';
+  body.innerHTML = '';
+
+  list.forEach(function (p) {
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'padding:7px 0;border-top:1px solid var(--line)';
+
+    var top = document.createElement('div');
+    top.className = 'entryRow';
+    var nm = document.createElement('span');
+    nm.className = 'label';
+    nm.style.color = 'var(--text)';
+    nm.textContent = p.label + (p.kind ? '　' + p.kind : '');
+    top.appendChild(nm);
+
+    var open = document.createElement('button');
+    open.className = p.hasShell ? 'go' : '';
+    open.textContent = p.exists ? (p.hasShell ? '開く' : 'フォルダ') : '無い';
+    open.disabled = !p.exists;
+    open.addEventListener('click', function () {
+      open.textContent = '…';
+      fetch('/__shell/open', { method: 'POST', body: JSON.stringify({ dir: p.dir }) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { open.textContent = j.ok ? '開いた' : '失敗'; })
+        .catch(function () { open.textContent = '失敗'; });
+    });
+    top.appendChild(open);
+    wrap.appendChild(top);
+
+    if (p.exists) {
+      var line = document.createElement('div');
+      line.className = 'row';
+      var left = document.createElement('span');
+      left.className = 'nm';
+      if (p.git) {
+        var dirty = p.git.dirty || 0;
+        left.innerHTML = '<span style="color:' + (dirty ? 'var(--accent)' : 'var(--mk)') + '">'
+          + (p.git.branch || '?') + (dirty ? '　未コミット ' + dirty + '件' : '　きれい') + '</span>';
+      } else { left.textContent = 'git 管理外'; }
+      var right = document.createElement('span');
+      right.className = 'sub';
+      right.textContent = p.git && p.git.lastAt ? formatAge(Date.now() - new Date(p.git.lastAt).getTime()) : '';
+      line.appendChild(left); line.appendChild(right);
+      wrap.appendChild(line);
+
+      if (p.git && p.git.lastSubject) {
+        var msg = document.createElement('div');
+        msg.className = 'hint';
+        msg.style.margin = '2px 0 0';
+        msg.textContent = p.git.lastSubject;
+        wrap.appendChild(msg);
+      }
+      if (p.gsd) {
+        var g = document.createElement('div');
+        g.className = 'row';
+        var gl = document.createElement('span'); gl.className = 'nm';
+        gl.textContent = 'GSD  Phase ' + (p.gsd.phase || '?') + '　' + (p.gsd.phaseName || '');
+        var gr = document.createElement('span'); gr.className = 'sub';
+        gr.style.color = 'var(--mk)';
+        gr.textContent = (p.gsd.percent || 0) + '%';
+        g.appendChild(gl); g.appendChild(gr);
+        wrap.appendChild(g);
+      }
+    }
+    body.appendChild(wrap);
+  });
+
+  document.getElementById('projHint').innerHTML =
+    '出しとるんは<b>種類を問わん共通の状態</b>だけ —— git と GSD の現在地。'
+    + '中身の深い表示は、そのプロジェクト自身のシェルの仕事。'
+    + '「開く」はシェルがあればそれを起動し、無ければフォルダを開く。';
 }
 
 /* ---- 画面への入口。軽い版（dist-dev/）と焼き込み版（dist/）の2本 ---- */

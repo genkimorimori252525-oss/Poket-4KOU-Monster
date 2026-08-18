@@ -134,6 +134,90 @@ Bun.serve({
       return text(JSON.stringify({ files: out }), 200, MIME['.json']);
     }
 
+    /* ---- プロジェクト一覧（ハブ用）。config.projects があるときだけ働く ----
+       種類を問わん共通の状態だけを出す: git・GSD・自前のシェルがあるか。
+       そのプロジェクトにしか無いものはここに出さん —— 種類が違えば持っとらんけん。 */
+    if (pathname === '/__shell/projects') {
+      const list = CONFIG.projects || [];
+      const out = list.map((proj) => {
+        const dir = path.resolve(REPO_ROOT, proj.dir);
+        const row = { label: proj.label || path.basename(dir), dir, exists: fs.existsSync(dir) };
+        if (!row.exists) return row;
+
+        /* 種類。何で建てとるかで見分ける */
+        row.kind = fs.existsSync(path.join(dir, 'gradlew')) || fs.existsSync(path.join(dir, 'build.gradle'))
+          ? 'Java/Gradle'
+          : fs.existsSync(path.join(dir, 'package.json')) ? 'Node' : '—';
+
+        /* git。読むだけ。書き込みも fetch もせん */
+        const git = (args) => {
+          try {
+            return require('child_process')
+              .execFileSync('git', args, { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+              .trim();
+          } catch (e) { return null; }
+        };
+        if (fs.existsSync(path.join(dir, '.git'))) {
+          const porcelain = git(['status', '--porcelain']);
+          row.git = {
+            branch: git(['rev-parse', '--abbrev-ref', 'HEAD']),
+            dirty: porcelain ? porcelain.split(String.fromCharCode(10)).filter(Boolean).length : 0,
+            lastSubject: git(['log', '-1', '--format=%s']),
+            lastAt: git(['log', '-1', '--format=%cI'])
+          };
+        }
+
+        /* GSD。STATE.md の frontmatter から現在地だけ拾う（読むだけ） */
+        const st = path.join(dir, '.planning', 'STATE.md');
+        if (fs.existsSync(st)) {
+          try {
+            const head = fs.readFileSync(st, 'utf8').split('---')[1] || '';
+            /* frontmatter から1つ拾う。正規表現やのうて素直に行を探す ——
+               percent は progress: の下に**字下げして**書かれとるけん、行頭一致やと取れん。 */
+            const rows = head.split(String.fromCharCode(10));
+            const pick = (k) => {
+              const line = rows.find((l) => l.trim().indexOf(k + ':') === 0);
+              if (!line) return null;
+              return line.trim().slice(k.length + 1).trim().replace(/^["']|["']$/g, '');
+            };
+            row.gsd = {
+              phase: pick('current_phase'),
+              phaseName: pick('current_phase_name'),
+              percent: parseInt(pick('percent') || '0', 10),
+              status: pick('status'),
+              activity: pick('last_activity_desc')
+            };
+          } catch (e) {}
+        }
+
+        row.hasShell = fs.existsSync(path.join(dir, 'devshell', 'launch.js'));
+        return row;
+      });
+      return text(JSON.stringify({ projects: out }), 200, MIME['.json']);
+    }
+
+    /* ---- そのプロジェクトを開く。config.projects に載っとるものだけ ---- */
+    if (pathname === '/__shell/open' && req.method === 'POST') {
+      return req.text().then((body) => {
+        let want = '';
+        try { want = (JSON.parse(body) || {}).dir || ''; } catch (e) {}
+        const hit = (CONFIG.projects || []).find((p) => path.resolve(REPO_ROOT, p.dir) === path.resolve(want));
+        if (!hit) return text('その場所は開かん（設定に載っとらん）', 403);
+        const dir = path.resolve(REPO_ROOT, hit.dir);
+        const cp = require('child_process');
+        try {
+          if (fs.existsSync(path.join(dir, 'devshell', 'launch.js'))) {
+            cp.spawn('bun', [path.join('devshell', 'launch.js')], { cwd: dir, detached: true, stdio: 'ignore' }).unref();
+            return text(JSON.stringify({ ok: true, how: 'devshell' }), 200, MIME['.json']);
+          }
+          cp.spawn('explorer', [dir], { detached: true, stdio: 'ignore' }).unref();
+          return text(JSON.stringify({ ok: true, how: 'explorer' }), 200, MIME['.json']);
+        } catch (e) {
+          return text(JSON.stringify({ ok: false, error: String(e) }), 500, MIME['.json']);
+        }
+      });
+    }
+
     if (pathname === '/__shell/status') {
       const now = new Date();
       const verify = readJsonSafe(path.resolve(REPO_ROOT, CONFIG.verifyStatus));
