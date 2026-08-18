@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 current_phase: 4
 current_phase_name: 技の分類と既定モーション
 status: ready
-stopped_at: Phase 3 complete — saves are files, saved monsters reach battle
+stopped_at: All 4 phases complete — 30/30 requirements
 last_updated: "2026-08-18T00:00:00.000Z"
 last_activity: 2026-08-18
-last_activity_desc: Phase 3 完了（SAVE-01〜07 / WIRE-01〜05 全件。5体を無損失で移行）
+last_activity_desc: Phase 4 完了（MOVE-01〜06 全件）。マイルストーン 30/30
 state_head: 55b7adc
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 3
   completed_plans: 3
-  percent: 75
+  percent: 100
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-17)
 
 **Core value:** にーくらが作ったもの（四皇モン・技・音）が、容量を気にせず保存でき、実際の戦闘に出てくること
-**Current focus:** Phase 4 — 技の分類と既定モーション
+**Current focus:** マイルストーン完了 —— 30/30 要件
 
 ## Current Position
 
-Phase: 3 of 4 (ファイル保存と戦闘への配線) — 未着手
+Phase: 4 of 4 (技の分類と既定モーション) — 完了
 Plan: 0 of ? in current phase
-Status: **停止中** —— にーくらによる localStorage のバックアップ待ち
-Last activity: 2026-08-18 — Phase 2 完了（SHELL-01〜05 全件）
+Status: 全フェーズ完了
+Last activity: 2026-08-18 — Phase 4 完了（MOVE-01〜06 全件）
 
-Progress: [█████░░░░░] 50%（2/4 フェーズ完了）
+Progress: [██████████] 100%（4/4 フェーズ完了）
 
 ### Phase 3 完了記録（2026-08-18）
 

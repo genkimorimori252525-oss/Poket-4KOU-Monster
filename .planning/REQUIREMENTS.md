@@ -33,12 +33,12 @@
 
 ### 技の分類とモーション（MOVE）
 
-- [ ] **MOVE-01**: 技データに「近接 / 遠距離 / 遠隔」の分類フィールドがあり、定義は「実体が空間を進むか」で判定できる
-- [ ] **MOVE-02**: `starter_moves.js` の44技と内蔵技すべてに分類が付いている
-- [ ] **MOVE-03**: 相殺判定が「遠距離か否か」でまず門前払いし、既存の弾↔弾／光線↔光線／貫通の力関係は変わらない
-- [ ] **MOVE-04**: `fx.motions[]` が空の技に、分類ごとの既定モーションが割り当たる（近接=踏み込む／遠距離=前へ出す／遠隔=その場で溜める）
-- [ ] **MOVE-05**: 個別の技が `fx.motions[]` を書けば既定を上書きでき、技クリエーターからその上書きができる
-- [ ] **MOVE-06**: `CLAUDE.md` と `docs/開発計画_v6.md` の掟から「近接と雷は迎撃不可」という技名混じりの記述が消え、分類による定義に置き換わる
+- [x] **MOVE-01**: 技データに「近接 / 遠距離 / 遠隔」の分類フィールドがあり、定義は「実体が空間を進むか」で判定できる
+- [x] **MOVE-02**: `starter_moves.js` の44技と内蔵技すべてに分類が付いている
+- [x] **MOVE-03**: 相殺判定が「遠距離か否か」でまず門前払いし、既存の弾↔弾／光線↔光線／貫通の力関係は変わらない
+- [x] **MOVE-04**: `fx.motions[]` が空の技に、分類ごとの既定モーションが割り当たる（近接=踏み込む／遠距離=前へ出す／遠隔=その場で溜める）
+- [x] **MOVE-05**: 個別の技が `fx.motions[]` を書けば既定を上書きでき、技クリエーターからその上書きができる
+- [x] **MOVE-06**: `CLAUDE.md` と `docs/開発計画_v6.md` の掟から「近接と雷は迎撃不可」という技名混じりの記述が消え、分類による定義に置き換わる
 
 ### 掃除（FIX）
 
@@ -104,12 +104,12 @@
 | WIRE-03 | Phase 3 | Complete |
 | WIRE-04 | Phase 3 | Complete |
 | WIRE-05 | Phase 3 | Complete |
-| MOVE-01 | Phase 4 | Pending |
-| MOVE-02 | Phase 4 | Pending |
-| MOVE-03 | Phase 4 | Pending |
-| MOVE-04 | Phase 4 | Pending |
-| MOVE-05 | Phase 4 | Pending |
-| MOVE-06 | Phase 4 | Pending |
+| MOVE-01 | Phase 4 | Complete |
+| MOVE-02 | Phase 4 | Complete |
+| MOVE-03 | Phase 4 | Complete |
+| MOVE-04 | Phase 4 | Complete |
+| MOVE-05 | Phase 4 | Complete |
+| MOVE-06 | Phase 4 | Complete |
 
 **Coverage:**
 
