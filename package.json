@@ -16,7 +16,10 @@
     "sfx": "python3 tools/gen_sfx.py",
     "build:dev": "node build.js --dev",
     "check:untouched": "node tools/check_untouched.js",
-    "verify:dev": "node tools/verify_dev.js"
+    "verify:dev": "node tools/verify_dev.js",
+    "migrate": "node tools/migrate_to_files.js",
+    "verify:migration": "node tools/verify_migration.js",
+    "verify:store": "node tools/verify_store.js"
   },
   "devDependencies": {
     "playwright": "^1.62.1"

@@ -14,14 +14,16 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 
 const UNTOUCHABLE = [
-  /* 復元手段が無い。CC0の元素材がこのマシンに無く、616KB のこれが79音の唯一の実体 */
+  /* 復元手段が無い。CC0の元素材がこのマシンに無く、616KB のこれが79音の唯一の実体。
+     **これだけは全フェーズを通して不可触。** */
   'src/sfx_bank.js',
-  /* 単体で開ける・外部参照ゼロの掟を担う4画面。dist-dev/ を作っても動いたらいかん */
-  'dist/shioumon_field_test.html',
-  'dist/shioumon_effect_lab.html',
-  'dist/shioumon_audio_lab.html',
-  'dist/shioumon_creator.html',
 ];
+
+/* dist/ の4画面について:
+   Phase 2 では「dist-dev/ を作っても dist/ が動いたらいかん」という理由で不可触に入れとった。
+   Phase 3 はテンプレート（src/*.tpl.html）を変えるフェーズやけん、dist/ が変わるのは正常。
+   守るべきは dist/ の**バイト列**やのうて**形式**（単体で開ける・外部参照ゼロ）で、
+   そっちは tools/verify_*.js が4画面を実際に開いて見とる。 */
 
 const git = args => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
 
