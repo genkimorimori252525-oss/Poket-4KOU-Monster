@@ -141,7 +141,11 @@ Bun.serve({
       const list = CONFIG.projects || [];
       const out = list.map((proj) => {
         const dir = path.resolve(REPO_ROOT, proj.dir);
-        const row = { label: proj.label || path.basename(dir), dir, exists: fs.existsSync(dir) };
+        /* percent と note は**にーくらが設定に書いた分だけ**通す。
+           自動計算はせん —— 進捗率は数えられるもんやのうて、本人の申告やけん。 */
+        const row = { label: proj.label || path.basename(dir), dir, exists: fs.existsSync(dir),
+                      percent: (typeof proj.percent === 'number') ? proj.percent : null,
+                      note: proj.note || null };
         if (!row.exists) return row;
 
         /* 種類。何で建てとるかで見分ける */
@@ -159,12 +163,30 @@ Bun.serve({
         };
         if (fs.existsSync(path.join(dir, '.git'))) {
           const porcelain = git(['status', '--porcelain']);
+          const lines = porcelain ? porcelain.split(String.fromCharCode(10)).filter(Boolean) : [];
+          const countN = (v) => { const x = parseInt(v || '', 10); return isNaN(x) ? null : x; };
           row.git = {
             branch: git(['rev-parse', '--abbrev-ref', 'HEAD']),
-            dirty: porcelain ? porcelain.split(String.fromCharCode(10)).filter(Boolean).length : 0,
+            dirty: lines.length,
+            /* 未コミットの内訳。数えるだけ */
+            untracked: lines.filter((l) => l.indexOf('??') === 0).length,
             lastSubject: git(['log', '-1', '--format=%s']),
-            lastAt: git(['log', '-1', '--format=%cI'])
+            lastAt: git(['log', '-1', '--format=%cI']),
+            /* 活動量。「最近どれを触っとるか」が一目で分かる。数えるだけで推定は入っとらん */
+            commits7: countN(git(['rev-list', '--count', '--since=7 days ago', 'HEAD'])),
+            commits30: countN(git(['rev-list', '--count', '--since=30 days ago', 'HEAD'])),
+            total: countN(git(['rev-list', '--count', 'HEAD']))
           };
+          /* remote があるときだけ、何個先／何個遅れかを出す。fetch はせん（勝手に通信せん） */
+          const up = git(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']);
+          if (up) {
+            const ab = git(['rev-list', '--left-right', '--count', 'HEAD...@{u}']);
+            if (ab) {
+              const parts = ab.split(/\s+/);
+              row.git.ahead = countN(parts[0]);
+              row.git.behind = countN(parts[1]);
+            }
+          }
         }
 
         /* GSD。STATE.md の frontmatter から現在地だけ拾う（読むだけ） */
@@ -183,11 +205,47 @@ Bun.serve({
             row.gsd = {
               phase: pick('current_phase'),
               phaseName: pick('current_phase_name'),
-              percent: parseInt(pick('percent') || '0', 10),
               status: pick('status'),
               activity: pick('last_activity_desc')
             };
+            /* フェーズと要件は**チェックボックスを数えるだけ**。率にはせん ——
+               「3/4 完了」は事実やが、それを 75% と書いた瞬間
+               「プロジェクトが75%終わった」という別の主張になってしまう。
+               率を出すんは、にーくらが設定に書いた分だけ。 */
+            const tick = (file, re) => {
+              try {
+                const t = fs.readFileSync(path.join(dir, '.planning', file), 'utf8');
+                const all = t.match(re);
+                if (!all) return null;
+                const done = all.filter((l) => l.indexOf('[x]') >= 0 || l.indexOf('[X]') >= 0).length;
+                return { done, total: all.length };
+              } catch (e) { return null; }
+            };
+            row.gsd.phases = tick('ROADMAP.md', /^- \[[ xX]\] \*\*Phase .*$/gm);
+            row.gsd.reqs   = tick('REQUIREMENTS.md', /^- \[[ xX]\] \*\*[A-Z]+-[0-9]+\*\*.*$/gm);
           } catch (e) {}
+        }
+
+        /* 最後にビルドが通った証拠。Java は成果物の .jar、Node は検証結果ファイル。
+           **古さも一緒に出す** —— 3日前に通ったんは「通っとる」とは違う。 */
+        const newest = (d, ext) => {
+          try {
+            let best = null;
+            for (const f of fs.readdirSync(d)) {
+              if (ext && !f.endsWith(ext)) continue;
+              const st = fs.statSync(path.join(d, f));
+              if (!st.isFile()) continue;
+              if (!best || st.mtimeMs > best.at) best = { name: f, at: st.mtimeMs, bytes: st.size };
+            }
+            return best;
+          } catch (e) { return null; }
+        };
+        const libs = path.join(dir, 'build', 'libs');
+        if (fs.existsSync(libs)) row.build = newest(libs, '.jar');
+        const vs = path.join(dir, '.verify-status.json');
+        if (fs.existsSync(vs)) {
+          const j = readJsonSafe(vs);
+          if (j) row.verify = { ok: j.ok, at: j.finishedAt, stages: (j.stages || []).length };
         }
 
         row.hasShell = fs.existsSync(path.join(dir, 'devshell', 'launch.js'));
