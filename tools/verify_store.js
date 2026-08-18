@@ -6,6 +6,7 @@
    2. 保存すると data/ のファイルが実際に変わるか
    3. file:// で開いたら今までどおり localStorage か（掟「単体で開ける」を壊しとらんか） */
 const { chromium } = require('playwright');
+const offlineFonts = require('./_pw_offline.js');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -33,6 +34,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     if (!up) { console.error('verify_store: サーバーが立たんかった'); process.exit(1); }
 
     b = await chromium.launch(LAUNCH);
+
+    offlineFonts(b);
 
     /* ---- 1. サーバー経由：ファイルから読めとるか ---- */
     const pg = await b.newPage({ viewport: { width: 420, height: 900 } });

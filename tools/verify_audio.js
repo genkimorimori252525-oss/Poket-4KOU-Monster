@@ -1,4 +1,5 @@
 const { chromium } = require('playwright');
+const offlineFonts = require('./_pw_offline.js');
 const path = require('path');
 const fs = require('fs');
 const DIST_URL = 'file://' + path.join(__dirname, '..', 'dist') + '/';
@@ -10,6 +11,7 @@ const LAUNCH = { args:['--autoplay-policy=no-user-gesture-required'] };
 if(process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
 (async () => {
   const b = await chromium.launch(LAUNCH);
+  offlineFonts(b);
   const results = {};
   const allErrs = [];
   for (const [name, file] of [

@@ -7,6 +7,7 @@
    npm run verify の4段には入れん。あれは dist/ の正しさを見る連鎖で、
    dist-dev/ は開発用の派生物やけん別のコマンドにしとく。 */
 const { chromium } = require('playwright');
+const offlineFonts = require('./_pw_offline.js');
 const { spawn } = require('child_process');
 const path = require('path');
 
@@ -56,6 +57,8 @@ try {
     if (!/audio\/ogg/.test(ctype)) allErrs.push('[se] content-type が audio/ogg やない: ' + ctype);
 
     b = await chromium.launch(LAUNCH);
+
+    offlineFonts(b);
 
     for (const [name, file] of [
       ['音ラボ',     'shioumon_audio_lab.html'],

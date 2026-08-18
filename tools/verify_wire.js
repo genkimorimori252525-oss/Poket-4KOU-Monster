@@ -4,6 +4,7 @@
    これまで戦闘に出られたのはベタ書きの個体だけで、保存した個体の影も鳴き声も自作技も
    一度も読まれとらんかった。それが直ったことを、主張やのうて実行で示す。 */
 const { chromium } = require('playwright');
+const offlineFonts = require('./_pw_offline.js');
 const { spawn } = require('child_process');
 const path = require('path');
 
@@ -29,6 +30,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     if (!up) { console.error('verify_wire: サーバーが立たんかった'); process.exit(1); }
 
     b = await chromium.launch(LAUNCH);
+
+    offlineFonts(b);
     const pg = await b.newPage({ viewport: { width: 420, height: 900 } });
     const perr = [];
     pg.on('pageerror', e => perr.push('PAGEERROR ' + e.message));

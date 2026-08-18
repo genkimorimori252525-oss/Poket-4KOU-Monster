@@ -5,6 +5,7 @@
    使い方: node tools/verify_resolve.js
    ========================================================= */
 const { chromium } = require('playwright');
+const offlineFonts = require('./_pw_offline.js');
 const path = require('path');
 const DIST_URL = 'file://' + path.join(__dirname, '..', 'dist') + '/';
 /* Chromium が見つからんときは PW_CHROMIUM に実行ファイルのパスを入れる */
@@ -25,6 +26,7 @@ const KEYS = ['normal','attack','hurt','back','summon','shiranai'];
 
 (async () => {
   const b = await chromium.launch(LAUNCH);
+  offlineFonts(b);
   const allErrs = [];
   const watch = (pg, tag) => {
     pg.on('pageerror', e => allErrs.push(tag + ' PAGEERROR ' + e.message));

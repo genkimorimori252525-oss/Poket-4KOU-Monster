@@ -4,6 +4,7 @@
    使い方: node tools/verify_creator.js
    ========================================================= */
 const { chromium } = require('playwright');
+const offlineFonts = require('./_pw_offline.js');
 const path = require('path');
 const fs = require('fs');
 const DIST = 'file://' + path.join(__dirname, '..', 'dist') + '/';
@@ -44,6 +45,7 @@ async function setRange(pg, sel, n, v) {
 
 (async () => {
   const b = await chromium.launch(LAUNCH);
+  offlineFonts(b);
   const pg = await b.newPage({ viewport: { width: 420, height: 1100 } });
   const errs = [];
   pg.on('pageerror', e => errs.push('PAGEERROR ' + e.message));
