@@ -17,6 +17,7 @@ function readConfig() {
 }
 
 const CONFIG = readConfig();
+let lastPageAt = 0;   /* ブラウザがページを取りに来た印（起動の成否をこれで見る） */
 const PORT = parseInt(process.argv[2] || CONFIG.port || '8766', 10);
 
 const MIME = {
@@ -82,11 +83,15 @@ Bun.serve({
       return text('no', 400);
     }
 
+    /* ブラウザが本当にページを取りに来た印。**窓を数えるより確か** ——
+       プロファイルが壊れてエラー画面が出とるときも「窓」は在るけん、
+       窓の有無では成否が分からん。ページを取りに来たかどうかなら間違えん。 */
     if (pathname === '/') {
+      lastPageAt = Date.now();
       return text(fs.readFileSync(DASHBOARD_PATH), 200, MIME['.html']);
     }
     if (pathname === '/__shell/ping') {
-      return text('ok', 200);
+      return text(JSON.stringify({ ok: true, lastPageAt: lastPageAt }), 200, MIME['.json']);
     }
     if (pathname === '/__shell/config.json') {
       return text(fs.readFileSync(CONFIG_PATH, 'utf8'), 200, MIME['.json']);

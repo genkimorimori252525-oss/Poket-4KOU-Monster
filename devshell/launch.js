@@ -96,19 +96,30 @@ async function main() {
 
   console.log('起動: ' + browser);
 
-  /* この起動で使うブラウザの窓が、実際に画面に出とるか。
-     プロセスの有無やのうて**窓の有無**を見る —— 立ち上がって即死ぬときも
-     プロセスは一瞬存在するけん、それやと嘘になる。
-     見分けが付かんときは true（黙る）。余計な警告を出すより害が少ない。 */
-  function windowIsUp() {
-    if (process.platform !== 'win32') return true;
-    try {
-      var out = require('child_process').execFileSync('powershell', ['-NoProfile', '-Command',
-        '@(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq ' +
-        JSON.stringify(browser).replace(/"/g, "'") + ' -and $_.MainWindowHandle -ne 0 }).Count'
-      ], { encoding: 'utf8', timeout: 15000, stdio: ['ignore', 'pipe', 'ignore'] });
-      return parseInt(out.trim(), 10) > 0;
-    } catch (e) { return true; }
+  /* 起動がうまくいったかを、**ブラウザがページを取りに来たか**で見る。
+
+     ⚠ ここは前まで PowerShell で窓の数を数えとった。2つ問題があった:
+
+       1. **その PowerShell 自身が黒い端末を開いとった。**
+          launch.vbs から呼ばれると親にコンソールが無いけん、PowerShell が
+          自前で新しいコンソールを作る。窓の有無を調べる仕掛けが、
+          自分で窓を作っとった —— にーくらの言う「目障りな端末」の正体はこれ。
+
+       2. **窓が在っても失敗のことがある。** プロファイルが壊れとると
+          「プロフィール エラーが発生しました」という窓が出る。窓は在るけん
+          「成功」と読んでしまう。実際に2回それで見逃した。
+
+     ページを取りに来たかどうかなら、どっちも間違えん。外部プロセスも要らん。 */
+  async function pageFetchedSince(since) {
+    for (var i = 0; i < 60; i++) {   /* 15秒。冷えたプロファイルの初回は6秒やと足りん */
+      try {
+        var r = await fetch(pingUrl);
+        var j = await r.json();
+        if ((j.lastPageAt || 0) >= since) return true;
+      } catch (e) {}
+      await new Promise(function (r2) { setTimeout(r2, 250); });
+    }
+    return false;
   }
 
   /* 窓を1つ開けて、**何ミリ秒生きたか**を返す */
@@ -151,10 +162,17 @@ async function main() {
 
      どっちでも**少し待ってもう一度試す**のが正しい。(a) なら既存の窓が
      前に出るだけで害は無い。(b) なら今度こそ窓が出る。 */
+  var launchedAt = Date.now();
   var lived = await openWindow();
-  if (lived < 4000) {
+  var loaded = await pageFetchedSince(launchedAt);
+
+  if (!loaded) {
+    /* 開けとらん。少し置いてもう一度 —— 直前に殺した Chromium が
+       まだプロファイルを離しとらんだけのことが多い */
     await new Promise(function (r) { setTimeout(r, 2500); });
+    launchedAt = Date.now();
     lived = await openWindow();
+    loaded = await pageFetchedSince(launchedAt);
   }
 
   /* それでも窓が無いなら、渡したんやのうて**開けとらん**。Chromium は
@@ -168,7 +186,7 @@ async function main() {
      やけん、ここは最後の手当てとしてだけ置く。しかも**消さん。脇へ退ける**。
      中にどんな残り物があるか俺には分からんし、人のデータを俺の都合で捨てる話やない。
      退けたものが要らんと分かったら、にーくらが自分で消せばよか。 */
-  if (lived < 4000 && !windowIsUp()) {
+  if (!loaded) {
     var aside = profileDir + '.broken-' + Date.now();
     var moved = false;
     try {
@@ -176,29 +194,34 @@ async function main() {
       fs.mkdirSync(profileDir, { recursive: true });
     } catch (e) {}
     if (moved) {
-      console.log('窓が出んかった。プロファイルを ' + path.basename(aside) + ' へ退けて作り直す。');
+      console.log('ページを取りに来んかった。プロファイルを ' + path.basename(aside) + ' へ退けて作り直す。');
+      launchedAt = Date.now();
       lived = await openWindow();
+      loaded = await pageFetchedSince(launchedAt);
     }
   }
 
-  if (lived < 4000 && !windowIsUp()) {
+  if (!loaded) {
     var msg = '開けんかった。' + String.fromCharCode(10) +
               'サーバーは http://127.0.0.1:' + port + '/ で動いとる。' + String.fromCharCode(10) +
               '中を見るには devshell' + String.fromCharCode(92) + 'launch.cmd を直に叩いて。';
     console.error(msg);
-    /* 窓を隠しとる（launch.vbs）けん、黙ったら誰も気付けん。ここだけは喋る */
+    /* 窓を隠しとる（launch.vbs）けん、黙ったら誰も気付けん。ここだけは喋る。
+       MessageBox は GUI やけん、裏の PowerShell を隠しても箱は見える。 */
     if (process.platform === 'win32') {
       try {
         require('child_process').execFileSync('powershell', ['-NoProfile', '-Command',
           'Add-Type -AssemblyName System.Windows.Forms; ' +
           '[System.Windows.Forms.MessageBox]::Show(' + JSON.stringify(msg).replace(/"/g, "'") +
-          ", '開発シェル') | Out-Null"], { timeout: 60000, stdio: 'ignore' });
+          ", '開発シェル') | Out-Null"], { timeout: 60000, stdio: 'ignore', windowsHide: true });
       } catch (e) {}
     }
     if (startedByMe && serverProc) serverProc.kill();
     process.exit(1);
   }
 
+  /* すぐ落ちたんは「もう開いとる窓に渡した」ということ。
+     ページは取りに来とる（loaded）けん、窓は在る。サーバーは生かしておく。 */
   if (lived < 4000) {
     console.log('もう開いとる窓に渡した（' + lived + 'ms）。サーバーは生かしたままにする。');
     return;
