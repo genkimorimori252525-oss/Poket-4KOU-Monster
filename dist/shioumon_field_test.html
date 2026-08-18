@@ -2572,7 +2572,12 @@ function drawInfoBox(g,x,y,w,h,f,showNumbers){
 
    掟4: 新しい絵は1枚も増やしとらん。全部ここで描いとる。
    ========================================================= */
-const CB = { dx:9, barDx:34, barW:44, barH:5, numDx:84, rowDy:38, rowDyNum:53 };
+const CB = { dx:9, barDx:34, barW:44, barH:5, numDx:84, rowDy:38, rowDyNum:53,
+             /* 数字を棒の中心から少し下げる。字そのものが上に偏っとる（上4px/下3px）けん、
+                中心に置いても目には高く見える。にーくらの指摘で足した。
+                下げすぎると箱の縁に付く —— 余白は相手の箱で 6.5px しか無いけん、
+                ここを 3 より大きくするなら箱も伸ばさないかん（検証が見張っとる） */
+             numDy:2 };
 /* 描いた場所をここに控える。**検証に座標を決め打ちさせんため** ——
    決め打ちやと、置き場所を動かすたびに検証が嘘の合格／不合格を出す。
    実際に一度、箱の中へ移したときに古い座標を読んで空振りしとる。 */
@@ -2619,11 +2624,16 @@ function drawOwnCost(g, x, y, w, f, hasNumbers){
     g.strokeRect(bx-2.5, by-2.5, bw+5, bh+5);
   }
 
-  CB_RECT[side] = { x:bx, y:by, w:bw, h:bh };
+  /* 検証が余白を測れるように、箱の下端と数字の実際の下端も控える。
+     字の高さは書体で変わるけん、決め打ちやのうて測った値を渡す。 */
+  const nm = g.measureText(String(Math.round(t.own)));
+  CB_RECT[side] = { x:bx, y:by, w:bw, h:bh,
+                    boxBottom: y + (hasNumbers ? 70 : 52),
+                    numBottom: mid + CB.numDy + nm.actualBoundingBoxDescent };
 
   g.fillStyle = t.own<=0 ? '#c02040' : '#20242e';
   g.font=F(11); g.textAlign='left'; g.textBaseline='middle';
-  g.fillText(Math.round(t.own), x+CB.numDx, mid);
+  g.fillText(Math.round(t.own), x+CB.numDx, mid + CB.numDy);
 }
 
 class MessageBox {

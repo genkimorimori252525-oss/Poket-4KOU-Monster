@@ -114,6 +114,31 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   ok(capped.bar.filled >= capped.bar.width - 2, '上限なのに棒が満ちとらん: ' + capped.bar.filled);
   console.log('上限          ' + capped.own + ' → ' + capped.bar.filled + '/' + capped.bar.width + '画素');
 
+  /* ---- 4.5 数字が箱の下の縁に付いとらんか ----
+     にーくらの指定は「もうすこし数字を下げれる？**下の縁につかない程度で**」。
+     下げ幅（CB.numDy）を後で誰かが増やしたとき、縁に食い込むのをここで止める。
+     字の高さは書体で変わるけん、**測った値**で見る（決め打ちやと書体を替えた途端に嘘になる）。 */
+  const margin = await pg.evaluate(() => {
+    resetBattle(4242);
+    stepBattle(1 / 60); ally.update(1 / 60); enemy.update(1 / 60);
+    drawField();
+    const out = {};
+    for (const s of ['ally', 'enemy']) {
+      const r = CB_RECT[s];
+      out[s] = r ? { 余白: Math.round((r.boxBottom - r.numBottom) * 10) / 10,
+                     字の下端: Math.round(r.numBottom * 10) / 10,
+                     箱の下端: r.boxBottom } : null;
+    }
+    return out;
+  });
+  for (const s of ['ally', 'enemy']) {
+    const m = margin[s];
+    ok(m, s + ' の位置が控えられとらん');
+    if (m) ok(m.余白 >= 2, s + ' の数字が箱の下の縁に付いとる（余白 ' + m.余白 + 'px）');
+  }
+  console.log('縁との余白    味方 ' + (margin.ally ? margin.ally.余白 : '?') + 'px / 相手 '
+    + (margin.enemy ? margin.enemy.余白 : '?') + 'px');
+
   /* ---- 5. 決着の理由が画面に出るか（WIN-05）---- */
   const banner = await pg.evaluate(() => {
     const read = () => {
