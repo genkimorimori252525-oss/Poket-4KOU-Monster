@@ -92,6 +92,23 @@
 
 <div id="stage"><canvas id="cv" width="384" height="288"></canvas></div>
 
+<!-- ⚠ ここは画面のいちばん下に埋まっとった（y=962・音のテストより下）。
+     **戦闘テストなのに「誰と誰が戦うか」が音の設定より下に在った。**
+     にーくらに「相手の手もちやこちらの手持ちが指定できないの、変じゃない？」と
+     言われて気付いた —— 機能は在ったが、在ることが分からん場所に置いとった。
+     戦う前に決めるものやけん、画面のすぐ下へ。最初から開いとく。 -->
+<div class="panel">
+  <h2>■ 編成 —— 誰と誰が戦うか</h2>
+  <div class="sec" id="rosterSec">
+    <div id="rosterList"></div>
+    <div class="hint" id="rosterHint"></div>
+    <div class="anim" style="grid-template-columns:repeat(2,1fr);margin-top:6px;">
+      <button id="btnRosterGo">この編成ではじめる</button>
+      <button id="btnRosterDefault">元のロスターに戻す</button>
+    </div>
+  </div>
+</div>
+
 <div class="panel">
   <h2>■ 音（CC0素材・HTMLへ焼き込み済み）</h2>
   <div class="anim" style="grid-template-columns:repeat(2,1fr);">
@@ -121,14 +138,6 @@
     <button id="btnFire2">水弾で反撃</button>
     <button id="btnAuto" class="on">自動戦闘 ON</button>
     <button id="btnReset">やりなおし</button>
-    <button id="btnRoster">▣ 編成をえらぶ</button>
-  </div>
-  <div class="sec" id="rosterSec" style="display:none">
-    <h2>編成 —— 制作ツールで作った四皇モンを出す</h2>
-    <div id="rosterList"></div>
-    <div class="hint" id="rosterHint"></div>
-    <button id="btnRosterGo">この編成ではじめる</button>
-    <button id="btnRosterDefault">元のロスターに戻す</button>
   </div>
   <div class="anim" style="grid-template-columns:1fr;margin-top:5px;">
     <button id="btnDet">決定論チェック（同じシードで2回走らせて一致するか）</button>
@@ -4120,8 +4129,17 @@ function rosterRender(){
   }
   mons.forEach(m=>{
     const nm=m._slot||m.name||m.id;
+    /* 行の揃えはここで決める。`.ctl` は別の用途で使われとるクラスで、
+       名前の長さで列がずれた（実際に「ちんすけ」と「バゼルギウス」で
+       ボタンの位置が食い違っとった）。名前1列＋ボタン2列の格子にする。 */
     const row=document.createElement('div'); row.className='ctl';
+    row.style.display='grid';
+    row.style.gridTemplateColumns='1fr 64px 64px';
+    row.style.gap='6px';
+    row.style.alignItems='center';
+    row.style.marginBottom='4px';
     const lb=document.createElement('label'); lb.textContent=nm;
+    lb.style.whiteSpace='nowrap'; lb.style.overflow='hidden'; lb.style.textOverflow='ellipsis';
     const bA=document.createElement('button'); bA.textContent='手前';
     const bE=document.createElement('button'); bE.textContent='奥';
     const upd=()=>{ bA.classList.toggle('on',rosterPick.ally.indexOf(nm)>=0);
@@ -4150,10 +4168,14 @@ function rosterApply(defsA,defsB){
   return true;
 }
 (function(){
-  const bt=document.getElementById('btnRoster'), sec=document.getElementById('rosterSec');
-  if(!bt) return;
-  bt.onclick=()=>{ const open=sec.style.display==='none';
-                   sec.style.display=open?'':'none'; if(open) rosterRender(); };
+  const sec=document.getElementById('rosterSec');
+  if(!sec) return;
+  /* 開閉のボタンは無くした。**最初から見えとる**のが、この画面の本題やけん。
+     一覧は保存が読めた頃に描く —— http 配信やと data/ から後から届く（store_bridge）。
+     即座に描くと「1体も無い」と出てしまうけん、少し待ってからもう一度描く。 */
+  rosterRender();
+  setTimeout(rosterRender, 600);
+  setTimeout(rosterRender, 1800);
   document.getElementById('btnRosterGo').onclick=()=>{
     const mons=ROSTER.saved(), by={};
     mons.forEach(m=>{ by[m._slot||m.name||m.id]=m; });
@@ -4164,11 +4186,12 @@ function rosterApply(defsA,defsB){
       return;
     }
     rosterApply(A,B);
-    sec.style.display='none';
+    document.getElementById('rosterHint').textContent=
+      'この編成ではじめた —— 手前 '+A.length+'体／奥 '+B.length+'体';
   };
   document.getElementById('btnRosterDefault').onclick=()=>{
     rosterApply(ROSTER_A,ROSTER_B);
-    sec.style.display='none';
+    document.getElementById('rosterHint').textContent='内蔵のロスターに戻した';
   };
 })();
 
