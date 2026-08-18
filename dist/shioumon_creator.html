@@ -536,6 +536,33 @@
   bail('files', '保存先は data/ のファイル（' + loaded + '体を読み込んだ）。' +
                 'git で戻せるし、容量の上限も無い。');
   console.log('[STORE] data/ のファイルへ保存する。読み込み ' + loaded + '体');
+
+  /* ---------- シェルへの戻り口 ----------
+     画面に入ったら戻れんかった（実際ににーくらが詰まった）。
+     ここに置くんは、このモジュールが4画面すべてに入っとって、しかも
+     「サーバー経由かどうか」を既に知っとる唯一の場所やけん。
+     file:// で単体で開いたときは出さん —— そこにシェルは無い。 */
+  function addBackLink() {
+    if (document.getElementById('__shellBack')) return;
+    var a = document.createElement('a');
+    a.id = '__shellBack';
+    a.href = '/';
+    a.textContent = '← シェル';
+    a.title = '開発シェルのダッシュボードへ戻る';
+    a.style.cssText = [
+      'position:fixed', 'top:6px', 'right:6px', 'z-index:99999',
+      'font:11px/1 "DotGothic16","MS Gothic",monospace',
+      'padding:6px 9px', 'border-radius:3px',
+      'background:rgba(25,30,39,0.72)', 'color:#8b97a8',
+      'border:1px solid rgba(44,52,66,0.8)', 'text-decoration:none',
+      'opacity:0.55', 'transition:opacity .12s'
+    ].join(';');
+    a.addEventListener('mouseenter', function () { a.style.opacity = '1'; a.style.color = '#dfe6f0'; });
+    a.addEventListener('mouseleave', function () { a.style.opacity = '0.55'; a.style.color = '#8b97a8'; });
+    document.body.appendChild(a);
+  }
+  if (document.body) addBackLink();
+  else document.addEventListener('DOMContentLoaded', addBackLink);
 })();
 
 /* =========================================================
