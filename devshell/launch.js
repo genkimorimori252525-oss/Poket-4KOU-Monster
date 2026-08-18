@@ -95,29 +95,102 @@ async function main() {
   fs.mkdirSync(profileDir, { recursive: true });
 
   console.log('起動: ' + browser);
-  var launchedAt = Date.now();
-  var browserProc = Bun.spawn([
-    browser,
-    '--app=http://127.0.0.1:' + port + '/',
-    '--user-data-dir=' + profileDir,
-    '--window-size=780,900',
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--autoplay-policy=no-user-gesture-required',
-  ], { stdio: ['ignore', 'ignore', 'ignore'] });
 
-  await browserProc.exited;
+  /* この起動で使うブラウザの窓が、実際に画面に出とるか。
+     プロセスの有無やのうて**窓の有無**を見る —— 立ち上がって即死ぬときも
+     プロセスは一瞬存在するけん、それやと嘘になる。
+     見分けが付かんときは true（黙る）。余計な警告を出すより害が少ない。 */
+  function windowIsUp() {
+    if (process.platform !== 'win32') return true;
+    try {
+      var out = require('child_process').execFileSync('powershell', ['-NoProfile', '-Command',
+        '@(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq ' +
+        JSON.stringify(browser).replace(/"/g, "'") + ' -and $_.MainWindowHandle -ne 0 }).Count'
+      ], { encoding: 'utf8', timeout: 15000, stdio: ['ignore', 'pipe', 'ignore'] });
+      return parseInt(out.trim(), 10) > 0;
+    } catch (e) { return true; }
+  }
+
+  /* 窓を1つ開けて、**何ミリ秒生きたか**を返す */
+  async function openWindow() {
+    var at = Date.now();
+    var proc = Bun.spawn([
+      browser,
+      '--app=http://127.0.0.1:' + port + '/',
+      '--user-data-dir=' + profileDir,
+      '--window-size=780,900',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--autoplay-policy=no-user-gesture-required',
+    ], { stdio: ['ignore', 'ignore', 'ignore'] });
+    await proc.exited;
+    return Date.now() - at;
+  }
 
   /* ⚠ ここは罠がある。同じ --user-data-dir を使っとる Chromium が既に居ると、
      新しい方は**既存の窓に仕事を渡して即座に終わる**。素直に受け取ると
      「閉じられた」と読めてしまい、下でサーバーを殺す —— その結果、
      **窓は生きとるのにサーバーだけ死んだ**状態が残る（実際に一度これで詰まった）。
 
-     すぐ落ちたら「渡した」と見なして、サーバーはそのまま生かしておく。
-     人がほんまに閉じたときは、開いてから数秒では済まん。 */
-  var lived = Date.now() - launchedAt;
+     ところが「すぐ落ちた」には理由が2つあって、外からは見分けが付かん:
+       (a) もう開いとる窓に渡した        …… 正常。窓は在る
+       (b) 直前に殺した Chromium がまだプロファイルを離しとらん
+                                         …… 失敗。**窓が出てこん**
+     (b) を「渡した」と読んで黙ると、押しても何も起きんまま何の合図も出ん。
+     窓を隠しとる（launch.vbs）けん、なおさら気付けん。
+
+     どっちでも**少し待ってもう一度試す**のが正しい。(a) なら既存の窓が
+     前に出るだけで害は無い。(b) なら今度こそ窓が出る。 */
+  var lived = await openWindow();
   if (lived < 4000) {
-    console.log(もう開いとる窓に渡した（ + lived + ms）。サーバーは生かしたままにする。);
+    await new Promise(function (r) { setTimeout(r, 2500); });
+    lived = await openWindow();
+  }
+
+  /* それでも窓が無いなら、渡したんやのうて**開けとらん**。Chromium は
+     こういうとき黙って死ぬけん、押した人には「押しても何も起きん」としか見えん。
+
+     ⚠ 原因を断定しとらん。実測で分かっとるんは「強制終了した直後に立て直すと
+     しばらく窓が出んことがある（時間を置けば同じプロファイルで出る）」まで。
+     プロファイルの壊れは**あり得る筋であって、確かめた原因やない**。
+     一度それを原因と決めつけて外しとる。
+
+     やけん、ここは最後の手当てとしてだけ置く。しかも**消さん。脇へ退ける**。
+     中にどんな残り物があるか俺には分からんし、人のデータを俺の都合で捨てる話やない。
+     退けたものが要らんと分かったら、にーくらが自分で消せばよか。 */
+  if (lived < 4000 && !windowIsUp()) {
+    var aside = profileDir + '.broken-' + Date.now();
+    var moved = false;
+    try {
+      if (fs.existsSync(profileDir)) { fs.renameSync(profileDir, aside); moved = true; }
+      fs.mkdirSync(profileDir, { recursive: true });
+    } catch (e) {}
+    if (moved) {
+      console.log('窓が出んかった。プロファイルを ' + path.basename(aside) + ' へ退けて作り直す。');
+      lived = await openWindow();
+    }
+  }
+
+  if (lived < 4000 && !windowIsUp()) {
+    var msg = '開けんかった。' + String.fromCharCode(10) +
+              'サーバーは http://127.0.0.1:' + port + '/ で動いとる。' + String.fromCharCode(10) +
+              '中を見るには devshell' + String.fromCharCode(92) + 'launch.cmd を直に叩いて。';
+    console.error(msg);
+    /* 窓を隠しとる（launch.vbs）けん、黙ったら誰も気付けん。ここだけは喋る */
+    if (process.platform === 'win32') {
+      try {
+        require('child_process').execFileSync('powershell', ['-NoProfile', '-Command',
+          'Add-Type -AssemblyName System.Windows.Forms; ' +
+          '[System.Windows.Forms.MessageBox]::Show(' + JSON.stringify(msg).replace(/"/g, "'") +
+          ", '開発シェル') | Out-Null"], { timeout: 60000, stdio: 'ignore' });
+      } catch (e) {}
+    }
+    if (startedByMe && serverProc) serverProc.kill();
+    process.exit(1);
+  }
+
+  if (lived < 4000) {
+    console.log('もう開いとる窓に渡した（' + lived + 'ms）。サーバーは生かしたままにする。');
     return;
   }
 
