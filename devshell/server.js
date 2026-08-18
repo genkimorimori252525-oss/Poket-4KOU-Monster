@@ -6,7 +6,10 @@ const fs = require('fs');
 const path = require('path');
 
 const REPO_ROOT = path.join(import.meta.dir, '..');
-const CONFIG_PATH = path.join(import.meta.dir, 'shell.config.json');
+/* 検証は SHELL_CONFIG で別の設定を指す。**本物を書き換えさせんため** ——
+   検証が本物を書いて戻す作りやと、にーくらが検証中に進捗を入れたとき、
+   その入力ごと巻き戻す。実際に一度、運だけで助かっとる。 */
+const CONFIG_PATH = process.env.SHELL_CONFIG || path.join(import.meta.dir, 'shell.config.json');
 const DASHBOARD_PATH = path.join(import.meta.dir, 'dashboard.html');
 
 function readConfig() {
