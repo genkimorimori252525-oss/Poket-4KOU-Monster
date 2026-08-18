@@ -48,6 +48,25 @@
     } catch (e) { return null; }
   }
 
+  /* メディアは URL で渡す（base64 に戻さんけん localStorage を食わん）。
+     ただし mime（audio/webm;codecs=opus など）を落とすと、保存し返した時に
+     別物になってしまう —— 実際に4体の鳴き声から ;codecs=opus が消えた。
+     サーバーは url.pathname しか見んけん、クエリに積んで往復させる。 */
+  function mediaUrl(ref) {
+    var file = typeof ref === 'string' ? ref : ref.file;
+    var mime = (typeof ref === 'object' && ref.mime) ? ref.mime : '';
+    return SHELL + '/data/monsters/' + file + (mime ? '?mime=' + encodeURIComponent(mime) : '');
+  }
+  function parseMediaUrl(u) {
+    var body = u.split('/data/monsters/')[1] || '';
+    var q = body.indexOf('?');
+    if (q < 0) return { file: body, mime: null };
+    var mime = null;
+    var m = /(?:^|&)mime=([^&]*)/.exec(body.slice(q + 1));
+    if (m) { try { mime = decodeURIComponent(m[1]); } catch (e) { mime = null; } }
+    return { file: body.slice(0, q), mime: mime };
+  }
+
   var index = getSync(SHELL + '/__shell/data-index');
   if (index === null) {
     bail('localStorage', 'サーバーにデータの口が無いけん、保存先は localStorage のまま。');
@@ -71,14 +90,14 @@
       var im = {};
       for (var k in mon.images) {
         var v = mon.images[k];
-        im[k] = v ? (SHELL + '/data/monsters/' + (typeof v === 'string' ? v : v.file)) : null;
+        im[k] = v ? mediaUrl(v) : null;
       }
       mon.images = im;
     }
     if (mon.cry && mon.cry.file) {
       var c = {};
       for (var ck in mon.cry) c[ck] = mon.cry[ck];
-      c.data = SHELL + '/data/monsters/' + mon.cry.file;
+      c.data = mediaUrl({ file: mon.cry.file, mime: mon.cry.mime });
       delete c.file; delete c.mime;
       mon.cry = c;
     }
@@ -130,7 +149,7 @@
             /* 新しく入れた写真。バイト列にして別ファイルへ */
             jobs.push(putMedia(id, k, v).then(function (r) { out.images[k] = r; }));
           } else if (v.indexOf('/data/monsters/') >= 0) {
-            out.images[k] = { file: v.split('/data/monsters/')[1], mime: null };
+            out.images[k] = parseMediaUrl(v);
           }
         });
       }
@@ -140,7 +159,9 @@
             out.cry.file = r.file; out.cry.mime = r.mime; delete out.cry.data;
           }));
         } else if (out.cry.data.indexOf('/data/monsters/') >= 0) {
-          out.cry.file = out.cry.data.split('/data/monsters/')[1];
+          var pm = parseMediaUrl(out.cry.data);
+          out.cry.file = pm.file;
+          if (pm.mime) out.cry.mime = pm.mime;
           delete out.cry.data;
         }
       }
