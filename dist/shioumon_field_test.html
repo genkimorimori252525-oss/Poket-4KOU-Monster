@@ -2120,7 +2120,42 @@ var COST = (function () {
     return { cost: Math.max(K.floor, Math.round(base + mv)), avg: avg, base: base, mv: mv };
   }
 
-  return { W: W, K: K, of: of, moveIds: moveIds };
+  /* ---------------------------------------------------------
+     コスト経済（計画18章・本作の中核仕様）
+
+     掟6: **コストは編成枠やない。試合中の陣営の体力。**
+     編成を上限で縛らん。銀河軍団を組んでもよい —— ただし経済が悪い。
+
+     ここに全部の定数を並べとる理由: 実戦で「守りのゲーム／攻めのゲーム」に
+     なっとらんかったとき、**動かす場所が1箇所に揃っとる**ようにするため。
+     計画18.5 が「仮の式でよいので早い段階で入れ、実戦で検証する」と指示しとる。
+     --------------------------------------------------------- */
+  var ECON = {
+    start:    150,   // 所持コストの初期値（両陣営とも同じ）
+    maxMul:   2,     // 上限は初期値の2倍 → 300
+    k:        0.5,   // 撃破時の係数
+    ratioCap: 2.0,   // 比率の上限。ここが「刺客」の取り分を決める
+    judgeAfter: 8    // 8クォーターを超えても決着せんかったら判定へ（計画20章）
+  };
+
+  function maxOwn() { return ECON.start * ECON.maxMul; }
+
+  /* 撃破で入る額。計画18.2:
+
+       相手のコスト × min(比率上限, 相手のコスト ÷ 倒した個体のコスト) × 係数k
+
+     **格上を食うほど大きく増え、格下を潰してもほとんど増えん。**
+     これが「安い個体で格上に刺しにいく」を成立させとる唯一の仕掛けやけん、
+     ここを緩めると低コスト編成の存在理由が消える。
+
+     倒した側のコストで割るけん 0 除算に注意 —— cost.js の floor が
+     1 を保証しとるが、外から 0 が来ても割れんように max(1,…) を挟む。 */
+  function gainOn(killerCost, victimCost) {
+    var ratio = Math.min(ECON.ratioCap, victimCost / Math.max(1, killerCost));
+    return victimCost * ratio * ECON.k;
+  }
+
+  return { W: W, K: K, of: of, moveIds: moveIds, ECON: ECON, maxOwn: maxOwn, gainOn: gainOn };
 })();
 
 /* 既存の呼び出しをそのまま生かす薄い皮。
@@ -2875,6 +2910,71 @@ let battleRng=new RNG(4242), quarter=1, battleTime=0;
 const QUARTER={ len:20, interval:8 };          // 調整用。計画の初期値は30/10
 let phase='battle', phaseLeft=QUARTER.len;
 
+/* =========================================================
+   コスト経済（Phase 15・計画18章）
+
+   掟6: コストは編成枠やのうて**試合中の陣営の体力**。
+   定数は src/cost.js の COST.ECON に集めとる（触るのはそこ）。
+   ここは乱数を一切通さん —— 通したら決定論が壊れる（掟1）。
+   ========================================================= */
+const TEAM = {
+  ally:  { own: COST.ECON.start, dealt: 0 },
+  enemy: { own: COST.ECON.start, dealt: 0 }
+};
+let endReason = null;   // '全滅' / 'コスト枯渇' / '判定'
+
+/* 所持コストを動かす。**必ずここを通す** —— 直に書き換えたら
+   ログに残らんくなって、バランスが崩れたとき追えん（掟9）。 */
+function addCost(side, delta, why){
+  const t = TEAM[side];
+  const before = t.own;
+  t.own = Math.max(0, Math.min(COST.maxOwn(), t.own + delta));
+  const sign = delta >= 0 ? '+' : '−';
+  AILog.event(side, '所持コスト '+sign+Math.abs(delta).toFixed(1)
+    +'（'+before.toFixed(1)+' → '+t.own.toFixed(1)+'）　'+why);
+  return t.own;
+}
+
+/* 決着。**三本の道（全滅・コスト枯渇・判定）が全部ここへ集まる。**
+   前は全滅だけが戦闘不能の中に埋まっとった。増やすたびに散らかるけん、
+   入口を一本にしてある。 */
+function endMatch(loserSide, reason){
+  if(over) return;
+  over=true; autoBattle=false; endReason=reason;
+  const lost = loserSide==='ally';
+  playSys(lost?'lose':'win');
+  const word = reason==='全滅' ? (lost?'こちらの　ぜんめつ…':'あいての　ぜんめつ！')
+             : reason==='コスト枯渇' ? (lost?'コストが　つきた…':'あいての　コストが　つきた！')
+             : (lost?'はんてい　まけ…':'はんてい　かち！');
+  schedule(1.0,()=>box.play(word));
+  AILog.event(loserSide,'■■ '+(lost?'敗北':'勝利')+'（'+reason+'） ■■');
+  AILog.event(loserSide,'　残り所持コスト  味方 '+TEAM.ally.own.toFixed(1)
+    +' ／ 相手 '+TEAM.enemy.own.toFixed(1)
+    +'　与ダメ 味方 '+TEAM.ally.dealt.toFixed(1)+' ／ 相手 '+TEAM.enemy.dealt.toFixed(1));
+}
+
+/* コストが尽きとらんか。全滅より先に来ることがある（高コスト編成） */
+function checkCostOut(){
+  if(over) return false;
+  for(const s of ['ally','enemy']){
+    if(TEAM[s].own <= 0){ endMatch(s,'コスト枯渇'); return true; }
+  }
+  return false;
+}
+
+/* 8クォーターを超えても決着せんときの判定（計画20章）。
+   1. 残り所持コストが多い側　2. 同率なら与ダメージ総量が多い側 */
+function judge(){
+  if(over) return;
+  const a=TEAM.ally, e=TEAM.enemy;
+  let loser;
+  if(a.own !== e.own)         loser = a.own < e.own ? 'ally' : 'enemy';
+  else if(a.dealt !== e.dealt) loser = a.dealt < e.dealt ? 'ally' : 'enemy';
+  else                         loser = 'ally';   // 完全同率は挑んだ側の負けにする
+  AILog.event('ally','── 第'+COST.ECON.judgeAfter+'クォーター終了。判定へ ──');
+  endMatch(loser,'判定');
+}
+
 function stepQuarter(dt){
   phaseLeft-=dt;
   if(phaseLeft>0) return;
@@ -2888,6 +2988,9 @@ function stepQuarter(dt){
     box.play('第'+quarter+'クォーター　しゅうりょう！');
     panel.mode='main'; drawer.target=1;         // 作戦を決めさせる
   }else{
+    /* 8クォーターを超えたら判定（計画20章・膠着対策）。
+       次のクォーターを始める前に見る —— 始めてしまうと「8を超えても」の境目がぼやける */
+    if(quarter >= COST.ECON.judgeAfter){ judge(); return; }
     phase='battle'; quarter++; phaseLeft=QUARTER.len;
     panel.timeouts=1;                           // 持ち越し不可
     for(const f of [ally,enemy]) f.actionTimer=0.4;
@@ -3223,6 +3326,10 @@ function applyHit(atk,def,move,mul){
   }
   const dmg=damageOf(atk,def,move)*(mul===undefined?1:mul);
   def.hp=Math.max(0,def.hp-dmg);
+  /* 与ダメ総量。判定（8Q超え）の2番目の基準になる（計画20章・WIN-04）。
+     **実際に入った分だけ**を数える —— HP を削り切った超過分は数えん。
+     数えとらんと、同率のときに決められん。 */
+  if(atk && atk.side && TEAM[atk.side]) TEAM[atk.side].dealt += dmg;
 
   /* ひるみ：防御力が低いほど攻撃準備を潰される */
   let flinched=false;
@@ -3242,14 +3349,24 @@ function applyHit(atk,def,move,mul){
     def.dead=true; def.charging=null;
     AILog.event(def.side, '★ '+def.name+' 戦闘不能');
     schedule(0.5,()=>box.play(def.name+'は　たおれた！'));
+
+    /* ---- コストが動く（計画18.2）----
+       死んだ側は**全額**失う。倒した側は格差に応じて得る。
+       順番は「失う → 得る」。逆にすると、相打ちのとき上限で頭打ちして
+       損失が食われることがある。 */
+    addCost(def.side, -def.cost, def.name+' 戦闘不能');
+    if(atk && atk.side !== def.side){
+      const gain = COST.gainOn(atk.cost, def.cost);
+      addCost(atk.side, +gain, atk.name+'(C'+atk.cost+') が '+def.name+'(C'+def.cost+') を撃破');
+    }
+
     const list=def.side==='ally'?partyA:partyB;
     const rest=aliveOf(list);
     if(rest.length===0){
-      over=true; autoBattle=false;
-      playSys(def.side==='ally'?'lose':'win');
-      schedule(1.0,()=>box.play(def.side==='ally'?'こちらの　ぜんめつ…':'あいての　ぜんめつ！'));
-      AILog.event(def.side,'■■ '+(def.side==='ally'?'敗北':'勝利')+' ■■');
-    }else{
+      endMatch(def.side,'全滅');
+    }else if(!checkCostOut()){
+      /* コストが尽きたら、手持ちが残っとっても負け（掟6・計画20章）。
+         **高コスト編成はここで先に終わる** —— それが「1体も落とさないゲーム」の中身 */
       schedule(1.2,()=>switchTo(def.side, list.indexOf(rest[0])));
     }
   }
@@ -3479,6 +3596,12 @@ function resetBattle(seed){
   shots=[]; pending=[]; bursts=[]; SCREEN.clear(); over=false; autoBattle=true; quarter=1;
   battleRng=new RNG(seed||4242); battleTime=0; AILog.clear();
   phase='battle'; phaseLeft=QUARTER.len; quarter=1; order={id:null,until:-1};
+  /* 経済も仕切り直す。**消し忘れたら決定論が落ちる** ——
+     前の試合の所持コストを引きずったまま2回目を回すと、同じ種でも別の決着になる。
+     この手の消し忘れは `f.lastMove` で実際にやらかしとる（下のコメント参照）。 */
+  TEAM.ally.own = TEAM.enemy.own = COST.ECON.start;
+  TEAM.ally.dealt = TEAM.enemy.dealt = 0;
+  endReason = null;
   for(const f of [...partyA,...partyB]){
     f.dead=false; f.charging=null; f.cd={}; f.mi=0;
     f.hp=f.maxHP; f.actionTimer=0.6; f.dodgeUntil=-1; f.lastMove=null;

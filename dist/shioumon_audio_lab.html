@@ -1743,7 +1743,42 @@ var COST = (function () {
     return { cost: Math.max(K.floor, Math.round(base + mv)), avg: avg, base: base, mv: mv };
   }
 
-  return { W: W, K: K, of: of, moveIds: moveIds };
+  /* ---------------------------------------------------------
+     コスト経済（計画18章・本作の中核仕様）
+
+     掟6: **コストは編成枠やない。試合中の陣営の体力。**
+     編成を上限で縛らん。銀河軍団を組んでもよい —— ただし経済が悪い。
+
+     ここに全部の定数を並べとる理由: 実戦で「守りのゲーム／攻めのゲーム」に
+     なっとらんかったとき、**動かす場所が1箇所に揃っとる**ようにするため。
+     計画18.5 が「仮の式でよいので早い段階で入れ、実戦で検証する」と指示しとる。
+     --------------------------------------------------------- */
+  var ECON = {
+    start:    150,   // 所持コストの初期値（両陣営とも同じ）
+    maxMul:   2,     // 上限は初期値の2倍 → 300
+    k:        0.5,   // 撃破時の係数
+    ratioCap: 2.0,   // 比率の上限。ここが「刺客」の取り分を決める
+    judgeAfter: 8    // 8クォーターを超えても決着せんかったら判定へ（計画20章）
+  };
+
+  function maxOwn() { return ECON.start * ECON.maxMul; }
+
+  /* 撃破で入る額。計画18.2:
+
+       相手のコスト × min(比率上限, 相手のコスト ÷ 倒した個体のコスト) × 係数k
+
+     **格上を食うほど大きく増え、格下を潰してもほとんど増えん。**
+     これが「安い個体で格上に刺しにいく」を成立させとる唯一の仕掛けやけん、
+     ここを緩めると低コスト編成の存在理由が消える。
+
+     倒した側のコストで割るけん 0 除算に注意 —— cost.js の floor が
+     1 を保証しとるが、外から 0 が来ても割れんように max(1,…) を挟む。 */
+  function gainOn(killerCost, victimCost) {
+    var ratio = Math.min(ECON.ratioCap, victimCost / Math.max(1, killerCost));
+    return victimCost * ratio * ECON.k;
+  }
+
+  return { W: W, K: K, of: of, moveIds: moveIds, ECON: ECON, maxOwn: maxOwn, gainOn: gainOn };
 })();
 
 /* 既存の呼び出しをそのまま生かす薄い皮。
