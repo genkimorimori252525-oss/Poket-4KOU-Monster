@@ -17,3 +17,8 @@ assets/webgamesfxcc0kenney/
 
 # 開発用の軽量ビルド(node build.js --dev の出力)。dist/ と違うて中身は焼き込みやない。
 dist-dev/
+
+# localStorage のバックアップ（にーくらが手で書き出したもの）。
+# 四皇モンの中身は data/ として git に載っとるけん、これは移行の材料と証拠。
+# betgame4 など別プロジェクトのデータも入っとるけん、このリポジトリには載せん。
+shioumon_backup_*.json
