@@ -7,21 +7,21 @@
 
 ### 保存層（SAVE）
 
-- [ ] **SAVE-01**: にーくらが保存した四皇モンが `data/` 以下のファイルとして書き出され、容量上限にぶつからずに何体でも保存できる
-- [ ] **SAVE-02**: 技ライブラリがファイルとして保存され、1技1ファイルまたは1JSONとして Claude が直接読み書きできる
-- [ ] **SAVE-03**: 音設定・草むらプール・シーン効果音・自動保存の各データがファイルへ移る
-- [ ] **SAVE-04**: サーバーが起動していない状態で `dist/` の単体HTMLを開いた場合、localStorage にフォールバックして今まで通り動く
-- [ ] **SAVE-05**: 保存データが git で追跡され、壊した保存を `git checkout` で戻せる
-- [ ] **SAVE-06**: `file://` で開いても `http://localhost` で開いても、同じ保存データが見える
-- [ ] **SAVE-07**: 今 localStorage に入っている既存データ（四皇モン・技・音設定）が、1件も失われずファイルへ移行される
+- [x] **SAVE-01**: にーくらが保存した四皇モンが `data/` 以下のファイルとして書き出され、容量上限にぶつからずに何体でも保存できる
+- [x] **SAVE-02**: 技ライブラリがファイルとして保存され、1技1ファイルまたは1JSONとして Claude が直接読み書きできる
+- [x] **SAVE-03**: 音設定・草むらプール・シーン効果音・自動保存の各データがファイルへ移る
+- [x] **SAVE-04**: サーバーが起動していない状態で `dist/` の単体HTMLを開いた場合、localStorage にフォールバックして今まで通り動く
+- [x] **SAVE-05**: 保存データが git で追跡され、壊した保存を `git checkout` で戻せる
+- [x] **SAVE-06**: `file://` で開いても `http://localhost` で開いても、同じ保存データが見える
+- [x] **SAVE-07**: 今 localStorage に入っている既存データ（四皇モン・技・音設定）が、1件も失われずファイルへ移行される
 
 ### 制作ツール→戦闘の配線（WIRE）
 
-- [ ] **WIRE-01**: にーくらが保存した四皇モンを、戦闘テスト画面のロスターに選んで出場させられる
-- [ ] **WIRE-02**: 出場させた個体の自作技（`mon.customMoves`）が、実戦でコスト計算も音も内蔵技と同じ道を通って使われる
-- [ ] **WIRE-03**: 戦闘画面が `mon.shadow` を読んで、制作ツールで調整した影がそのまま出る
-- [ ] **WIRE-04**: 戦闘画面が `mon.cry` を読んで、出現時と戦闘不能時に鳴き声が鳴る
-- [ ] **WIRE-05**: 草むらプールに放流した個体が、戦闘側から読める形式で保存されている（Phase 19 の土台）
+- [x] **WIRE-01**: にーくらが保存した四皇モンを、戦闘テスト画面のロスターに選んで出場させられる
+- [x] **WIRE-02**: 出場させた個体の自作技（`mon.customMoves`）が、実戦でコスト計算も音も内蔵技と同じ道を通って使われる
+- [x] **WIRE-03**: 戦闘画面が `mon.shadow` を読んで、制作ツールで調整した影がそのまま出る
+- [x] **WIRE-04**: 戦闘画面が `mon.cry` を読んで、出現時と戦闘不能時に鳴き声が鳴る
+- [x] **WIRE-05**: 草むらプールに放流した個体が、戦闘側から読める形式で保存されている（Phase 19 の土台）
 
 ### 起動と軽量化（SHELL）
 
@@ -92,18 +92,18 @@
 | SHELL-03 | Phase 2 | Complete |
 | SHELL-04 | Phase 2 | Complete |
 | SHELL-05 | Phase 2 | Complete |
-| SAVE-01 | Phase 3 | Pending |
-| SAVE-02 | Phase 3 | Pending |
-| SAVE-03 | Phase 3 | Pending |
-| SAVE-04 | Phase 3 | Pending |
-| SAVE-05 | Phase 3 | Pending |
-| SAVE-06 | Phase 3 | Pending |
-| SAVE-07 | Phase 3 | Pending |
-| WIRE-01 | Phase 3 | Pending |
-| WIRE-02 | Phase 3 | Pending |
-| WIRE-03 | Phase 3 | Pending |
-| WIRE-04 | Phase 3 | Pending |
-| WIRE-05 | Phase 3 | Pending |
+| SAVE-01 | Phase 3 | Complete |
+| SAVE-02 | Phase 3 | Complete |
+| SAVE-03 | Phase 3 | Complete |
+| SAVE-04 | Phase 3 | Complete |
+| SAVE-05 | Phase 3 | Complete |
+| SAVE-06 | Phase 3 | Complete |
+| SAVE-07 | Phase 3 | Complete |
+| WIRE-01 | Phase 3 | Complete |
+| WIRE-02 | Phase 3 | Complete |
+| WIRE-03 | Phase 3 | Complete |
+| WIRE-04 | Phase 3 | Complete |
+| WIRE-05 | Phase 3 | Complete |
 | MOVE-01 | Phase 4 | Pending |
 | MOVE-02 | Phase 4 | Pending |
 | MOVE-03 | Phase 4 | Pending |

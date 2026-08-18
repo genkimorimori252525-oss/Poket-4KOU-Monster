@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-current_phase: 3
-current_phase_name: ファイル保存と戦闘への配線
+current_phase: 4
+current_phase_name: 技の分類と既定モーション
 status: ready
-stopped_at: Phase 2 complete — STOPPED before Phase 3 pending owner localStorage backup
+stopped_at: Phase 3 complete — saves are files, saved monsters reach battle
 last_updated: "2026-08-18T00:00:00.000Z"
 last_activity: 2026-08-18
-last_activity_desc: Phase 2 完了（SHELL-01〜05 全件。dist-dev/ で 69〜87%減）
+last_activity_desc: Phase 3 完了（SAVE-01〜07 / WIRE-01〜05 全件。5体を無損失で移行）
 state_head: 55b7adc
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 3
   completed_plans: 3
-  percent: 50
+  percent: 75
 ---
 
 # Project State
@@ -23,7 +23,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-17)
 
 **Core value:** にーくらが作ったもの（四皇モン・技・音）が、容量を気にせず保存でき、実際の戦闘に出てくること
-**Current focus:** Phase 3 — ファイル保存と戦闘への配線
+**Current focus:** Phase 4 — 技の分類と既定モーション
 
 ## Current Position
 
@@ -34,22 +34,19 @@ Last activity: 2026-08-18 — Phase 2 完了（SHELL-01〜05 全件）
 
 Progress: [█████░░░░░] 50%（2/4 フェーズ完了）
 
-### ⚠ Phase 3 に入る前に必要なこと
+### Phase 3 完了記録（2026-08-18）
 
-**にーくら本人の手が要る。** Phase 3 は保存先を localStorage からファイルへ移す工事で、
-移行元（作った四皇モン・技・音設定）はブラウザの中にあり **git の外**にある。Claude からは見えない。
+**保存がファイルになった。作った四皇モンが戦闘に出るようになった。**
 
-制作ツールを開いて F12 → Console で下記を実行し、落ちた JSON をプロジェクトフォルダへ置くこと。
+- `data/` 25ファイル。個体の設計データは 2〜5KB で **git の差分が読める**
+  （攻撃力 60→55 の差分が1行になる）
+- 移行は**往復一致で検証済み** —— ファイルから組み立て直したら元と1バイトも違わん
+- `file://` では今までどおり localStorage（掟「単体で開ける」は無傷）
+- 戦闘画面の「▣ 編成をえらぶ」で保存済み5体から手前・奥を選べる
+- 影・鳴き声・自作技が実戦に出る。決定論チェックも ok（掟1 無傷）
 
-```js
-(()=>{const d=JSON.stringify(Object.fromEntries(Object.entries(localStorage)),null,1);const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([d],{type:"application/json"}));a.download="shioumon_backup_"+Date.now()+".json";a.click();})()
-```
-
-**保存データは開き方（オリジン）ごとに別の箱**やけん、`file://` と `http://localhost` の
-心当たりのある開き方すべてで取ること（その箱が空なら `{}` だけの JSON が落ちてくる）。
-
-落ちた JSON をリポジトリ内に置いてもらえれば、移行コードを**実物のデータ構造を見ながら**書ける。
-推測で書かずに済むし、SAVE-07（1件も失わずに移行する）の検証にも使える。
+**移行検査が同じ欠陥を2回捕まえた** —— `audio/webm;codecs=opus` の12文字が、
+移行スクリプトとブラウザ往復の2経路で落ちかけた。
 
 ### Phase 1 完了記録（2026-08-18）
 
