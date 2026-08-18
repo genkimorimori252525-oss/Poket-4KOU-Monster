@@ -83,7 +83,6 @@ button[disabled]:active{background:#1a1f28;color:var(--dim);}
    固有のキー名やラベルもここには書かん。全部 shell.config.json から取る（別プロジェクトへ持ち出せるように）。 */
 var CFG = null;
 var DAY_MS = 24 * 60 * 60 * 1000;
-var QUOTA = 5 * 1024 * 1024;   /* localStorage の実務上の上限。おおむね5MB */
 
 function kb(n) { return Math.round(n / 1024) + ' KB'; }
 
@@ -96,34 +95,6 @@ function formatAge(ms) {
   var hour = Math.floor(min / 60);
   if (hour < 24) return hour + '時間前';
   return Math.floor(hour / 24) + '日前';
-}
-
-/* 壊れた1キーで画面が真っ白にならんように、読みは全部 try/catch で安全な既定値へ落とす
-   （制作ツールの loadSlots() と同じ idiom）。 */
-function rawOf(key) {
-  try { return localStorage.getItem(key) || ''; } catch (e) { return ''; }
-}
-function readStore(entry) {
-  var raw = rawOf(entry.key);
-  if (!raw) return entry.shape === 'array' ? [] : {};
-  try {
-    var outer = JSON.parse(raw);
-    if (entry.shape === 'map-of-json-strings') {
-      var o = {};
-      for (var k in outer) { try { o[k] = JSON.parse(outer[k]); } catch (e) { o[k] = null; } }
-      return o;
-    }
-    return outer;   /* map-of-objects / array / object はそのまま */
-  } catch (e) {
-    return entry.shape === 'array' ? [] : {};
-  }
-}
-function rawSizeOf(entry, name) {
-  try {
-    var outer = JSON.parse(rawOf(entry.key));
-    var v = outer && outer[name];
-    return typeof v === 'string' ? v.length : JSON.stringify(v || '').length;
-  } catch (e) { return 0; }
 }
 
 (async function () {
@@ -139,12 +110,49 @@ function rawSizeOf(entry, name) {
   var status = null;
   try { status = await (await fetch('/__shell/status')).json(); } catch (e) { status = null; }
 
+  /* データはサーバーのファイルから読む。localStorage は見ん ——
+     この画面自身にはアプリの保存コードが入っとらんけん、localStorage は常に空になる。
+     ファイルが正になった今、サーバーから読むのが素直（Phase 3）。 */
+  var data = null;
+  try { data = await loadData(); } catch (e) { data = null; }
+
   drawScreens(status);
   drawVerify(status);
-  drawStores();
-  drawUsage();
+  drawStores(data);
+  drawUsage(data);
   drawBuild(status);
 })();
+
+/* data/ の中身を集めてくる。1ファイルずつ取るけん件数ぶん往復するが、
+   開いた時の1回だけやし、個体は数体〜数十体の想定 */
+async function loadData() {
+  var idx = await (await fetch('/__shell/data-index')).json();
+  var files = idx.files || [];
+  var monFiles = files.filter(function (f) { return /^monsters\/[^/]+\.json$/.test(f.path); });
+  var mons = [];
+  for (var i = 0; i < monFiles.length; i++) {
+    try {
+      var m = await (await fetch('/data/' + monFiles[i].path)).json();
+      m._bytes = monFiles[i].bytes;
+      /* この個体のメディア（写真・鳴き声）の合計。
+         monsters/<id>.json に対して monsters/<id>/ 以下がその個体のもの */
+      var dir = monFiles[i].path.replace(/\.json$/, '') + '/';
+      m._mediaBytes = files.filter(function (f) { return f.path.indexOf(dir) === 0; })
+                           .reduce(function (a, f) { return a + f.bytes; }, 0);
+      mons.push(m);
+    } catch (e) {}
+  }
+  var one = async function (rel) { try { return await (await fetch('/data/' + rel)).json(); } catch (e) { return null; } };
+  return {
+    files: files,
+    totalBytes: files.reduce(function (a, f) { return a + f.bytes; }, 0),
+    mons: mons,
+    lib: await one('moves/library.json'),
+    wild: await one('wild-pool.json'),
+    audio: await one('audio/config.json'),
+    scene: await one('audio/scene.json')
+  };
+}
 
 /* ---- 画面への入口。軽い版（dist-dev/）と焼き込み版（dist/）の2本 ---- */
 function drawScreens(status) {
@@ -217,117 +225,97 @@ function drawVerify(status) {
   });
 }
 
-/* ---- 保存したもの。読むのはここだけ（サーバーからは見えん。まだファイルやないけん） ---- */
-function drawStores() {
+/* ---- 保存したもの。data/ のファイルから読む（サーバーが正） ---- */
+function drawStores(data) {
   var bodyEl = document.getElementById('monsBody');
-  var headEl = document.getElementById('monsHead');
-  var stores = CFG.storage || [];
-  if (!stores.length) {
-    headEl.textContent = '保存したもの';
-    bodyEl.innerHTML = '<div class="hint">この設定には保存の項目が無い（shell.config.json の storage が空）</div>';
-    document.getElementById('monsHint').textContent = '';
+  var hintEl = document.getElementById('monsHint');
+  bodyEl.innerHTML = '';
+
+  if (!data) {
+    bodyEl.innerHTML = '<div class="hint">データの口が無い。サーバー経由で開いとるか確かめて</div>';
+    hintEl.textContent = '';
     return;
   }
 
-  bodyEl.innerHTML = '';
-  var listed = 0;
+  var mons = data.mons || [];
+  /* ラベルは shell.config.json から取る。ここに固有名を書かん（別プロジェクトへ持ち出せるように） */
+  var monsLabel = ((CFG.storage || []).filter(function (e) { return e.shape === 'map-of-json-strings'; })[0] || {}).label || '個体';
+  var tot = document.createElement('div');
+  tot.className = 'tot';
+  tot.textContent = monsLabel + '　' + mons.length + '体';
+  bodyEl.appendChild(tot);
 
-  stores.forEach(function (entry) {
-    var data = readStore(entry);
-
-    if (entry.shape === 'map-of-json-strings') {
-      /* 1件ずつ並べる。名前・その1件の保存サイズ・数えたい配列の合計本数 */
-      var names = Object.keys(data || {});
-      listed += names.length;
-      var tot = document.createElement('div');
-      tot.className = 'tot';
-      tot.textContent = entry.label + '　' + names.length + '件';
-      bodyEl.appendChild(tot);
-      names.forEach(function (nm) {
-        var v = data[nm] || {};
-        var n = 0;
-        (entry.countFields || []).forEach(function (f) {
-          if (Array.isArray(v[f])) n += v[f].length;
-        });
-        var row = document.createElement('div');
-        row.className = 'row';
-        var a = document.createElement('span'); a.className = 'nm'; a.textContent = nm;
-        var b = document.createElement('span'); b.className = 'sub';
-        b.textContent = kb(rawSizeOf(entry, nm)) + (entry.countFields ? '　技 ' + n + '本' : '');
-        row.appendChild(a); row.appendChild(b);
-        bodyEl.appendChild(row);
-      });
-    } else {
-      /* 件数だけ出す。上の1件ごとの本数とは別の数字やけん、行を分ける */
-      var cnt = Array.isArray(data) ? data.length
-              : (data && typeof data === 'object' ? Object.keys(data).length : 0);
-      var row2 = document.createElement('div');
-      row2.className = 'row';
-      var c = document.createElement('span'); c.className = 'nm'; c.textContent = entry.label;
-      var d = document.createElement('span'); d.className = 'sub'; d.textContent = cnt + '件';
-      row2.appendChild(c); row2.appendChild(d);
-      bodyEl.appendChild(row2);
-      listed += cnt;
-    }
-  });
-
-  headEl.textContent = '保存したもの';
-
-  /* 空に見えるときの理由。これは飾りやのうて、故障との誤認を防ぐための一行。
-     出典は CLAUDE.md「保存データは開き方（オリジン）ごとに別の箱」。 */
-  var hint = '';
-  if (!listed) {
-    hint += '<b>何も見つからんときは、こわれとるんやなくて「開き方（オリジン）が違う箱」を見とる'
-         + '可能性がある。</b>この画面は <code>http://localhost</code> の箱しか見えん。'
-         + '<code>file://</code> で開いて保存した分は別の箱に入っとって、こっちからは見えん'
-         + '（消えとるわけやない）。Phase 3 でファイル保存に移したら1つにまとまる。<br>';
-  }
-  hint += '「最終更新」はここには出しとらん —— <b>Phase 3 送り</b>。'
-       + '今の保存データに時刻の欄が無いけん、ここで足すと保存の形を変えることになる。'
-       + 'Phase 3 でファイルになれば、ファイルの更新時刻がそのまま正確な最終更新になる。';
-  document.getElementById('monsHint').innerHTML = hint;
-}
-
-/* ---- 置き場。Phase 3 が解こうとしとる問題そのものやけん、育つのが見えるようにする ---- */
-function drawUsage() {
-  var el = document.getElementById('usageBody');
-  var used = 0;
-  try { for (var k in localStorage) used += (localStorage[k] || '').length; } catch (e) {}
-
-  var pct = Math.round((used / QUOTA) * 100);
-  var head = document.createElement('div');
-  head.className = 'tot';
-  head.textContent = '合計 ' + kb(used) + '　（上限およそ ' + kb(QUOTA) + ' の ' + pct + '%）';
-  if (pct >= 80) head.style.color = 'var(--accent)';
-  el.appendChild(head);
-
-  var bar = document.createElement('div');
-  bar.className = 'bar';
-  var fill = document.createElement('i');
-  fill.style.width = Math.min(100, pct) + '%';
-  if (pct >= 80) fill.style.background = 'var(--accent)';
-  bar.appendChild(fill);
-  el.appendChild(bar);
-
-  var known = 0;
-  (CFG.storage || []).forEach(function (entry) {
-    var n = rawOf(entry.key).length;
-    known += n;
+  mons.forEach(function (m) {
+    var n = 0;
+    if (Array.isArray(m.moves)) n += m.moves.length;
+    if (Array.isArray(m.customMoves)) n += m.customMoves.length;
     var row = document.createElement('div');
     row.className = 'row';
-    var a = document.createElement('span'); a.className = 'nm'; a.textContent = entry.label;
-    var b = document.createElement('span'); b.className = 'sub'; b.textContent = kb(n);
+    var a = document.createElement('span'); a.className = 'nm';
+    a.textContent = m._slot || m.name || m.id;
+    var b = document.createElement('span'); b.className = 'sub';
+    b.textContent = kb((m._bytes || 0) + (m._mediaBytes || 0)) + '　技 ' + n + '本';
     row.appendChild(a); row.appendChild(b);
-    el.appendChild(row);
+    bodyEl.appendChild(row);
   });
-  if (used - known > 0) {
-    var row3 = document.createElement('div');
-    row3.className = 'row';
-    var e1 = document.createElement('span'); e1.className = 'nm'; e1.textContent = 'その他';
-    var e2 = document.createElement('span'); e2.className = 'sub'; e2.textContent = kb(used - known);
-    row3.appendChild(e1); row3.appendChild(e2);
-    el.appendChild(row3);
+
+  var extras = [
+    ['技の棚', data.lib ? Object.keys(data.lib).length : 0],
+    ['草むら', Array.isArray(data.wild) ? data.wild.length : 0],
+    ['音の割り当て（技）', data.audio && data.audio.moves ? Object.keys(data.audio.moves).length : 0],
+    ['音の割り当て（システム）', data.audio && data.audio.system ? Object.keys(data.audio.system).length : 0]
+  ];
+  extras.forEach(function (e) {
+    var row = document.createElement('div');
+    row.className = 'row';
+    var a = document.createElement('span'); a.className = 'nm'; a.textContent = e[0];
+    var b = document.createElement('span'); b.className = 'sub'; b.textContent = e[1] + '件';
+    row.appendChild(a); row.appendChild(b);
+    bodyEl.appendChild(row);
+  });
+
+  var hint = '';
+  if (!mons.length) {
+    hint += '<b>data/monsters/ が空。</b>まだ移行しとらんなら <code>npm run migrate</code>。' +
+            'それでも出んときは、保存が <code>file://</code> の箱に残っとる可能性がある' +
+            '（保存データは<b>開き方（オリジン）ごとに別の箱</b>）。<br>';
   }
+  hint += '「最終更新」はまだ出しとらん。ファイルの更新時刻を使えば出せるけん、次にやる。';
+  hintEl.innerHTML = hint;
+}
+
+/* ---- 置き場。ファイルになったけん、もう5MB枠の話やない ---- */
+function drawUsage(data) {
+  var el = document.getElementById('usageBody');
+  el.innerHTML = '';
+
+  var head = document.createElement('div');
+  head.className = 'tot';
+  head.textContent = data ? ('data/ 合計 ' + kb(data.totalBytes) + '　' + (data.files || []).length + 'ファイル')
+                          : 'data/ を読めんかった';
+  el.appendChild(head);
+
+  if (data) {
+    var groups = {};
+    (data.files || []).forEach(function (f) {
+      var top = f.path.indexOf('/') >= 0 ? f.path.split('/')[0] : 'その他';
+      groups[top] = (groups[top] || 0) + f.bytes;
+    });
+    Object.keys(groups).sort(function (a, b) { return groups[b] - groups[a]; }).forEach(function (g) {
+      var row = document.createElement('div');
+      row.className = 'row';
+      var a = document.createElement('span'); a.className = 'nm'; a.textContent = g;
+      var b = document.createElement('span'); b.className = 'sub'; b.textContent = kb(groups[g]);
+      row.appendChild(a); row.appendChild(b);
+      el.appendChild(row);
+    });
+  }
+
+  var note = document.createElement('div');
+  note.className = 'hint';
+  note.innerHTML = '保存はファイルやけん、<b>ブラウザの 5MB 枠はもう関係無い</b>（ディスクの空きまで）。' +
+                   'git で追跡されとるけん、壊しても <code>git checkout -- data</code> で戻る。';
+  el.appendChild(note);
 }
 
 /* ---- 軽量ビルドの実測。無いものは0やのうて「まだ作っとらん」と出す ---- */
