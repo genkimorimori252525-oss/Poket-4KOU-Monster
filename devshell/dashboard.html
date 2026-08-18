@@ -61,12 +61,12 @@ button[disabled]:active{background:#1a1f28;color:var(--dim);}
     </div>
   </div>
 
-  <div class="sec">
+  <div class="sec" id="verifySec">
     <h2 id="verifyHead">検証</h2>
     <div><div id="verifyBody"></div></div>
   </div>
 
-  <div class="sec">
+  <div class="sec" id="monsSec">
     <h2 id="monsHead">保存したもの</h2>
     <div>
       <div id="monsBody"></div>
@@ -74,12 +74,12 @@ button[disabled]:active{background:#1a1f28;color:var(--dim);}
     </div>
   </div>
 
-  <div class="sec">
+  <div class="sec" id="usageSec">
     <h2>置き場</h2>
     <div><div id="usageBody"></div></div>
   </div>
 
-  <div class="sec">
+  <div class="sec" id="buildSec">
     <h2 id="buildHead">軽量ビルド</h2>
     <div><div id="buildBody"></div></div>
   </div>
@@ -121,16 +121,26 @@ function formatAge(ms) {
   /* データはサーバーのファイルから読む。localStorage は見ん ——
      この画面自身にはアプリの保存コードが入っとらんけん、localStorage は常に空になる。
      ファイルが正になった今、サーバーから読むのが素直（Phase 3）。 */
+  /* 設定に無いパネルは出さんし、読みにも行かん。
+     ハブ（projects だけの設定）で四皇モン用の口を叩いて 404 を出すと、
+     コンソールが無害なノイズで埋まって**本物のエラーが隠れる**。 */
+  var hasData   = (CFG.storage || []).length > 0 || !!CFG.dataDir;
+  var hasScreen = (CFG.screens || []).length > 0;
+  var hasVerify = (CFG.verifyStages || []).length > 0;
+  var hasBuild  = !!CFG.buildInfo;
+
   var data = null;
-  try { data = await loadData(); } catch (e) { data = null; }
+  if (hasData) { try { data = await loadData(); } catch (e) { data = null; } }
 
   await drawProjects();
-  drawScreens(status);
-  drawVerify(status);
-  drawStores(data);
-  drawUsage(data);
-  drawBuild(status);
+
+  if (hasScreen) drawScreens(status); else hide('screenSec');
+  if (hasVerify) drawVerify(status);  else hide('verifySec');
+  if (hasData) { drawStores(data); drawUsage(data); } else { hide('monsSec'); hide('usageSec'); }
+  if (hasBuild) drawBuild(status);    else hide('buildSec');
 })();
+
+function hide(id) { var e = document.getElementById(id); if (e) e.style.display = 'none'; }
 
 /* data/ の中身を集めてくる。1ファイルずつ取るけん件数ぶん往復するが、
    開いた時の1回だけやし、個体は数体〜数十体の想定 */
@@ -171,9 +181,6 @@ async function drawProjects() {
   var sec = document.getElementById('projSec');
   var body = document.getElementById('projBody');
   sec.style.display = '';
-  /* ハブのときは「画面」パネルが空になるけん畳んでおく */
-  if (!(CFG.screens || []).length) document.getElementById('screenSec').style.display = 'none';
-
   var data;
   try { data = await (await fetch('/__shell/projects')).json(); }
   catch (e) { body.innerHTML = '<div class="hint">プロジェクトを読めんかった: ' + e + '</div>'; return; }
