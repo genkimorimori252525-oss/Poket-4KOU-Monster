@@ -5,27 +5,101 @@
   "verifyStatus": ".verify-status.json",
   "buildInfo": "dist-dev/BUILD-INFO.json",
   "roots": [
-    { "prefix": "/dev/", "dir": "dist-dev" },
-    { "prefix": "/",     "dir": "dist" }
+    {
+      "prefix": "/data/",
+      "dir": "data"
+    },
+    {
+      "prefix": "/dev/",
+      "dir": "dist-dev"
+    },
+    {
+      "prefix": "/",
+      "dir": "dist"
+    }
   ],
   "screens": [
-    { "label": "戦闘テスト", "file": "shioumon_field_test.html" },
-    { "label": "技ラボ",     "file": "shioumon_effect_lab.html" },
-    { "label": "音ラボ",     "file": "shioumon_audio_lab.html" },
-    { "label": "制作ツール", "file": "shioumon_creator.html" }
+    {
+      "label": "戦闘テスト",
+      "file": "shioumon_field_test.html"
+    },
+    {
+      "label": "技ラボ",
+      "file": "shioumon_effect_lab.html"
+    },
+    {
+      "label": "音ラボ",
+      "file": "shioumon_audio_lab.html"
+    },
+    {
+      "label": "制作ツール",
+      "file": "shioumon_creator.html"
+    }
   ],
   "verifyStages": [
-    { "name": "audio",   "label": "音",          "cmd": ["node", "tools/verify_audio.js"] },
-    { "name": "ui",      "label": "UI・決定論",  "cmd": ["node", "tools/verify_ui.js"] },
-    { "name": "creator", "label": "制作ツール",  "cmd": ["node", "tools/verify_creator.js"] },
-    { "name": "resolve", "label": "resolve一致", "cmd": ["node", "tools/verify_resolve.js"] }
+    {
+      "name": "audio",
+      "label": "音",
+      "cmd": [
+        "node",
+        "tools/verify_audio.js"
+      ]
+    },
+    {
+      "name": "ui",
+      "label": "UI・決定論",
+      "cmd": [
+        "node",
+        "tools/verify_ui.js"
+      ]
+    },
+    {
+      "name": "creator",
+      "label": "制作ツール",
+      "cmd": [
+        "node",
+        "tools/verify_creator.js"
+      ]
+    },
+    {
+      "name": "resolve",
+      "label": "resolve一致",
+      "cmd": [
+        "node",
+        "tools/verify_resolve.js"
+      ]
+    }
   ],
   "storage": [
-    { "key": "shioumon_creator_slots", "label": "四皇モン", "shape": "map-of-json-strings",
-      "countFields": ["moves", "customMoves"] },
-    { "key": "shioumon_move_lib_v1",  "label": "技の棚",   "shape": "map-of-objects" },
-    { "key": "shioumon_wild_pool_v1", "label": "草むら",   "shape": "array" },
-    { "key": "shioumon_audio_cfg_v1", "label": "音の設定", "shape": "object" },
-    { "key": "shioumon_scene_sfx_v1", "label": "シーン音", "shape": "object" }
-  ]
+    {
+      "key": "shioumon_creator_slots",
+      "label": "四皇モン",
+      "shape": "map-of-json-strings",
+      "countFields": [
+        "moves",
+        "customMoves"
+      ]
+    },
+    {
+      "key": "shioumon_move_lib_v1",
+      "label": "技の棚",
+      "shape": "map-of-objects"
+    },
+    {
+      "key": "shioumon_wild_pool_v1",
+      "label": "草むら",
+      "shape": "array"
+    },
+    {
+      "key": "shioumon_audio_cfg_v1",
+      "label": "音の設定",
+      "shape": "object"
+    },
+    {
+      "key": "shioumon_scene_sfx_v1",
+      "label": "シーン音",
+      "shape": "object"
+    }
+  ],
+  "dataDir": "data"
 }

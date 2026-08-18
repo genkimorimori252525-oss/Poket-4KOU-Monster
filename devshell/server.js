@@ -88,6 +88,52 @@ Bun.serve({
     if (pathname === '/__shell/config.json') {
       return text(fs.readFileSync(CONFIG_PATH, 'utf8'), 200, MIME['.json']);
     }
+    /* ---- データの書き込みAPI（127.0.0.1 限定）。dataDir の外へは1バイトも書かん ---- */
+    if (pathname.startsWith('/__shell/data/')) {
+      if (!CONFIG.dataDir) return text('dataDir が設定されとらん', 501);
+      const dataRoot = path.resolve(REPO_ROOT, CONFIG.dataDir);
+      const rel = pathname.slice('/__shell/data/'.length);
+      const target = path.resolve(dataRoot, rel);
+      // 封じ込め。兄弟ディレクトリの接頭辞一致も塞ぐ（静的配信と同じ判定）
+      if (target !== dataRoot && !target.startsWith(dataRoot + path.sep)) {
+        return text('no', 403);
+      }
+      if (req.method === 'PUT' || req.method === 'POST') {
+        return req.arrayBuffer().then((ab) => {
+          fs.mkdirSync(path.dirname(target), { recursive: true });
+          fs.writeFileSync(target, Buffer.from(ab));
+          return text(JSON.stringify({ ok: true, path: rel, bytes: ab.byteLength }), 200, MIME['.json']);
+        });
+      }
+      if (req.method === 'DELETE') {
+        if (!fs.existsSync(target)) return text(JSON.stringify({ ok: true, missing: true }), 200, MIME['.json']);
+        fs.rmSync(target, { recursive: true, force: true });
+        return text(JSON.stringify({ ok: true, deleted: rel }), 200, MIME['.json']);
+      }
+      if (req.method === 'GET') {
+        if (!fs.existsSync(target) || !fs.statSync(target).isFile()) return text('見つからん: ' + rel, 404);
+        return text(fs.readFileSync(target), 200, MIME[path.extname(target)] || 'application/octet-stream');
+      }
+      return text('no', 405);
+    }
+
+    /* ---- データの一覧。中身は返さん（大きいけん）。パスと大きさだけ ---- */
+    if (pathname === '/__shell/data-index') {
+      if (!CONFIG.dataDir) return text(JSON.stringify({ files: [] }), 200, MIME['.json']);
+      const dataRoot = path.resolve(REPO_ROOT, CONFIG.dataDir);
+      const out = [];
+      const walk = (dir) => {
+        if (!fs.existsSync(dir)) return;
+        for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+          const abs = path.join(dir, e.name);
+          if (e.isDirectory()) walk(abs);
+          else out.push({ path: path.relative(dataRoot, abs).split(path.sep).join('/'), bytes: fs.statSync(abs).size });
+        }
+      };
+      walk(dataRoot);
+      return text(JSON.stringify({ files: out }), 200, MIME['.json']);
+    }
+
     if (pathname === '/__shell/status') {
       const now = new Date();
       const verify = readJsonSafe(path.resolve(REPO_ROOT, CONFIG.verifyStatus));
