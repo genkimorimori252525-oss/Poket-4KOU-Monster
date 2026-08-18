@@ -25,7 +25,7 @@
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: コストを独立させる** - `costOf` を `src/cost.js` へ剥がし、式を差し替えられる形にする。**挙動は1ミリも変えん**
+- [x] **Phase 1: コストを独立させる** - `costOf` を `src/cost.js` へ剥がし、式を差し替えられる形にする。**挙動は1ミリも変えん** ✓ 2026-08-19（2406通り 相違0）
 - [ ] **Phase 2: 陣営の体力にする** - 所持コスト150・死亡で減・撃破で増・敗北条件・8クォーター判定
 - [ ] **Phase 3: 見えるようにする** - 上部にコストバー2本。死んだ瞬間ガクッと落ち、倒した瞬間伸びる
 

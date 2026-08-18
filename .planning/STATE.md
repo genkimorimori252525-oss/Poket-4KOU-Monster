@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-current_phase: 1
-current_phase_name: コストを独立させる
+current_phase: 2
+current_phase_name: 陣営の体力にする
 status: ready
-stopped_at: マイルストーン開始（コスト経済）
+stopped_at: Phase 1 完了（2406通り 相違0）
 last_updated: "2026-08-19T00:00:00.000Z"
 last_activity: 2026-08-19
-last_activity_desc: 開発基盤 30/30 完了。コスト経済のマイルストーンを開始
+last_activity_desc: Phase 1 完了。costOf を src/cost.js へ独立（挙動不変を2406通りで実証）
 state_head: 76f0925
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 0
   completed_plans: 0
-  percent: 0
+  percent: 33
 ---
 # Project State
 
@@ -23,15 +23,15 @@ See: .planning/PROJECT.md
 
 **Core value:** コストが「編成の枠」やのうて**陣営の体力**として実際に動き、
 高コスト編成と低コスト編成で**違うゲーム**が成立すること
-**Current focus:** Phase 1 —— `costOf` を `src/cost.js` へ剥がす（挙動は変えん）
+**Current focus:** Phase 2 —— 所持コスト150・増減・敗北条件・8Q判定
 
 ## Current Position
 
-Phase: 1 of 3 (コストを独立させる)
-Status: 着手前
+Phase: 2 of 3 (陣営の体力にする)
+Status: 着手前（Phase 1 は完了）
 Last activity: 2026-08-19 —— マイルストーン開始
 
-Progress: [░░░░░░░░░░] 0%（0/3 フェーズ）
+Progress: [███░░░░░░░] 33%（1/3 フェーズ）
 
 ## 前のマイルストーン（開発基盤）
 
