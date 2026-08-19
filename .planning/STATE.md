@@ -5,9 +5,9 @@ current_phase_name: 依存を切る
 status: ready
 stopped_at: マイルストーン開始（技の作り直し）
 last_updated: "2026-08-19T00:00:00.000Z"
-last_activity: 2026-08-19
-last_activity_desc: 反動と間 19/19 完了。技の作り直しを開始
-state_head: 5d59312
+last_activity: 2026-08-20
+last_activity_desc: 威力連動の取りこぼしを閉じた（相殺判定を絵に揃え、技ごとの切替を追加）
+state_head: 27134c5
 progress:
   total_phases: 3
   completed_phases: 0
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md
 
 Phase: 1 of 3 (依存を切る)
 Status: 着手
-Last activity: 2026-08-19 —— マイルストーン開始
+Last activity: 2026-08-20 —— quick 260820-2k5 完了（威力連動の取りこぼし2件）
 
 Progress: [░░░░░░░░░░] 0%（0/3 フェーズ）
 
@@ -56,3 +56,9 @@ Progress: [░░░░░░░░░░] 0%（0/3 フェーズ）
 にーくらが挙げた `ポケモン素材集/Pokemon - Pearl Version` は **.nds が1つ**（ROM本体）。
 **使わん** —— 市販ゲームの中身を吸い出すことになるけん。
 そもそも要らん。足りんのはよその参考やのうて、四皇モン自身の仕組みからの逆算やけん。
+
+## Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260820-2k5 | 威力連動の取りこぼし2件（相殺判定を絵に揃える／技制作ツールに切替を足す） | 2026-08-20 | 27134c5 | [260820-2k5-clash-hitbox-and-power-toggle-2](./quick/260820-2k5-clash-hitbox-and-power-toggle-2/) |
