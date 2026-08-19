@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-current_phase: 3
-current_phase_name: 見えるようにする
-status: human_needed
-stopped_at: 3フェーズ完了。にーくらの実戦確認待ち
+current_phase: 1
+current_phase_name: 状態を分ける
+status: ready
+stopped_at: マイルストーン開始（反動と間）
 last_updated: "2026-08-19T00:00:00.000Z"
 last_activity: 2026-08-19
-last_activity_desc: Phase 3 完了。コストバー2本が出て、減増が見える
-state_head: 76f0925
+last_activity_desc: コスト経済 22/22 完了。反動と間のマイルストーンを開始
+state_head: 94e072c
 progress:
   total_phases: 3
-  completed_phases: 3
+  completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 100
+  percent: 0
 ---
 # Project State
 
@@ -21,40 +21,31 @@ progress:
 
 See: .planning/PROJECT.md
 
-**Core value:** コストが「編成の枠」やのうて**陣営の体力**として実際に動き、
-高コスト編成と低コスト編成で**違うゲーム**が成立すること
-**Current focus:** 完了条件の確認 —— 高コスト編成 vs 低コスト編成で戦わせる
+**Core value:** 見とる人に「**撃てんのか、撃たんのか**」が分かること。
+それが分かると采配に意味が出る。
+**Current focus:** Phase 1 —— 反動／間／溜め を内部で分ける（見た目はまだ変えん）
 
 ## Current Position
 
-Phase: 3 of 3 (見えるようにする) — 完了
-Status: 全フェーズ完了 —— **にーくらの実戦確認が残っとる**
+Phase: 1 of 3 (状態を分ける)
+Status: 着手
 Last activity: 2026-08-19 —— マイルストーン開始
 
-Progress: [██████████] 100%（3/3 フェーズ）
+Progress: [░░░░░░░░░░] 0%（0/3 フェーズ）
 
-## 前のマイルストーン（開発基盤）
+## 前のマイルストーン（コスト経済）
 
-**4/4 フェーズ・30/30 要件で完了。** 控えは `.planning/archive/v1-開発基盤/`。
-Phase 4 の目視確認は 2026-08-19 に にーくらが「解決でいい」と判断して閉じた。
-
-残したもの:
-
-- 保存が `data/` 以下のファイルへ（localStorage の 5MB 枠から脱出）
-- 制作ツールで作った四皇モンが戦闘に出る
-- 開発シェル（アイコン一発・専用ウィンドウ・軽量ビルド）
-- 技の「近接／遠距離／遠隔」分類と既定モーション
+**3/3 フェーズ・22/22 要件で完了。** 控えは `.planning/archive/v2-コスト経済/`。
+所持コスト150・死亡で減・撃破で増・敗北条件・8Q判定・上部のバー2本まで入っとる。
+**実戦での確認（高コスト編成 vs 低コスト編成）はまだ。** にーくらがキャラを増やしとる最中。
 
 ## このマイルストーンの出発点（数えた事実・2026-08-19）
 
 ```
-CostCalculator の仮式      在る（src/moves.js:106・コメントに「Phase 15 で本採用」）
-個体ごとの COST 表示       在る
-戦闘不能・鳴き声0.7倍      在る（battle.tpl.html:1314）
-所持コスト                 0 箇所
-コストの増減               0 箇所
-コストバーUI               0 箇所
-敗北条件（コスト0以下）    0 箇所
+白い点滅          charge が持っとる（flash 0.25→0.6→0.25・loop:true）
+「間」の状態      **無い**。pickMove は撃てる技から必ず1つ返す
+反動の見た目      無い（数値としては f.cd に在るが画面に出とらん）
+既定に乗る自作技  にーくらの5本中2本だけ（残り3本は motions 自前）
 ```
 
-**枠としてのコストは在るが、陣営の体力としてのコストが丸ごと無い。**
+**表現と意味がずれとる** —— 白は「溜め」に使われとるのに、にーくらの目には「反動」に見えた。
