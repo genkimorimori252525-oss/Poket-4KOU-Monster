@@ -49,7 +49,10 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   ok(anim.recoil, 'recoil の動きが無い');
   ok(anim.hold, 'hold の動きが無い');
   if (anim.recoil) {
-    ok(anim.recoil.maxFlash > 0.4, '反動が白く点滅しとらん（flash最大 ' + anim.recoil.maxFlash + '）');
+    /* 閾値は**実測の崖**から決めとる —— 0.22 まで下げると待機との差が2画素になって
+       目に見えんくなる。0.25 を下回ったら「点滅しとらん」と見なす。 */
+    ok(anim.recoil.maxFlash >= 0.25, '反動の白が弱すぎて見えん（flash最大 ' + anim.recoil.maxFlash + '・0.22で消える）');
+    ok(anim.recoil.maxFlash <= 0.45, '反動の白が強すぎる（flash最大 ' + anim.recoil.maxFlash + '）—— にーくらの「白すぎない」指定');
     ok(anim.recoil.moves === false, '反動が動いとる —— **静止させる**のが指定やった');
     ok(anim.recoil.loop, '反動が繰り返しやない（1回で終わったら反動中ずっとは出せん）');
   }
