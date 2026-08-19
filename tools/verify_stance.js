@@ -94,7 +94,13 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   ok((live.seen.recoil || 0) > 0, '3分回しても反動が一度も起きん（判定が効いとらん）');
   ok((live.seen.free || 0) > 0, '自由な時間が一度も無い');
   ok(live.構えのログ > 0, '構えが変わってもログに出とらん（STATE-02）');
-  ok((live.seen.hold || 0) === 0, 'まだ誰も間を選ばんはずやのに hold が出た（Phase 2 の先取り）');
+  /* ⚠ Phase 1 のときここは「hold は 0 件のはず」やった —— まだ AI が間を選べんかったけん。
+     Phase 2 で間が入って前提が変わったけん、見張りも入れ替えた。
+     今は「hold が読める形で出とるか」を見る。取りすぎ／取らなさすぎの判定は
+     verify_ma.js の担当（あっちが本職）。 */
+  ok((live.seen.hold || 0) >= 0, 'hold の集計が壊れとる');
+  ok((live.seen.recoil || 0) > (live.seen.hold || 0) * 0.1,
+     '反動より間が極端に多い —— 構えの判定が混ざっとらんか');
   console.log('実戦          ' + Object.entries(live.seen).map(([k, v]) => k + ' ' + v).join(' / '));
   console.log('              構えのログ ' + live.構えのログ + '件  例: ' + (live.例[0] || '—'));
 

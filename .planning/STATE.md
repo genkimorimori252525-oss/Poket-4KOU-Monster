@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-current_phase: 2
-current_phase_name: 間を選ばせる
+current_phase: 3
+current_phase_name: 見た目を分ける
 status: ready
-stopped_at: Phase 1 完了（構えが読めるようになった）
+stopped_at: Phase 2 完了（間が選ばれるようになった）
 last_updated: "2026-08-19T00:00:00.000Z"
 last_activity: 2026-08-19
-last_activity_desc: Phase 1 完了。反動／間／溜め を1つの値で読めるようにした
+last_activity_desc: Phase 2 完了。AI が「撃てるが撃たん」を選ぶようになった
 state_head: 94e072c
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 0
   completed_plans: 0
-  percent: 33
+  percent: 67
 ---
 # Project State
 
@@ -23,15 +23,15 @@ See: .planning/PROJECT.md
 
 **Core value:** 見とる人に「**撃てんのか、撃たんのか**」が分かること。
 それが分かると采配に意味が出る。
-**Current focus:** Phase 2 —— AI に「撃てるが撃たん」を選ばせる
+**Current focus:** Phase 3 —— 反動＝静止＋白点滅／間＝別／溜め＝白を外す
 
 ## Current Position
 
-Phase: 2 of 3 (間を選ばせる)
+Phase: 3 of 3 (見た目を分ける)
 Status: 着手
 Last activity: 2026-08-19 —— マイルストーン開始
 
-Progress: [███░░░░░░░] 33%（1/3 フェーズ）
+Progress: [███████░░░] 67%（2/3 フェーズ）
 
 ## 前のマイルストーン（コスト経済）
 
