@@ -33,7 +33,21 @@ var MOVE_RANGE = (function () {
     slash:      'melee',    // 斬る。触れて当てる
     lightning:  'remote',   // 落ちる。空間を横切らん
     aura:       'remote',   // 自分から出る。飛ばさん
-    shatter:    'remote'    // 着弾点で割れる。進まん
+    shatter:    'remote',   // 着弾点で割れる。進まん
+    hydro_pump: 'ranged',   // 高圧水流。空間を進む
+    close_combat:'melee',   // 接近して連打する
+    flamethrower:'ranged',  // 炎粒の噴流が空間を進む
+    roar_time:  'ranged',   // 時間の波が空間を進む
+    psychokinesis:'remote', // 対象の位置で念力場が閉じる
+    electro_ball:'ranged',  // 蓄電球そのものが空間を進む
+    solar_beam: 'ranged',   // 太陽光の束が空間を進む
+    big_butt_drop:'melee',  // 本体が跳び込み、尻から接触する
+    ten_thousand_volt:'remote', // 対象上空の電圧格子が閉じる
+    million_volt:'remote',      // 対象位置を超高圧ケージで囲む
+    two_volt:   'ranged',       // 微小電荷が空間を進む
+    black_kick: 'melee',        // 黒い脚で直接蹴る
+    black_punch:'melee',        // 黒い拳で直接殴る
+    black_shot: 'ranged'        // 暗黒弾が空間を進む
   };
 
   /* 技の分類を返す。技データに range が明示されとればそっちが勝つ

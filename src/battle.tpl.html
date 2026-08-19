@@ -1623,9 +1623,12 @@ function launch(f,foe,m){
   const support=m.fx.generator==='aura';
   const from=muzzle(f), to=support?target(f):target(foe);
   /* 弾速は技ではなく「撃った個体の素早さ」から決まる（計画15章） */
-  const spec = m.fx.travel
-    ? {...m.fx, travel:{...m.fx.travel, speed:Math.round(m.fx.travel.speed*f.shotScale)}}
-    : m.fx;
+  /* 本演出だけに使用者の攻撃を渡す。ダメージ・背景演出・parts には影響させない。
+     atk=50 が従来の1倍。技ごとの増減範囲は fx.powerVisual が決める。 */
+  const mainFx={...m.fx, powerLevel:Math.max(0,Math.min(1,(+f.stats.atk||0)/100))};
+  const spec = mainFx.travel
+    ? {...mainFx, travel:{...mainFx.travel, speed:Math.round(mainFx.travel.speed*f.shotScale)}}
+    : mainFx;
   playMovePhase(m.id,'fire',SPEED.battle);
   f.scheduleMotions(m.fx,'fire');
   const pts=fxPoints(f,foe,m);

@@ -209,6 +209,23 @@ const ANIMS = {
     K({t:1,    sx:1.00,sy:1.00})
   ], img:[[0,'hurt'],[0.85,'normal']]},
 
+  /* ビック尻ドロップ専用。深く沈む → 前へ高く跳ぶ → 尻から急降下 → 弾む。
+     jump / fly / attack のキー列は流用せず、この技用に全区間を作る。 */
+  big_butt_drop:{ dur:1.18, keys:[
+    K({t:0,    sx:1.00,sy:1.00,dx:0, dy:0,   rot:0}),
+    K({t:0.08, sx:1.38,sy:0.64,dx:-7,dy:8,   rot:0.08}),
+    K({t:0.15, sx:0.70,sy:1.42,dx:14,dy:-26, rot:-0.10,ghost:1}),
+    K({t:0.27, sx:0.84,sy:1.18,dx:42,dy:-82, rot:-0.24,ghost:1}),
+    K({t:0.39, sx:1.06,sy:0.96,dx:70,dy:-98, rot:-0.34}),
+    K({t:0.48, sx:1.20,sy:0.82,dx:82,dy:-72, rot:-0.28}),
+    K({t:0.57, sx:1.32,sy:0.70,dx:91,dy:-30, rot:-0.20,ghost:1}),
+    K({t:0.64, sx:1.68,sy:0.48,dx:94,dy:9,   rot:-0.12,flash:0.35}),
+    K({t:0.72, sx:1.42,sy:0.68,dx:88,dy:4,   rot:-0.06}),
+    K({t:0.82, sx:0.82,sy:1.22,dx:62,dy:-17, rot:0.08}),
+    K({t:0.91, sx:1.12,sy:0.90,dx:30,dy:1,   rot:0.03}),
+    K({t:1,    sx:1.00,sy:1.00,dx:0, dy:0,   rot:0})
+  ], img:[[0,'normal'],[0.08,'attack'],[0.82,'normal']]},
+
   /* 倒れる（その試合のみの死亡） */
   faint:{ dur:1.1, hold:true, keys:[
     K({t:0,    sx:1.00,sy:1.00}),
@@ -235,4 +252,3 @@ function sampleAnim(def,t){
   out.img=key;
   return out;
 }
-

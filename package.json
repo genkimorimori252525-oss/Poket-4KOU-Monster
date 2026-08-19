@@ -28,7 +28,10 @@
     "verify:bar": "node tools/verify_bar.js",
     "verify:stance": "node tools/verify_stance.js",
     "verify:ma": "node tools/verify_ma.js",
-    "verify:look": "node tools/verify_look.js"
+    "verify:look": "node tools/verify_look.js",
+    "verify:style": "node tools/verify_style.js",
+    "verify:moves": "node tools/verify_signature_moves.js",
+    "verify:butt": "node tools/verify_butt_animation.js"
   },
   "devDependencies": {
     "playwright": "^1.62.1"

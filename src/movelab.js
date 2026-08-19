@@ -16,7 +16,7 @@
 /* ラベルは「見りゃ何のツマミか分かる」ことを優先する。
    短さより分かりやすさ。迷ったら動詞を入れる。 */
 const LABEL={
-  shape:'玉のかたち',size:'大きさ',frames:'パラパラのコマ数',wobble:'ぐらつき',
+  shape:'玉のかたち',style:'形',size:'大きさ',frames:'パラパラのコマ数',wobble:'ぐらつき',
   core:'芯の明るさ',spin:'回転',specks:'散る火の粉',
   'trail.type':'尾のたなびき方','trail.length':'尾の長さ','trail.rate':'尾の濃さ',
   'trail.size':'尾の粒の大きさ',
@@ -28,20 +28,46 @@ const LABEL={
   count:'何連撃',interval:'次を出すまで',spread:'振る位置のばらけ',
   jag:'ギザギザの荒さ',branches:'枝分かれの数',duration:'出とる長さ',fromSky:'空から落とす',
   rings:'輪の数',rise:'昇る高さ',cracks:'ひび割れの数',drift:'破片の飛ぶ速さ',dust:'ガラス粉の量',
+  pressure:'圧力の脈',bubbles:'気泡の数',hits:'打撃数',reach:'踏み込み',
+  particles:'炎の粒',flameSpread:'炎の広がり',timeRings:'時間輪の数',warp:'時間のゆがみ',
+  fieldSize:'念力場の大きさ',grips:'念力の腕',debris:'浮かぶ粒',squeeze:'圧縮まで',
+  orbitals:'回る電極',bolts:'放電の本数',voltage:'帯電の揺れ',burst:'放電が消えるまで',
+  sunRays:'太陽の光条',leaves:'集まる葉',dropHeight:'落下の高さ',dropAt:'着地まで',
+  height:'落ちる高さ',steps:'折れる段数',hitAt:'命中まで',cage:'電圧檻の大きさ',
+  columns:'電柱の本数',crowns:'電冠の光条',dots:'微小電荷の尾',hops:'跳ねる回数',
+  hopHeight:'跳ねる高さ',lift:'軌道の高さ',echoes:'残る輪郭',blocks:'欠損する角片',sway:'蛇行幅',
   'impact.size':'着弾の大きさ','impact.frames':'着弾のコマ数','impact.shards':'着弾の破片',
   strength:'強さ',dur:'長さ',times:'点滅の回数',power:'揺れ幅',color:'色',
   at:'いつ',dir:'線の向き',
   off:'ずらす',dx:'横の位置',dy:'縦の位置',anchor:'どこを基準に'
 };
 const SCREEN_JP={flash:'閃光',blink:'背景点滅',tint:'背景に色',darken:'暗転',shake:'画面揺れ',lines:'走査線'};
-const GEN_JP={projectile:'飛び道具',beam:'光線',slash:'斬撃',lightning:'雷',aura:'オーラ',shatter:'空間割れ'};
+const GEN_JP={projectile:'飛び道具',beam:'光線',slash:'斬撃',lightning:'雷',aura:'オーラ',shatter:'空間割れ',
+  hydro_pump:'高圧水流',close_combat:'接近乱打',flamethrower:'火炎噴射',roar_time:'時間咆哮',
+  psychokinesis:'念力圧縮',electro_ball:'蓄電球',solar_beam:'太陽光線',big_butt_drop:'尻圧落下',
+  ten_thousand_volt:'電圧格子',million_volt:'超高圧檻',two_volt:'微弱電荷',
+  black_kick:'黒脚蹴撃',black_punch:'黒拳打撃',black_shot:'暗黒弾'};
 const GEN_DESC={
   projectile:'弾が飛んでいく。火の玉・水弾・エネルギー球',
   beam:'まっすぐ伸びる光の柱。溜めてから撃つ',
   slash:'弧を描いて斬る。連撃にもできる',
   lightning:'雷が落ちる。空からでも足元からでも',
   aura:'自分のまわりを輪が昇る。補助技むき',
-  shatter:'空間がガラスみたいに割れて飛び散る'
+  shatter:'空間がガラスみたいに割れて飛び散る',
+  hydro_pump:'圧力脈と気泡を伴う専用の高圧水流',
+  close_combat:'踏み込みから連打と決めまでを描く専用近接素材',
+  flamethrower:'炎粒が円錐に噴き出して燃え上がる専用素材',
+  roar_time:'時計輪が連なり、時間が崩れる専用素材',
+  psychokinesis:'念力の腕が対象を囲み、浮遊物ごと圧縮する専用素材',
+  electro_ball:'電極が公転し、球体の外へ放電しながら飛ぶ専用素材',
+  solar_beam:'葉を集めて太陽を結び、葉脈のある光を放つ専用素材',
+  big_butt_drop:'双円の尻圧印が落下し、地面を押し潰す専用素材',
+  ten_thousand_volt:'空中の端子列から電圧格子が対象へ収束する専用素材',
+  million_volt:'多重電柱と電冠が超高圧ケージを作る専用素材',
+  two_volt:'2個の微小電荷が頼りなく跳ねて進む専用素材',
+  black_kick:'黒い脚線・靴底・蹴り抜く弧を描く専用素材',
+  black_punch:'四つの拳骨と圧縮筒が突き進む専用素材',
+  black_shot:'光を吸う核と角形の欠損尾を持つ専用素材'
 };
 /* 素材の置き場所 */
 const ANCHOR_JP={ from:'撃った人', to:'当たった場所', center:'画面の中央' };
@@ -51,7 +77,7 @@ const ANIM_JP={ attack:'突き出す', charge:'力を溜める', jump:'跳ぶ', 
                 dodge:'横へ跳ぶ', zigzag:'往復横跳び', hurt:'のけぞる', knockback:'ふっとぶ',
                 appear:'降りてくる', idle:'動かん',
                 /* 戦闘の「間」に使うのをやめた動き。捨てずにここへ回した（2026-08-19） */
-                hold:'構える', recoil:'白く明滅' };
+                hold:'構える', recoil:'白く明滅', big_butt_drop:'尻から急降下' };
 const SCHEMA={
   projectile:[['shape','sel',['orb','shard','ring','bolt']],['size','rng',6,96,1,'px'],
     ['frames','rng',1,12,1,'コマ'],['wobble','rng',0,0.5,0.01],['core','rng',0.1,1.2,0.05],
@@ -60,10 +86,12 @@ const SCHEMA={
     ['trail.rate','rng',0.1,3,0.1],['trail.size','rng',0.2,2,0.1],
     ['travel.speed','rng',40,700,10,'px/s'],['travel.arc','rng',-80,80,1,'px'],
     ['travel.spin','rng',0,12,0.5]],
-  beam:[['width','rng',3,72,1,'px'],['segments','rng',3,24,1],['waver','rng',0,8,0.2],
+  beam:[['style','sel',['straight','wave','twin','spiral','cone']],['width','rng',3,72,1,'px'],
+    ['segments','rng',3,24,1],['waver','rng',0,8,0.2],
     ['charge','rng',0,1.2,0.05,'秒'],['fire','rng',0.03,0.6,0.01,'秒'],
     ['sustain','rng',0,1.5,0.05,'秒'],['fade','rng',0.05,1,0.05,'秒']],
-  slash:[['size','rng',24,320,4,'px'],['arcDeg','rng',40,340,5,'°'],['thickness','rng',2,40,1],
+  slash:[['style','sel',['arc','cross','thrust','fan','spiral']],['size','rng',24,320,4,'px'],
+    ['arcDeg','rng',40,340,5,'°'],['thickness','rng',2,40,1],
     ['taper','rng',0.3,3,0.1],['hollow','rng',0,0.85,0.05],['jitter','rng',0,0.8,0.02],
     ['squash','rng',0.4,1.6,0.05],['specks','rng',0,30,1],
     ['count','rng',1,6,1,'連'],['interval','rng',0.05,0.5,0.01,'秒'],['spread','rng',0,60,2]],
@@ -73,7 +101,41 @@ const SCHEMA={
     ['duration','rng',0.4,3,0.1,'秒']],
   shatter:[['size','rng',60,360,4,'px'],['cracks','rng',3,40,1,'本'],['jag','rng',0,1.2,0.05],
     ['drift','rng',0,220,5],['spin','rng',0,14,0.5],['dust','rng',0,120,2,'粒'],
-    ['duration','rng',0.4,2.5,0.05,'秒']]
+    ['duration','rng',0.4,2.5,0.05,'秒']],
+  hydro_pump:[['width','rng',8,64,1,'px'],['pressure','rng',3,18,1],['bubbles','rng',0,48,1],
+    ['charge','rng',0,1.2,0.05,'秒'],['fire','rng',0.03,0.6,0.01,'秒'],
+    ['sustain','rng',0,1.5,0.05,'秒'],['fade','rng',0.05,1,0.05,'秒']],
+  close_combat:[['size','rng',48,240,4,'px'],['hits','rng',3,16,1],['interval','rng',0.03,0.18,0.005,'秒'],
+    ['reach','rng',24,140,2,'px'],['duration','rng',0.4,1.8,0.05,'秒']],
+  flamethrower:[['width','rng',8,64,1,'px'],['particles','rng',12,96,2],['flameSpread','rng',8,72,2,'px'],
+    ['charge','rng',0,1.2,0.05,'秒'],['fire','rng',0.03,0.6,0.01,'秒'],
+    ['sustain','rng',0,1.5,0.05,'秒'],['fade','rng',0.05,1,0.05,'秒']],
+  roar_time:[['width','rng',16,96,2,'px'],['timeRings','rng',4,20,1],['warp','rng',0,24,1,'px'],
+    ['charge','rng',0,1.5,0.05,'秒'],['fire','rng',0.03,0.8,0.01,'秒'],
+    ['sustain','rng',0,1.8,0.05,'秒'],['fade','rng',0.05,1.2,0.05,'秒']],
+  psychokinesis:[['fieldSize','rng',48,240,4,'px'],['grips','rng',4,18,1],['debris','rng',4,48,1],
+    ['warp','rng',0,24,1,'px'],['squeeze','rng',0.10,1.2,0.05,'秒'],['duration','rng',0.4,2.2,0.05,'秒']],
+  electro_ball:[['size','rng',12,80,2,'px'],['orbitals','rng',2,12,1],['bolts','rng',3,16,1],
+    ['voltage','rng',0,12,1,'px'],['travel.speed','rng',60,700,10,'px/s'],['travel.arc','rng',-80,80,2,'px'],
+    ['burst','rng',0.15,1.2,0.05,'秒']],
+  solar_beam:[['width','rng',16,96,2,'px'],['sunRays','rng',6,24,1],['leaves','rng',4,40,1],
+    ['charge','rng',0.2,2.0,0.05,'秒'],['fire','rng',0.03,0.8,0.01,'秒'],
+    ['sustain','rng',0,1.8,0.05,'秒'],['fade','rng',0.05,1.2,0.05,'秒']],
+  big_butt_drop:[['size','rng',48,220,4,'px'],['dropHeight','rng',40,220,4,'px'],
+    ['dropAt','rng',0.15,1.2,0.05,'秒'],['dust','rng',4,48,1],['duration','rng',0.4,2.0,0.05,'秒']],
+  ten_thousand_volt:[['width','rng',40,220,4,'px'],['height','rng',50,180,4,'px'],
+    ['bolts','rng',3,20,1],['steps','rng',3,10,1],['hitAt','rng',0.10,1.2,0.05,'秒'],
+    ['duration','rng',0.35,2.0,0.05,'秒']],
+  million_volt:[['cage','rng',40,160,4,'px'],['columns','rng',5,24,1],['crowns','rng',4,28,1],
+    ['steps','rng',4,12,1],['hitAt','rng',0.15,1.5,0.05,'秒'],['duration','rng',0.5,2.4,0.05,'秒']],
+  two_volt:[['size','rng',3,24,1,'px'],['dots','rng',2,12,1],['hops','rng',2,10,1],
+    ['hopHeight','rng',1,24,1,'px'],['travel.speed','rng',60,500,10,'px/s'],['burst','rng',0.10,0.8,0.05,'秒']],
+  black_kick:[['size','rng',36,150,2,'px'],['lift','rng',10,100,2,'px'],['echoes','rng',2,12,1],
+    ['hitAt','rng',0.10,1.0,0.05,'秒'],['duration','rng',0.35,1.8,0.05,'秒']],
+  black_punch:[['size','rng',36,150,2,'px'],['lift','rng',0,80,2,'px'],['rings','rng',2,14,1],
+    ['hitAt','rng',0.10,1.0,0.05,'秒'],['duration','rng',0.35,1.8,0.05,'秒']],
+  black_shot:[['size','rng',12,90,2,'px'],['blocks','rng',3,30,1],['sway','rng',0,24,1,'px'],
+    ['travel.speed','rng',80,650,10,'px/s'],['burst','rng',0.15,1.2,0.05,'秒']]
 };
 
 const specGet=(o,p)=>p.split('.').reduce((a,k)=>a&&a[k],o);
