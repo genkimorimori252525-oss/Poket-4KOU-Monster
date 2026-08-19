@@ -158,6 +158,102 @@ const LEVELS = [0, 0.5, 1];
 
     await pg.locator('#power-verify').screenshot({ path: SHOT });
     /* defect2（movelab.jsのトグル）と c/d/e のチェックはここに続けて足す（別タスクで拡張） */
+
+    /* ---- c/d/e：変わったらいかんものが1画素も変わっとらんか ---- */
+    const keep = await pg.evaluate((levels) => {
+      const CW = 300, CH = 200, FROM = { x: 40, y: 100 };
+      const bytes = (cv) => cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      const measure = (canvases) => {
+        let hash = 2166136261, pixels = 0;
+        for (const cv of canvases) {
+          const d = bytes(cv);
+          for (let i = 0; i < d.length; i++) {
+            hash ^= d[i]; hash = Math.imul(hash, 16777619);
+            if (i % 4 === 3 && d[i]) pixels++;
+          }
+        }
+        return { hash: (hash >>> 0).toString(16).padStart(8, '0'), pixels };
+      };
+      /* 同じ generator を3段の powerLevel で描いて、絵のハッシュを並べる */
+      const drawRuns = (Cls, gen, pal, time, to, tweak) => levels.map((level) => {
+        const sp = makeSpec(gen, 4242, 'keep verify', pal);
+        sp.powerLevel = level;
+        if (tweak) tweak(sp);
+        const cv = mkCv(CW, CH), g = cv.getContext('2d');
+        const fx = new Cls(sp, FROM, to, buildEffect(sp), null);
+        fx.time = time;
+        fx.draw(g);
+        return Object.assign({ level }, measure([cv]),
+          { halfWidth: typeof fx.halfWidth === 'number' ? fx.halfWidth : null });
+      });
+      /* c: 既定 slash。近接やし powerVisual も持っとらん＝焼きコマが変わったらおかしい */
+      const slash = levels.map((level) => {
+        const sp = makeSpec('slash', 4242, 'keep verify', '鋼');
+        sp.powerLevel = level;
+        const frames = genSlashFrames(sp);
+        return Object.assign({ level }, measure([frames[Math.floor(frames.length / 2)]]));
+      });
+      return {
+        slash,
+        /* d: 亜空切断の generator と、ときのほうこう */
+        shatter: drawRuns(ShatterFX, 'shatter', '闇', 0.40, { x: 150, y: 100 }),
+        roar: drawRuns(RoarOfTimeFX, 'roar_time', '闇', 1.00, { x: 240, y: 100 }),
+        /* e: 威力連動する技に scaleByPower:false を明示したとき */
+        off: drawRuns(HydroPumpFX, 'hydro_pump', '水', 0.70, { x: 240, y: 100 },
+          (sp) => { sp.scaleByPower = false; })
+      };
+    }, LEVELS);
+
+    const same = (runs, label) => {
+      const h = runs.map((r) => r.hash);
+      ok(h.every((v) => v === h[0]),
+        label + ' が攻撃で変わっとる（1画素も変わったらいかん）: ' + h.join(' '));
+      console.log(label.padEnd(12) + h[0] + '  ' + runs.map((r) => 'atk'
+        + Math.round(r.level * 100) + ':' + r.pixels).join('  '));
+    };
+    same(keep.slash, 'c 既定slash');
+    same(keep.shatter, 'd shatter');
+    same(keep.roar, 'd roar_time');
+    same(keep.off, 'e 連動OFF');
+    const offW = keep.off.map((r) => r.halfWidth);
+    ok(offW.every((v) => v !== null && v === offW[0]),
+      'e: scaleByPower:false やのに halfWidth が動いとる: ' + offW.join(' '));
+    console.log('e 判定     halfWidth ' + offW.map((v) => Number(v).toFixed(2)).join(' / '));
+
+    /* ---- defect2：技ラボ／制作ツール共用の切り替えトグル（movelab.js） ---- */
+    await pg.goto(DIST_URL + 'shioumon_effect_lab.html');
+    await pg.waitForTimeout(600);
+    const ui = await pg.evaluate(() => {
+      const LABEL_TEXT = '強さで大きさが変わる';
+      const probe = (gen) => {
+        /* ページ自身の spec / labCtx には触らん。使い捨ての host と最小の ctx で
+           mlScreen を直接呼ぶ（画面の状態に結果が左右されんように） */
+        const sp = makeSpec(gen, 4242, 'toggle verify', '炎');
+        const host = document.createElement('div');
+        const ctx = { spec: () => sp, set: () => {}, change: () => {}, rebuild: () => {} };
+        mlScreen(host, ctx);
+        const label = Array.from(host.querySelectorAll('label'))
+          .find((l) => l.textContent === LABEL_TEXT);
+        if (!label) return { found: false };
+        const btn = label.parentElement.querySelector('button');
+        const beforeUndefined = sp.scaleByPower === undefined;
+        const disabled = !!btn.disabled;
+        const text = btn.textContent;
+        if (!disabled) btn.click();
+        return { found: true, disabled, beforeUndefined, text,
+          after: sp.scaleByPower === undefined ? 'undefined' : String(sp.scaleByPower) };
+      };
+      return { ranged: probe('hydro_pump'), melee: probe('slash') };
+    });
+    ok(ui.ranged.found, 'defect2: 技ラボに「強さで大きさが変わる」の行が無い（遠距離）');
+    ok(!ui.ranged.disabled, 'defect2: 遠距離やのにトグルが押せん');
+    ok(ui.ranged.beforeUndefined, 'defect2: 既定で scaleByPower が書き込まれとる（省略＝ONの契約が壊れとる）');
+    ok(ui.ranged.after === 'false', 'defect2: 押しても scaleByPower=false にならん（' + ui.ranged.after + '）');
+    ok(ui.melee.found, 'defect2: 技ラボに「強さで大きさが変わる」の行が無い（近接）');
+    ok(ui.melee.disabled, 'defect2: 近接（slash）でトグルが押せてしまう');
+    console.log('defect2    遠距離 ' + ui.ranged.text + '→' + ui.ranged.after
+      + ' / 近接 ' + ui.melee.text + '（押せん:' + ui.melee.disabled + '）');
+
     await pg.close();
   } catch (e) {
     errs.push(e.stack || e.message || String(e));

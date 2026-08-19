@@ -3968,6 +3968,39 @@ function mlScreen(host,ctx){
   host.innerHTML='';
   const sp=ctx.spec();
   if(!sp.screen) sp.screen={};
+  /* 強さで大きさが変わる（威力連動）。generator 固有やのうて**技全体**にかかる設定やけん
+     SCHEMA には入れん。既定は ON ＝ scaleByPower を書かん（省略＝有効）。
+     OFF のときだけ scaleByPower=false を書き込む —— 明示的な true は書かんことで
+     「省略＝既定ON」の契約を汚さん。fx_core.js の fxVisualScale が同じ約束で読む。 */
+  {
+    const melee = typeof MOVE_RANGE!=='undefined' && MOVE_RANGE.rangeOf({fx:sp})==='melee';
+    const wrap=document.createElement('div'); wrap.className='ml-box';
+    const head=document.createElement('div'); head.className='ml-ctl'; head.style.marginBottom='0';
+    head.innerHTML='<label style="width:auto;flex:1;color:#dfe6f0">強さで大きさが変わる</label>'
+                  +'<button style="width:74px;flex:none"></button>';
+    const bt=head.querySelector('button');
+    const hint=document.createElement('div'); hint.className='ml-hint';
+    const on=()=>sp.scaleByPower!==false;
+    const paint=()=>{
+      bt.textContent=melee?'対象外':(on()?'ON':'OFF');
+      bt.classList.toggle('on',!melee&&on());
+      hint.textContent=melee
+        ? '近接は対象外 —— 触れて当てる技やけん、間合いが絵の意味そのもの。'
+        : (on()
+          ? '撃った個体の攻撃が高いほど本演出が大きくなる。相殺の当たり判定も同じだけ大きくなる。'
+          : 'OFF のあいだは、撃った個体の攻撃に関係なく常に等倍で描画・判定される。');
+    };
+    if(melee){
+      /* 押せてしまうと「入れたのに効かん」になる。灰色にして理由を出す */
+      bt.disabled=true; bt.style.opacity='0.4'; bt.style.cursor='default';
+      bt.title='近接は対象外';
+    } else {
+      bt.onclick=()=>{ if(on()) sp.scaleByPower=false; else delete sp.scaleByPower;
+        paint(); ctx.change(); };
+    }
+    wrap.append(head,hint); paint();
+    host.appendChild(wrap);
+  }
   for(const k of Object.keys(SCREEN_DEFAULTS)){
     const wrap=document.createElement('div'); wrap.className='ml-box';
     const head=document.createElement('div'); head.className='ml-ctl'; head.style.marginBottom='0';
