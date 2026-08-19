@@ -6,7 +6,7 @@ status: human_needed
 stopped_at: 3フェーズ完了。にーくらの実機確認待ち
 last_updated: "2026-08-19T00:00:00.000Z"
 last_activity: 2026-08-19
-last_activity_desc: Phase 3 完了。反動＝静止＋白点滅／間＝構え／溜め＝白なし
+last_activity_desc: 反動は待機＋白点滅に差し戻し。間の専用アニメは技制作の選択肢へ
 state_head: 94e072c
 progress:
   total_phases: 3

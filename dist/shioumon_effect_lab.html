@@ -2069,7 +2069,9 @@ const PHASE_JP ={ cast:'構えた時', fire:'撃った時', impact:'当たった
 /* 技を出すとき、四皇モン本体にさせる動き */
 const ANIM_JP={ attack:'突き出す', charge:'力を溜める', jump:'跳ぶ', fly:'空へ舞う',
                 dodge:'横へ跳ぶ', zigzag:'往復横跳び', hurt:'のけぞる', knockback:'ふっとぶ',
-                appear:'降りてくる', idle:'動かん' };
+                appear:'降りてくる', idle:'動かん',
+                /* 戦闘の「間」に使うのをやめた動き。捨てずにここへ回した（2026-08-19） */
+                hold:'構える', recoil:'白く明滅' };
 const SCHEMA={
   projectile:[['shape','sel',['orb','shard','ring','bolt']],['size','rng',6,96,1,'px'],
     ['frames','rng',1,12,1,'コマ'],['wobble','rng',0,0.5,0.01],['core','rng',0.1,1.2,0.05],

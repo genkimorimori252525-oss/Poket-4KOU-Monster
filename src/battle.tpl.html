@@ -506,10 +506,10 @@ class Fighter {
      前はここが無条件に 'idle' やった —— 「撃てん」も「撃たん」も同じ棒立ちに見えとった。 */
   restAnim(){
     if(typeof stanceOf!=='function') return 'idle';
-    const s=stanceOf(this);
-    if(s==='recoil') return 'recoil';
-    if(s==='hold')   return 'hold';
-    return 'idle';
+    /* ⚠ **間は待機のまま**。前は hold 専用の動きを当てとったが、にーくらから
+       差し戻し ——「間のアニメーションはいらない」「待機モーションの出番がない」。
+       絵で分けるんは反動だけ。間は AI の判断としては残っとる（ログと構えで読める）。 */
+    return stanceOf(this)==='recoil' ? 'recoil' : 'idle';
   }
   /* 出現させる。光の柱はトレーナー戦だけ。鳴き声は cryDelay 秒あと */
   summonIn(){
@@ -1213,7 +1213,7 @@ function damageOf(atk,def,move){
    ========================================================= */
 /* 待機系の動き。**ここに載っとるものだけ**、構えが変わったとき差し替えてよい。
    攻撃や被弾の最中に割り込んだら技のモーションが途中で消えるけん、白名簿にしとる。 */
-const REST_ANIMS={ idle:1, recoil:1, hold:1 };
+const REST_ANIMS={ idle:1, recoil:1 };   /* hold は技制作の選択肢へ回した */
 
 const AILog = {
   entries:[], max:120, paused:false, filter:'all',

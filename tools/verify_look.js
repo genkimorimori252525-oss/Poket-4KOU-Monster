@@ -41,7 +41,9 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
         maxFlash: Math.max(...k.map((f) => f.flash || 0)),
         /* 動いとるか＝拡縮と移動が1でも変わるか */
         moves: k.some((f) => Math.abs((f.sx || 1) - 1) > 0.005 || Math.abs((f.sy || 1) - 1) > 0.005
-                          || Math.abs(f.dx || 0) > 0.5 || Math.abs(f.dy || 0) > 0.5)
+                          || Math.abs(f.dx || 0) > 0.5 || Math.abs(f.dy || 0) > 0.5),
+        /* 振れ幅。上下の動きの最大値で測る —— 待機とかけ離れとらんかを見るため */
+        amp: Math.max.apply(null, k.map((f) => Math.abs(f.dy || 0)))
       };
     };
     return { recoil: g('recoil'), hold: g('hold'), charge: g('charge'), idle: g('idle') };
@@ -53,12 +55,14 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
        目に見えんくなる。0.25 を下回ったら「点滅しとらん」と見なす。 */
     ok(anim.recoil.maxFlash >= 0.25, '反動の白が弱すぎて見えん（flash最大 ' + anim.recoil.maxFlash + '・0.22で消える）');
     ok(anim.recoil.maxFlash <= 0.45, '反動の白が強すぎる（flash最大 ' + anim.recoil.maxFlash + '）—— にーくらの「白すぎない」指定');
-    ok(anim.recoil.moves === false, '反動が動いとる —— **静止させる**のが指定やった');
     ok(anim.recoil.loop, '反動が繰り返しやない（1回で終わったら反動中ずっとは出せん）');
-  }
-  if (anim.hold) {
-    ok(anim.hold.maxFlash === 0, '間が白く点滅しとる —— 白は反動のものやけん被る');
-    ok(anim.hold.moves, '間が全く動いとらん —— 反動と見分けが付かん');
+    /* ⚠ ここは前「動いとったら落とす」やった（静止させる指定）。にーくらから差し戻し ——
+       「反動も、演出以外アニメーションは既存の待機モーションにして」。
+       理由もそのとおりで、**待機モーションの出番が無くなっとった**。
+       今は逆に「待機と同じくらいの動きがあるか」を見る。 */
+    ok(anim.recoil.moves, '反動が固まっとる —— 動きは待機のままにする指定');
+    ok(Math.abs(anim.recoil.amp - anim.idle.amp) < 4,
+       '反動の動きが待機とかけ離れとる（振れ幅 ' + anim.recoil.amp + ' vs 待機 ' + anim.idle.amp + '）');
   }
   if (anim.charge) {
     ok(anim.charge.maxFlash === 0, '溜めから白が抜けとらん（flash最大 ' + anim.charge.maxFlash + '）');
@@ -93,18 +97,17 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
     const out = {
       /* 白がいちばん出る瞬間で比べる */
       recoil: pose('recoil', 0.10),
-      hold:   pose('hold',   0.34),
+
       charge: pose('charge', 0.50),
       idle:   pose('idle',   0.30)
     };
     resetBattle(4242); autoBattle = true;
     return out;
   });
-  ok(pix.recoil.white > pix.hold.white, '反動が間より白ない: ' + pix.recoil.white + ' vs ' + pix.hold.white);
+
   ok(pix.recoil.white > pix.charge.white, '反動が溜めより白ない: ' + pix.recoil.white + ' vs ' + pix.charge.white);
   ok(pix.recoil.white > pix.idle.white + 20, '反動が待機と見分けが付かん: ' + pix.recoil.white + ' vs ' + pix.idle.white);
-  console.log('画素の白      反動 ' + pix.recoil.white + ' / 間 ' + pix.hold.white
-    + ' / 溜め ' + pix.charge.white + ' / 待機 ' + pix.idle.white);
+  console.log('画素の白      反動 ' + pix.recoil.white + ' / 溜め ' + pix.charge.white + ' / 待機 ' + pix.idle.white);
 
   /* ---- 3. 実戦で3つとも絵に出るか ---- */
   const live = await pg.evaluate(() => {
@@ -118,7 +121,10 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
     return seen;
   });
   ok((live.recoil || 0) > 0, '実戦で反動の絵が一度も出とらん');
-  ok((live.hold || 0) > 0, '実戦で間の絵が一度も出とらん');
+  /* ⚠ 「間の絵」はもう無い。にーくらの差し戻しで、間は待機のままにした。
+     代わりに**待機がちゃんと出とるか**を見る —— 出番が無くなったのが差し戻しの理由やけん。 */
+  ok((live.idle || 0) > 0, '待機の絵が一度も出とらん —— 出番を戻したはずが戻っとらん');
+  ok((live.hold || 0) === 0, '間の専用アニメがまだ出とる（技制作の選択肢へ回したはず）');
   console.log('実戦の絵      ' + Object.entries(live).sort((a, c) => c[1] - a[1])
     .map(([k, v]) => k + ' ' + v).join(' / '));
 
