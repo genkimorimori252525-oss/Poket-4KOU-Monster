@@ -119,6 +119,46 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   console.log('実戦の絵      ' + Object.entries(live).sort((a, c) => c[1] - a[1])
     .map(([k, v]) => k + ' ' + v).join(' / '));
 
+  /* ---- 3.5 溜めの絵は**溜めとる間だけ**か ----
+     ⚠ ここは実際に外した。`charge` が loop:true で**自分では終わらん**動きやったけん、
+     cast 0.42秒の技を撃っても、絵だけ4秒後まで上下し続けとった。
+     にーくらの「何度も上下に動く」も「白くなるのが実機の方が長い」も、
+     元をたどればこの1点。**検証が見張っとらん所やった**けん足す。 */
+  const chargeLife = await pg.evaluate(() => {
+    const run = (gen) => {
+      resetBattle(4242);
+      autoBattle = false;
+      const f = partyA[0], foe = partyB[0];
+      /* ⚠ 技を差し替えるけん**必ず控えて戻す**。戻し忘れると、この後の
+         determinismTest が偽の技を踏んで落ちる（実際に一度やった）。
+         検証が検証自身の後始末で失敗するんは、いちばん質の悪い赤や。 */
+      const keepMoves = f.moves, keepCd = f.cd;
+      try {
+        const mv = { id: 'probe', name: '試験', power: 20, cast: 0.42, cooldown: 5,
+                     fx: { generator: gen, motions: [] }, type: '闇' };
+        f.moves = [mv]; f.cd = {};
+        startAttack(f, foe, mv);
+        let frames = 0;
+        for (let i = 0; i < 60 * 5; i++) {
+          stepBattle(1 / 60); f.update(1 / 60); foe.update(1 / 60);
+          if (f.anim === 'charge') frames++;
+        }
+        return { sec: +(frames / 60).toFixed(2), last: f.anim };
+      } finally {
+        f.moves = keepMoves; f.cd = keepCd;
+        resetBattle(4242); autoBattle = true;
+      }
+    };
+    return { remote: run('shatter'), melee: run('slash') };
+  });
+  ok(chargeLife.remote.sec > 0, '遠隔技で溜めの絵が一度も出とらん');
+  ok(chargeLife.remote.sec < 1.6,
+     '溜めの絵が長すぎる（' + chargeLife.remote.sec + '秒）—— 溜めが終わっても止まっとらんのやないか');
+  ok(chargeLife.remote.last !== 'charge', '5秒経っても溜めの絵のまま（終わっとらん）');
+  ok(chargeLife.melee.sec === 0, '近接技なのに溜めの絵が出とる: ' + chargeLife.melee.sec + '秒');
+  console.log('溜めの寿命    遠隔 ' + chargeLife.remote.sec + '秒 → ' + chargeLife.remote.last
+    + ' ／ 近接 ' + chargeLife.melee.sec + '秒（cast は 0.42秒）');
+
   /* ---- 4. 既存を壊しとらんか（KEEP-01〜03）---- */
   const keep = await pg.evaluate(() => {
     /* 分類→anim の割り当てが変わっとらんか */
@@ -138,8 +178,8 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   });
   const wantMap = {
     projectile: 'ranged→attack/0.42', beam: 'ranged→attack/0.42',
-    slash: 'melee→attack', lightning: 'remote→charge',
-    aura: 'remote→charge', shatter: 'remote→charge'
+    slash: 'melee→attack', lightning: 'remote→charge/0.42',
+    aura: 'remote→charge/0.42', shatter: 'remote→charge/0.42'
   };
   Object.keys(wantMap).forEach((g) => {
     ok(keep.map[g] === wantMap[g],

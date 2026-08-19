@@ -65,7 +65,11 @@ var MOVE_RANGE = (function () {
   var MOTION = {
     melee:  { anim: 'attack', dur: 0 },      // dur:0 = 既定の長さ。今までどおりの踏み込み
     ranged: { anim: 'attack', dur: 0.42 },   // 短く。前へ出すだけの控えめな動き
-    remote: { anim: 'charge', dur: 0 }       // その場で溜める
+    /* ⚠ dur を与えた（2026-08-19）。前は 0＝既定の長さ（0.9秒）やった。
+     cast のあと**撃ち終わっとるのに溜めのポーズが0.9秒残る**けん、
+     にーくらに「何度も上下に動く」と言われた。撃った後は余韻やけん短くてよい。
+     遠距離（0.42）に揃える。**anim名は変えとらん** —— 分類→動きの対応は据え置き。 */
+  remote: { anim: 'charge', dur: 0.42 }       // その場で溜める
   };
   function motionOf(move) { return MOTION[rangeOf(move)] || MOTION.ranged; }
 
