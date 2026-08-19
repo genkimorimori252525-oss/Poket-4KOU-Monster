@@ -1805,7 +1805,7 @@ function stepClash(){
       if(!isBullet(bl)||bl.clashed||bl.state==='dead') continue;
       if(bl.forSide===bm.forSide) continue;
       const p=bl.pos();
-      if(distToSeg(p.x,p.y,bm.f.x,bm.f.y,e.x,e.y) <= bl.radius+bm.sp.width*0.5+16){
+      if(distToSeg(p.x,p.y,bm.f.x,bm.f.y,e.x,e.y) <= bl.radius+bm.halfWidth+16){
         bl.clashed=true; bl.state='dead';
         burstAt(p.x,p.y,bl.b.impact);
         AILog.event(bl.forSide==='ally'?'enemy':'ally',

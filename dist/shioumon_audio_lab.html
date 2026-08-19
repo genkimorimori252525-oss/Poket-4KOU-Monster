@@ -413,7 +413,7 @@ function hash3(a,b,c){
 /* 使用者の攻撃 atk を 0〜1 で受け取り、本演出だけを技別の範囲で伸縮する。
    atk=50 は従来どおり1倍。ときのほうこうは指定により常に1倍。 */
 function fxVisualScale(sp,channel){
-  if(!sp||sp.generator==='roar_time'||sp.powerLevel==null) return 1;
+  if(!sp||sp.generator==='roar_time'||sp.scaleByPower===false||sp.powerLevel==null) return 1;
   const band=sp.powerVisual&&sp.powerVisual[channel];
   if(!Array.isArray(band)||band.length<2) return 1;
   const p=Math.max(0,Math.min(1,+sp.powerLevel||0)), lo=+band[0]||1, hi=+band[1]||1;
@@ -810,7 +810,10 @@ class BaseFX{
 
 /* ---- projectile：飛び道具 ---- */
 class ProjectileFX extends BaseFX{
-  get radius(){ return Math.max(3,(this.sp.size||16)/2); }
+  /* 大きさの倍率はここ1本だけ。draw() が使う fxVisualScale と同じ式を
+     当たり判定も読む —— 別々に計算したら絵と判定がズレる（それが元の不具合） */
+  get mul(){ return fxVisualScale(this.sp,'size'); }
+  get radius(){ return Math.max(3,(this.sp.size||16)/2) * this.mul; }
   constructor(...a){ super(...a); this.p=0; this.spawn=0;
     this.dur=Math.hypot(this.t.x-this.f.x,this.t.y-this.f.y)/Math.max(20,this.sp.travel.speed);
     this.ang=Math.atan2(this.t.y-this.f.y,this.t.x-this.f.x); }
@@ -865,6 +868,9 @@ class ProjectileFX extends BaseFX{
 class BeamFX extends BaseFX{
   /* limit: 0〜1。1未満なら途中で止められとる（相殺のせめぎ合い） */
   get firing(){ return this.time>=this.sp.charge; }
+  /* 相殺の当たり判定はここを読む。draw() の中の width=s.width*sz と同じ式やけん、
+     絵が太くなったぶんだけ判定も太くなる（呼び出し側で sp.width を直読みせん） */
+  get halfWidth(){ return this.sp.width*0.5*fxVisualScale(this.sp,'size'); }
   extent(){
     const s=this.sp;
     const raw=this.time<s.charge+s.fire?(this.time-s.charge)/s.fire:1;
