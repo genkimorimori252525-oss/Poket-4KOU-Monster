@@ -2328,13 +2328,38 @@ const ANIMS = {
   ], img:[[0,'normal']]},
 
   /* 力を溜める（脈打つ） */
+  /* 溜め。**白を外した**（2026-08-19・にーくらの指定）。
+     白は「反動」に譲る —— 前はここが白く点滅しとって、にーくらの目には
+     反動に見えとった。表現と意味がずれとったのを直す。
+     溜めらしさは**大きく波打つ拡縮**で出す。白より動きの方が「力を溜めとる」に近い。 */
   charge:{ dur:1.1, loop:true, keys:[
     K({t:0,    sx:1.00,sy:1.00}),
-    K({t:0.25, sx:1.12,sy:0.90,dy:2, flash:0.25}),
-    K({t:0.50, sx:0.92,sy:1.10,dy:-4,flash:0.6}),
-    K({t:0.75, sx:1.10,sy:0.92,dy:1, flash:0.25}),
+    K({t:0.25, sx:1.16,sy:0.86,dy:4}),
+    K({t:0.50, sx:0.88,sy:1.16,dy:-7}),
+    K({t:0.75, sx:1.14,sy:0.88,dy:3}),
     K({t:1,    sx:1.00,sy:1.00})
   ], img:[[0,'attack']]},
+
+  /* 反動（CD）—— **静止させながら白く点滅**（にーくらの指定そのまま）。
+     「攻撃したくてもできない状態」やけん、**動かさん**のが肝。
+     sx/sy/dx/dy を1回も動かしとらん。動いたら「動けん」に見えんくなる。
+     白は短く強く1回 —— 溜め（動く・白なし）と一目で分かれる。 */
+  recoil:{ dur:0.85, loop:true, keys:[
+    K({t:0,    sx:1,sy:1, flash:0}),
+    K({t:0.10, sx:1,sy:1, flash:0.62}),
+    K({t:0.24, sx:1,sy:1, flash:0}),
+    K({t:1,    sx:1,sy:1, flash:0})
+  ], img:[[0,'idle']]},
+
+  /* 間（ま）—— 「攻撃できるが、回避などを行えるように様子見しとる」。
+     **白は使わん**（白は反動のもの）。腰を落として構え、小刻みに揺れる。
+     待機（idle）と見分けが付くように、**重心を下げて横に構える**のが違い。 */
+  hold:{ dur:0.68, loop:true, keys:[
+    K({t:0,    sx:1.07,sy:0.93,dy:4,dx:-3}),
+    K({t:0.34, sx:1.05,sy:0.95,dy:4,dx: 2}),
+    K({t:0.68, sx:1.07,sy:0.93,dy:4,dx:-1}),
+    K({t:1,    sx:1.07,sy:0.93,dy:4,dx:-3})
+  ], img:[[0,'idle']]},
 
   /* 大きくふっとぶ */
   knockback:{ dur:0.9, keys:[
@@ -2465,8 +2490,25 @@ class Fighter {
     if(this.t>=1){
       if(def.loop) this.t%=1;
       else if(def.hold) this.t=1;
-      else { this.anim='idle'; this.t=0; this.durOv=null; }
+      else { this.anim=this.restAnim(); this.t=0; this.durOv=null; }
     }
+    /* 構えが変わったら、待っとる動きも入れ替える。
+       ⚠ 待機系（idle / recoil / hold）に居るときだけ。攻撃や被弾の最中に
+       割り込んだら、技のモーションが途中で消える。 */
+    if(REST_ANIMS[this.anim]){
+      const want=this.restAnim();
+      if(want!==this.anim){ this.anim=want; this.t=0; }
+    }
+  }
+
+  /* 何もしとらんときに何を見せるか。**構えをそのまま絵にする**（LOOK-01〜03）。
+     前はここが無条件に 'idle' やった —— 「撃てん」も「撃たん」も同じ棒立ちに見えとった。 */
+  restAnim(){
+    if(typeof stanceOf!=='function') return 'idle';
+    const s=stanceOf(this);
+    if(s==='recoil') return 'recoil';
+    if(s==='hold')   return 'hold';
+    return 'idle';
   }
   /* 出現させる。光の柱はトレーナー戦だけ。鳴き声は cryDelay 秒あと */
   summonIn(){
@@ -3168,6 +3210,10 @@ function damageOf(atk,def,move){
 /* =========================================================
    AIログ — 開発の根底。AIより先に落とさない
    ========================================================= */
+/* 待機系の動き。**ここに載っとるものだけ**、構えが変わったとき差し替えてよい。
+   攻撃や被弾の最中に割り込んだら技のモーションが途中で消えるけん、白名簿にしとる。 */
+const REST_ANIMS={ idle:1, recoil:1, hold:1 };
+
 const AILog = {
   entries:[], max:120, paused:false, filter:'all',
   decision(f,cands,pick,T){
