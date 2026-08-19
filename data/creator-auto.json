@@ -243,16 +243,16 @@
   },
   "derived": {
     "normal": false,
-    "attack": true,
-    "hurt": true,
+    "attack": false,
+    "hurt": false,
     "back": false,
-    "summon": true
+    "summon": false
   },
   "images": {
-    "normal": "http://127.0.0.1:8766/data/monsters/PALKIA/normal.webp?mime=image%2Fwebp",
+    "normal": null,
     "attack": null,
     "hurt": null,
-    "back": "http://127.0.0.1:8766/data/monsters/PALKIA/back.webp?mime=image%2Fwebp",
+    "back": null,
     "summon": null
   }
 }

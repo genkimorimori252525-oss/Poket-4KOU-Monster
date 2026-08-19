@@ -1409,6 +1409,61 @@ function softmax(cands,T){
   return ex.map(e=>e/sum);
 }
 
+/* =========================================================
+   構え（stance）—— 今この個体が何をしとるか
+
+   にーくらの指摘（2026-08-19）:
+     「CD（反動）は、攻撃したくてもできない状態」
+     「間は、攻撃できるが、回避などを行えるように……攻撃せず、様子見などをしている状態」
+
+   **この2つは今まで区別されとらんかった。** 状態は3箇所に散らばっとって
+   （f.charging / f.cd[id] / f.actionTimer）、「反動中か」を知るには全部見る必要があった。
+   1つの値にまとめる。
+
+   ⚠ Phase 1 では**読めるようにするだけ**。挙動は1ミリも変えん。
+      'hold'（間）は Phase 2 で AI が選ぶようになって初めて出る。
+   ========================================================= */
+const STANCE = {
+  down:   '戦闘不能',
+  charge: '溜め',      // 技を溜めとる。撃つ意思はある
+  recoil: '反動',      // **撃ちたくても撃てん**。技が全部クールダウン中
+  hold:   '間',        // **撃てるが撃たん**。回避に備えて様子を見とる（Phase 2）
+  free:   '自由'       // 撃てて、撃つ気がある
+};
+
+function stanceOf(f){
+  if(f.dead) return 'down';
+  if(f.charging) return 'charge';
+  /* 撃てる技が1本も無い＝反動。**「次の行動までの間合い」とは別物**やけん
+     actionTimer では判定せん —— あれは撃てるのに待っとるだけの時間も含む */
+  const ready=f.moves.filter(m=>(f.cd[m.id]||0)<=0);
+  if(!ready.length) return 'recoil';
+  if(f.holding) return 'hold';
+  return 'free';
+}
+
+/* 構えが変わった瞬間だけログに出す。毎フレーム垂れ流したらログが埋まって
+   肝心の判断が読めんくなる（掟9：内訳が見えん実装をしない、の裏返し）。
+   ⚠ ここは**読むだけ**。戻り値を戦闘の計算に使わん＝決定論に触らん（掟1）。 */
+function noteStance(f){
+  const s=stanceOf(f);
+  if(f._stance===s) return s;
+  const was=f._stance;
+  f._stance=s;
+  if(was!==undefined && !AILog.paused){
+    let why='';
+    if(s==='recoil'){
+      const soon=Math.min(...f.moves.map(m=>f.cd[m.id]||0));
+      why='（技が全部クールダウン中／最短 '+soon.toFixed(1)+'s）';
+    }else if(s==='free' && was==='recoil'){
+      const n=f.moves.filter(m=>(f.cd[m.id]||0)<=0).length;
+      why='（'+n+'本 撃てるようになった）';
+    }
+    AILog.event(f.side, f.name+'：'+STANCE[was]+' → '+STANCE[s]+why);
+  }
+  return s;
+}
+
 function pickMove(f,foe){
   const ready=f.moves.filter(m=>(f.cd[m.id]||0)<=0);
   if(!ready.length){
@@ -1730,6 +1785,9 @@ function stepFighter(f,foe,dt){
     return;
   }
   if(!autoBattle) return;
+  /* 構えを見届ける。**読むだけで、下の判断には一切使わん** ——
+     使った瞬間、Phase 1 の約束（挙動を変えん）が破れる */
+  noteStance(f);
   f.actionTimer-=dt;
   if(f.actionTimer<=0){
     const m=pickMove(f,foe);
@@ -1782,6 +1840,9 @@ function resetBattle(seed){
     /* 演出まわりの状態も必ず消す。消し忘れると前の試合を引きずって
        決定論チェックが落ちる（`f.lastMove` で実際にやらかしとる） */
     f.seqT=null; f.cryT=null; f.durOv=null; f.pendMo.length=0;
+    /* 構えも消す。残しとくと前の試合の構えから始まって、
+       ログの「○○ → ○○」が嘘になる。holding は Phase 2 で使う */
+    f._stance=undefined; f.holding=false;
     f.t=0; f.trail.length=0; f.play('idle');
   }
   ally=partyA[0]; enemy=partyB[0];
