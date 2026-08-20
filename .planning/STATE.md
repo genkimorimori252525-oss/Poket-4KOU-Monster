@@ -6,8 +6,8 @@ status: ready
 stopped_at: マイルストーン開始（技の作り直し）
 last_updated: "2026-08-19T00:00:00.000Z"
 last_activity: 2026-08-20
-last_activity_desc: 技一覧を library.json に一本化。技ネタ帳は廃止し idea 135本として取り込んだ
-state_head: 773c324
+last_activity_desc: 覚えられる技／覚える技を2段に割り、内蔵技を個体ごとに外せるようにした
+state_head: 5f79242
 progress:
   total_phases: 3
   completed_phases: 0
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md
 
 Phase: 1 of 3 (依存を切る)
 Status: 着手
-Last activity: 2026-08-20 —— quick 260820-jpn 完了（技一覧の一本化）
+Last activity: 2026-08-20 —— quick 260820-kit 完了（覚える表）
 
 Progress: [░░░░░░░░░░] 0%（0/3 フェーズ）
 
@@ -63,3 +63,4 @@ Progress: [░░░░░░░░░░] 0%（0/3 フェーズ）
 |---|-------------|------|--------|-----------|
 | 260820-2k5 | 威力連動の取りこぼし2件（相殺判定を絵に揃える／技制作ツールに切替を足す） | 2026-08-20 | 27134c5 | [260820-2k5-clash-hitbox-and-power-toggle-2](./quick/260820-2k5-clash-hitbox-and-power-toggle-2/) |
 | 260820-jpn | 技一覧を library.json に一本化し、技ネタ帳を廃止（made 54 / idea 135） | 2026-08-20 | 773c324 | [260820-jpn-movelist-unify-library-json](./quick/260820-jpn-movelist-unify-library-json/) |
+| 260820-kit | 覚えられる技（12）／覚える技（4）の2段UIと、内蔵技の個体ごと除外 | 2026-08-20 | 5f79242 | [260820-kit-learnable-table-learnable-ui](./quick/260820-kit-learnable-table-learnable-ui/) |
