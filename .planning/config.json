@@ -47,7 +47,7 @@
     "security_enforcement": true,
     "security_asvs_level": 1,
     "security_block_on": "high",
-    "inline_plan_threshold": 3,
+    "inline_plan_threshold": 2,
     "test_command": "node build.js && node build.js --dev && node tools/verify_style.js && node tools/verify_signature_moves.js && node tools/verify_movelist.js && node tools/verify_learnable.js"
   },
   "ship": {
@@ -67,8 +67,9 @@
   "mode": "yolo",
   "granularity": "coarse",
   "model_overrides": {
-    "gsd-planner": "sonnet",
+    "gsd-planner": "opus",
     "gsd-plan-checker": "sonnet",
+    "gsd-executor": "sonnet",
     "gsd-verifier": "sonnet",
     "gsd-code-reviewer": "sonnet",
     "gsd-phase-researcher": "sonnet"
