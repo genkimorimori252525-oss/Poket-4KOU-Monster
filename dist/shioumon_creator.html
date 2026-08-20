@@ -221,13 +221,20 @@
 <div class="sec"><h2><span>■ ステータス</span><span>▾</span></h2><div id="statCtl"></div></div>
 <div class="sec"><h2><span>■ 性格</span><span>▾</span></h2><div id="perCtl"></div></div>
 
-<div class="sec"><h2><span>■ 覚える技（最大4つ）</span><span>▾</span></h2><div>
+<div class="sec"><h2><span>■ 覚えられる技（最大12）</span><span>▾</span></h2><div>
   <div id="moveList"></div>
   <div class="bar">
     <button id="btnNewMove" style="background:#4a3510;border-color:#8a6a20;color:#f5e0c0;">＋ 新しい技を作る</button>
   </div>
   <div class="hint">名前を押すと覚える／外す。<b style="color:#f0a020">✎</b>を押すと下の技クリエーターが開く。<br>
-  内蔵技は書き換えられんけん、いじりたいときは<b style="color:#f0a020">複</b>で自分の技として複製する。</div>
+  内蔵技は書き換えられんけん、いじりたいときは<b style="color:#f0a020">複</b>で自分の技として複製する。<br>
+  <b style="color:#f0a020">除外</b>を押すと、この四皇モンはその内蔵技を覚えられんくなる（覚えとる場合は先に「覚える技」から外す必要がある）。</div>
+</div></div>
+
+<div class="sec"><h2><span>■ 覚える技（最大4）</span><span>▾</span></h2><div>
+  <div id="moveConflict" class="hint" style="margin:0 0 6px"></div>
+  <div id="equipList"></div>
+  <div class="hint">名前を押すと外れる。技そのものの追加・編集・複製・除外は上の「覚えられる技」でやる。</div>
 </div></div>
 
 <div class="sec fx closed" id="secMove"><h2><span>■ 技クリエーター</span><span>▾</span></h2><div>
@@ -4183,6 +4190,7 @@ function DEFAULT_MON(){ return {
   per  :{aggr:50,caut:50,loyal:50,self:50},
   moves:['shakunetsu'],
   customMoves:[],
+  excludeBuiltin:[],
   cry:{id:null,vol:1,rate:1},
   scale:1.0, dy:0,
   idleMotion:true,                    // 待機中にゆらゆら動くか
@@ -5433,8 +5441,23 @@ function editBuiltin(id){
 function toggleMove(id){
   const i=mon.moves.indexOf(id);
   if(i>=0) mon.moves.splice(i,1);
+  else if(isBuiltinId(id) && mon.excludeBuiltin.includes(id)){
+    alert('この技は「覚えられる技」から除外しとる。含めてから覚えさせて。'); return;
+  }
   else if(mon.moves.length<4) mon.moves.push(id);
   else { alert('技は4つまで。どれか外して。'); return; }
+  buildMoveList(); refresh();
+}
+/* 内蔵技をこの個体では覚えられんようにする／また覚えられるようにする。
+   moves ⊆ 覚えられる技 を守るけん、装備中の技は先に「覚える技」から外させる（掟9）。 */
+function toggleExcludeBuiltin(id){
+  if(!isBuiltinId(id)) return;
+  const i=mon.excludeBuiltin.indexOf(id);
+  if(i>=0) mon.excludeBuiltin.splice(i,1);           // 含める方向はいつでも許可
+  else if(mon.moves.includes(id)){
+    alert('この技は今「覚える技」に入っとる。先にそっちで外してから除外して。'); return;
+  }
+  else mon.excludeBuiltin.push(id);
   buildMoveList(); refresh();
 }
 function buildMoveList(){
@@ -5445,10 +5468,13 @@ function buildMoveList(){
     const m=MOVES[id]; if(!m) continue;
     const edited=mon.customMoves.some(c=>c.id===id);   // 自作 or 内蔵の上書き
     const over  =edited && isBuiltinId(id);            // 内蔵技を書き換えとる
+    const excluded=isBuiltinId(id) && mon.excludeBuiltin.includes(id);  // この個体では除外しとる
     const d=document.createElement('div');
     d.className='mv'+(mon.moves.includes(id)?' on':'')+(edited?' cus':'');
+    if(excluded) d.style.opacity='0.5';
     d.innerHTML=`<span class="tp" style="background:${TYPES[m.type]||'#888'}">${m.type||'—'}</span>`+
-      `<span class="nm">${m.name||id}${over?'<span style="color:#f0a020;font-size:9px"> 編集済</span>':''}</span>`+
+      `<span class="nm">${m.name||id}${over?'<span style="color:#f0a020;font-size:9px"> 編集済</span>':''}`+
+      `${excluded?'<span style="color:#e08080;font-size:9px"> 覚えられん</span>':''}</span>`+
       `<span class="st">威${m.power} 溜${(+m.cast).toFixed(2)}s CD${m.cooldown}s</span>`;
     d.querySelector('.nm').onclick=()=>toggleMove(id);
     d.querySelector('.tp').onclick=()=>toggleMove(id);
@@ -5473,12 +5499,50 @@ function buildMoveList(){
                   over?'元に戻す？':'消す？');
       d.appendChild(bx);
     }
+    /* 除外／含める：内蔵技だけ。自作技には無い操作 */
+    if(isBuiltinId(id)){
+      const be=document.createElement('button');
+      be.textContent=excluded?'含める':'除外';
+      be.title=excluded?'また覚えられるようにする':'この四皇モンには覚えさせん';
+      be.onclick=()=>toggleExcludeBuiltin(id);
+      d.appendChild(be);
+    }
     ml.appendChild(d);
   }
   const sel=$('fireSel'); sel.innerHTML='';
   const list=mon.moves.length?mon.moves:ids.slice(0,1);
   for(const id of list){ if(!MOVES[id]) continue;
     const o=document.createElement('option'); o.value=id; o.textContent=MOVES[id].name; sel.appendChild(o); }
+  buildEquipList(); paintMoveConflict();
+}
+/* 「覚える技（最大4）」―― 今装備しとる技だけを見せる。操作は「覚えられる技」側でやる */
+function buildEquipList(){
+  const el=$('equipList'); el.innerHTML='';
+  if(!mon.moves.length){
+    el.innerHTML='<div class="hint" style="margin:0">まだ何も覚えとらん。上の「覚えられる技」から選んで。</div>';
+    return;
+  }
+  for(const id of mon.moves){
+    const m=MOVES[id]; if(!m) continue;
+    const edited=mon.customMoves.some(c=>c.id===id);
+    const over  =edited && isBuiltinId(id);
+    const d=document.createElement('div');
+    d.className='mv on'+(edited?' cus':'');
+    d.innerHTML=`<span class="tp" style="background:${TYPES[m.type]||'#888'}">${m.type||'—'}</span>`+
+      `<span class="nm">${m.name||id}${over?'<span style="color:#f0a020;font-size:9px"> 編集済</span>':''}</span>`+
+      `<span class="st">威${m.power} 溜${(+m.cast).toFixed(2)}s CD${m.cooldown}s</span>`;
+    d.querySelector('.nm').onclick=()=>toggleMove(id);
+    d.querySelector('.tp').onclick=()=>toggleMove(id);
+    el.appendChild(d);
+  }
+}
+/* 矛盾状態（除外しとるのに装備されとる）を画面へ出す。UIを介さん経路（旧データ読込等）の防御 */
+function paintMoveConflict(){
+  const bad=mon.moves.filter(id=>isBuiltinId(id)&&mon.excludeBuiltin.includes(id));
+  $('moveConflict').innerHTML=bad.length?
+    '<b style="color:#e08080">⚠ 除外したはずの内蔵技が「覚える技」に混ざっとる：'+
+    bad.map(id=>(MOVES[id]&&MOVES[id].name)||id).join('・')+
+    '　→ 上の「覚えられる技」で外すか、含めるか決めて。</b>':'';
 }
 function copyBuiltin(id){
   const m=MOVES[id];
@@ -5819,6 +5883,10 @@ function normalizeMon(o){
       anim:x.anim, at:['cast','fire','impact'].includes(x.at)?x.at:'fire',
       off:Math.max(0,Math.min(2,+x.off||0)), dur:Math.max(0.05,Math.min(3,+x.dur||0.75))}));
   }
+  /* この個体では覚えられん内蔵技。書いとらん/壊れとるときは必ず空配列（後方互換） */
+  m.excludeBuiltin=Array.isArray(o.excludeBuiltin)
+    ?o.excludeBuiltin.filter(id=>typeof id==='string'&&BUILTIN_MOVE_IDS.includes(id))
+    :[];
   m.scale=+m.scale||1; m.dy=+m.dy||0;
   m.idleMotion=(o.idleMotion!==false);
   m.summon={style:'trainer',cryDelay:0.5,land:[],...(o.summon||{})};
