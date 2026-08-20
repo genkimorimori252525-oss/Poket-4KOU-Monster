@@ -48,7 +48,7 @@
     "security_asvs_level": 1,
     "security_block_on": "high",
     "inline_plan_threshold": 3,
-    "test_command": "node build.js && node build.js --dev && node tools/verify_style.js && node tools/verify_signature_moves.js"
+    "test_command": "node build.js && node build.js --dev && node tools/verify_style.js && node tools/verify_signature_moves.js && node tools/verify_movelist.js"
   },
   "ship": {
     "pr_body_sections": []

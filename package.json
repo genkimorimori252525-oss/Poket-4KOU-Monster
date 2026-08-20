@@ -31,6 +31,7 @@
     "verify:look": "node tools/verify_look.js",
     "verify:style": "node tools/verify_style.js",
     "verify:moves": "node tools/verify_signature_moves.js",
+    "verify:movelist": "node tools/verify_movelist.js",
     "verify:butt": "node tools/verify_butt_animation.js",
     "verify:power": "node tools/verify_power_scale.js"
   },

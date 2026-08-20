@@ -6,9 +6,16 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { chromium } = require('playwright');
 const offlineFonts = require('./_pw_offline.js');
+const { isMade } = require('./gen_starter.js');
 
 const ROOT = path.join(__dirname, '..');
 const LIB_PATH = path.join(ROOT, 'data', 'moves', 'library.json');
+/* 亜空切断・灼熱弾・Codexの14本（design doc §6-4）。1本も欠けとらんかを見張る。 */
+const MUST_SURVIVE = [
+  '亜空切断', '灼熱弾', '10まんボルト', '１００万ボルト', '２ボルト', 'ハイドロポンプ',
+  'インファイト', 'ブラックキック', 'ブラックパンチ', 'ブラックショット', 'ビック尻ドロップ',
+  'かえんほうしゃ', 'ソーラービーム', 'エレキボール', 'サイコキネシス', 'ときのほうこう'
+];
 const DIST_URL = 'file://' + path.join(ROOT, 'dist') + '/';
 const SHOT = path.join(__dirname, '_movelist-shot.png');
 const LAUNCH = { args: ['--autoplay-policy=no-user-gesture-required'] };
@@ -31,6 +38,38 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
     ok(distCount > 0, 'dist/shioumon_creator.html の技棚（STARTER_MOVES）が0本になっとる');
     console.log('movelist  dist の技棚: ' + distCount + '本');
 
+    const library = JSON.parse(fs.readFileSync(LIB_PATH, 'utf8'));
+
+    /* 2. made数の一致（design doc §6-2） */
+    const madeCount = Object.values(library).filter(isMade).length;
+    ok(distCount === madeCount,
+      'dist/ の技棚数が library.json の status:made の数と一致せん: ' + distCount + ' vs ' + madeCount);
+
+    /* 4. 生存確認（design doc §6-4） */
+    const names = Object.keys(library);
+    for (const name of MUST_SURVIVE) {
+      ok(names.includes(name), name + ' が library.json から消えとる');
+    }
+
+    /* 3. status別の必須項目（design doc §6-3） */
+    let ideaCount = 0;
+    for (const rec of Object.values(library)) {
+      const status = rec.status || 'made';
+      if (status === 'made') {
+        ok(!!rec.name, '(made) name が無いレコードがある');
+        ok(!!rec.fx, rec.name + ' (made) に fx が無い');
+        ok(!!(rec.battle && rec.battle.type), rec.name + ' (made) に battle.type が無い');
+        ok(!!(rec.battle && rec.battle.power !== undefined), rec.name + ' (made) に battle.power が無い');
+        ok(!!(rec.battle && rec.battle.cast !== undefined), rec.name + ' (made) に battle.cast が無い');
+        ok(!!(rec.battle && rec.battle.cooldown !== undefined), rec.name + ' (made) に battle.cooldown が無い');
+      } else if (status === 'idea') {
+        ideaCount++;
+        ok(!!rec.name, '(idea) name が無いレコードがある');
+        ok(!!(rec.battle && rec.battle.type), rec.name + ' (idea) に battle.type が無い');
+        ok(!('fx' in rec), rec.name + ' (idea) が fx を持っとる（ネタの段階で数値を捏造しとる）');
+      }
+    }
+
     /* idempotence（design doc §6-5）：tools/migrate_movelist.js を連続で走らせても
        library.json のバイト列が変わらん（技ネタ帳が既に廃止された定常状態でも成立する）。
        Playwright 不要、Node側だけ。 */
@@ -39,7 +78,7 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
     const after = fs.readFileSync(LIB_PATH);
     ok(before.equals(after), 'tools/migrate_movelist.js の再実行で library.json が変わっとる（idempotenceが崩れとる）');
 
-    /* MOVELIST-GATE: 残りのチェック（made数の一致・生存確認・status別必須項目・idempotence）はここに続けて足す（別タスクで拡張） */
+    console.log('movelist  made=' + madeCount + '  idea=' + ideaCount + '  エラー=' + errs.length + '件');
 
     await pg.locator('body').screenshot({ path: SHOT });
     await pg.close();
