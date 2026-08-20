@@ -1,258 +1,277 @@
 {
-  "id": "PALKIA",
-  "name": "パルキア",
+  "id": "BAZERGIUS",
+  "name": "バゼルギウス",
   "types": [
-    "ドラゴン",
-    "みず"
+    "ほのお",
+    "ひこう"
   ],
   "stats": {
-    "atk": 35,
-    "def": 55,
-    "hp": 80,
-    "spd": 45,
-    "eva": 25,
-    "int": 25
+    "atk": 60,
+    "def": 60,
+    "hp": 25,
+    "spd": 32,
+    "eva": 65,
+    "int": 7
   },
   "per": {
-    "aggr": 75,
-    "caut": 25,
-    "loyal": 30,
-    "self": 24
+    "aggr": 65,
+    "caut": 11,
+    "loyal": 67,
+    "self": 75
   },
   "moves": [
-    "beam",
-    "mv2"
+    "shakunetsu",
+    "Bomb"
   ],
   "customMoves": [
     {
-      "id": "mv2",
-      "name": "亜空切断",
-      "type": "ドラゴン",
-      "power": 20,
-      "cast": 0.42,
-      "cooldown": 5,
-      "tags": [
-        "近距離向き",
-        "高威力",
-        "とどめ向き",
-        "瀕死時危険"
-      ],
+      "id": "Bomb",
+      "name": "爆撃",
+      "type": "ひこう",
+      "power": 50,
+      "cast": 1,
+      "cooldown": 8,
+      "tags": [],
       "fx": {
-        "generator": "shatter",
-        "size": 190,
-        "cracks": 26,
-        "jag": 0.5,
-        "drift": 82,
-        "spin": 4,
-        "dust": 46,
-        "duration": 1.15,
-        "impact": null,
-        "id": "mv2",
-        "name": "亜空切断",
+        "generator": "flamethrower",
+        "width": 64,
+        "particles": 96,
+        "flameSpread": 72,
+        "charge": 0.85,
+        "fire": 0.6,
+        "sustain": 1.5,
+        "fade": 1,
+        "powerVisual": {
+          "size": [
+            0.65,
+            2
+          ],
+          "amount": [
+            0.55,
+            2.2
+          ]
+        },
+        "id": "Bomb",
+        "name": "爆撃",
         "seed": 918273,
         "palette": [
-          "#e0d0ff",
-          "#9b7ad6",
-          "#5227a0",
-          "#160a30"
+          "#ffffff",
+          "#ffd44a",
+          "#ff7a18",
+          "#c8260c"
         ],
         "screen": {
-          "darken": {
-            "strength": 0.62,
-            "dur": 0.45,
-            "at": "cast"
-          },
-          "lines": {
-            "color": "#d8a8ff",
-            "strength": 0.45,
-            "dur": 0.4,
-            "at": "cast",
-            "dir": "v"
-          },
-          "flash": {
-            "color": "#f4e0ff",
-            "strength": 0.92,
-            "dur": 0.16,
+          "tint": {
+            "color": "#ff0f0f",
+            "strength": 0.35,
+            "dur": 0.5,
             "at": "impact"
           },
           "shake": {
-            "power": 10,
-            "dur": 0.42,
-            "at": "impact"
-          },
-          "tint": {
-            "color": "#7a3ad0",
-            "strength": 0.34,
-            "dur": 0.55,
+            "power": 7,
+            "dur": 0.35,
             "at": "impact"
           }
         },
-        "palKey": "闇",
+        "palKey": "炎",
+        "timeScale": 1,
+        "motions": [
+          {
+            "anim": "big_butt_drop",
+            "at": "fire",
+            "off": 0,
+            "dur": 3
+          }
+        ],
         "parts": [
           {
-            "generator": "shatter",
-            "size": 190,
-            "cracks": 26,
-            "jag": 0.5,
-            "drift": 82,
-            "spin": 4,
-            "dust": 46,
-            "duration": 1.15,
+            "generator": "psychokinesis",
+            "fieldSize": 240,
+            "grips": 18,
+            "debris": 48,
+            "warp": 9,
+            "squeeze": 1.2,
+            "duration": 2.2,
             "impact": null,
-            "id": "shatter_918294",
-            "name": "空間割れ",
-            "seed": 918287,
+            "powerVisual": {
+              "size": [
+                0.7,
+                1.6
+              ],
+              "amount": [
+                0.6,
+                1.8
+              ]
+            },
+            "id": "psychokinesis_918287",
+            "name": "",
+            "seed": 918280,
             "palette": [
-              "#e0d0ff",
-              "#9b7ad6",
-              "#5227a0",
-              "#160a30"
+              "#ffffff",
+              "#ffd44a",
+              "#ff7a18",
+              "#c8260c"
             ],
             "at": "impact",
             "off": 0,
-            "anchor": "to",
-            "dx": 0,
-            "dy": 0
-          },
-          {
-            "generator": "slash",
-            "size": 204,
-            "arcDeg": 210,
-            "thickness": 30,
-            "count": 1,
-            "interval": 0.13,
-            "spread": 26,
-            "taper": 1.1,
-            "hollow": 0,
-            "jitter": 0.18,
-            "squash": 1,
-            "specks": 10,
-            "impact": {
-              "size": 12,
-              "frames": 7,
-              "shards": 8,
-              "palette": [
-                "#e0d0ff",
-                "#9b7ad6",
-                "#5227a0",
-                "#160a30"
-              ]
-            },
-            "id": "slash_918294",
-            "name": "斬撃",
-            "seed": 52812,
-            "palette": [
-              "#e0d0ff",
-              "#9b7ad6",
-              "#5227a0",
-              "#160a30"
-            ],
-            "at": "cast",
-            "off": 0.29,
             "anchor": "center",
-            "dx": -22,
+            "dx": -2,
             "dy": 0
           }
-        ],
-        "motions": [],
-        "timeScale": 1
+        ]
       },
-      "audio": [
-        {
-          "id": "warp",
-          "at": "cast",
-          "off": 0,
-          "vol": 0.8,
-          "rate": 0.8
+      "audio": []
+    },
+    {
+      "id": "shakunetsu",
+      "name": "灼熱弾",
+      "type": "ほのお",
+      "power": 26,
+      "cast": 0.3,
+      "cooldown": 2.4,
+      "tags": [
+        "遠距離向き",
+        "連発向き",
+        "迎撃向き"
+      ],
+      "fx": {
+        "generator": "projectile",
+        "shape": "orb",
+        "size": 22,
+        "frames": 6,
+        "wobble": 0.16,
+        "core": 0.5,
+        "spin": 0.15,
+        "specks": 5,
+        "trail": {
+          "type": "flame",
+          "length": 14,
+          "rate": 0.8,
+          "size": 0.8
         },
-        {
-          "id": "slash2",
-          "at": "fire",
-          "off": 0,
-          "vol": 1,
-          "rate": 0.85
+        "travel": {
+          "speed": 230,
+          "arc": -26,
+          "spin": 0
         },
-        {
-          "id": "laser_sharp",
-          "at": "fire",
-          "off": 0.06,
-          "vol": 0.6,
-          "rate": 0.7
+        "impact": {
+          "size": 56,
+          "frames": 9,
+          "shards": 14,
+          "palette": [
+            "#ffffff",
+            "#ffd44a",
+            "#ff7a18",
+            "#c8260c"
+          ]
         },
-        {
-          "id": "clash1",
-          "at": "impact",
-          "off": 0,
-          "vol": 0.9,
-          "rate": 1.3
+        "id": "shakunetsu",
+        "name": "灼熱弾",
+        "seed": 918273,
+        "palette": [
+          "#ffffff",
+          "#ffd44a",
+          "#ff7a18",
+          "#c8260c"
+        ],
+        "screen": {
+          "shake": {
+            "power": 5,
+            "dur": 0.28,
+            "at": "impact"
+          },
+          "tint": {
+            "color": "#ff6a10",
+            "strength": 0.28,
+            "dur": 0.35,
+            "at": "impact"
+          }
         },
-        {
-          "id": "exp_crunch",
-          "at": "impact",
-          "off": 0.1,
-          "vol": 0.7,
-          "rate": 0.9
-        }
-      ]
+        "timeScale": 1,
+        "motions": [],
+        "parts": []
+      },
+      "audio": null
     }
   ],
   "cry": {
-    "id": "cry_PALKIA",
-    "vol": 0.5,
+    "id": "cry_BAZERGIUS",
+    "vol": 0.95,
     "rate": 1,
-    "label": "パルキアの声",
-    "data": "http://127.0.0.1:8766/data/monsters/PALKIA/cry.webm?mime=audio%2Fwebm%3Bcodecs%3Dopus"
+    "label": "バゼルギウスの声",
+    "data": "http://127.0.0.1:8766/data/monsters/BAZERGIUS/cry.mp3?mime=audio%2Fmpeg"
   },
   "scale": 1,
   "dy": 0,
   "idleMotion": true,
   "summon": {
     "style": "trainer",
-    "cryDelay": 0.65,
-    "land": []
+    "cryDelay": 0.5,
+    "land": [
+      {
+        "img": "summon",
+        "dur": 0.4,
+        "shake": 0
+      },
+      {
+        "img": "normal",
+        "dur": 0.3,
+        "shake": 0
+      },
+      {
+        "img": "summon",
+        "dur": 0.4,
+        "shake": 0
+      },
+      {
+        "img": "normal",
+        "dur": 0.45,
+        "shake": 2
+      }
+    ]
   },
   "shadow": {
-    "scale": 1.1,
+    "scale": 1.24,
     "flat": 1,
     "dx": 0,
     "dy": 0,
     "alpha": 0.24,
-    "follow": 0.6
+    "follow": 0.55
   },
   "img": {
     "normal": {
-      "scale": 1.1,
+      "scale": 1.3,
       "dy": 0
     },
     "attack": {
-      "scale": 1.1,
+      "scale": 1.3,
       "dy": 0
     },
     "hurt": {
-      "scale": 1.1,
+      "scale": 1.3,
       "dy": 0
     },
     "back": {
-      "scale": 1.8,
-      "dy": 40
+      "scale": 1.3,
+      "dy": 0
     },
     "summon": {
-      "scale": 1.1,
-      "dy": 0
+      "scale": 1.74,
+      "dy": -19
     }
   },
   "derived": {
     "normal": false,
-    "attack": false,
-    "hurt": false,
-    "back": false,
+    "attack": true,
+    "hurt": true,
+    "back": true,
     "summon": false
   },
   "images": {
-    "normal": null,
+    "normal": "http://127.0.0.1:8766/data/monsters/BAZERGIUS/normal.webp?mime=image%2Fwebp",
     "attack": null,
     "hurt": null,
     "back": null,
-    "summon": null
+    "summon": "http://127.0.0.1:8766/data/monsters/BAZERGIUS/summon.webp?mime=image%2Fwebp"
   }
 }

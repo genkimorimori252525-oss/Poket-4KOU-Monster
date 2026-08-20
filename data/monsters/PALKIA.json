@@ -21,7 +21,8 @@
   },
   "moves": [
     "beam",
-    "mv2"
+    "mv2",
+    "mv1"
   ],
   "customMoves": [
     {
@@ -194,6 +195,618 @@
           "rate": 0.9
         }
       ]
+    },
+    {
+      "id": "mv1",
+      "name": "ビック尻ドロップ",
+      "type": "ノーマル",
+      "power": 42,
+      "cast": 0.5,
+      "cooldown": 5,
+      "tags": [
+        "近距離向き",
+        "高威力"
+      ],
+      "fx": {
+        "generator": "big_butt_drop",
+        "id": "mv1",
+        "name": "ビック尻ドロップ",
+        "seed": 7003,
+        "palKey": null,
+        "size": 122,
+        "dropHeight": 92,
+        "dropAt": 0.56,
+        "dust": 24,
+        "duration": 1.08,
+        "powerVisual": {
+          "size": [
+            0.75,
+            1.55
+          ],
+          "amount": [
+            0.6,
+            1.8
+          ]
+        },
+        "palette": [
+          "#fff7e8",
+          "#ffbf78",
+          "#ec6f69",
+          "#6d2735"
+        ],
+        "impact": null,
+        "screen": {
+          "flash": {
+            "color": "#fff0d0",
+            "strength": 0.62,
+            "dur": 0.14,
+            "at": "impact"
+          },
+          "shake": {
+            "power": 14,
+            "dur": 0.56,
+            "at": "impact"
+          }
+        },
+        "timeScale": 1,
+        "parts": [],
+        "motions": [
+          {
+            "anim": "big_butt_drop",
+            "at": "cast",
+            "off": 0,
+            "dur": 1.65
+          }
+        ]
+      },
+      "audio": []
+    },
+    {
+      "id": "mv3",
+      "name": "１００万ボルト",
+      "type": "でんき",
+      "power": 58,
+      "cast": 0.85,
+      "cooldown": 7,
+      "tags": [
+        "高威力",
+        "とどめ向き",
+        "瀕死時危険",
+        "回避されやすい"
+      ],
+      "fx": {
+        "generator": "million_volt",
+        "id": "mv3",
+        "name": "１００万ボルト",
+        "seed": 2025,
+        "palKey": null,
+        "cage": 92,
+        "columns": 11,
+        "crowns": 14,
+        "steps": 7,
+        "hitAt": 0.48,
+        "duration": 1.14,
+        "palette": [
+          "#ffffff",
+          "#d9fbff",
+          "#8b8cff",
+          "#4b126f"
+        ],
+        "impact": null,
+        "powerVisual": {
+          "size": [
+            0.8,
+            1.6
+          ],
+          "amount": [
+            0.7,
+            1.75
+          ]
+        },
+        "screen": {
+          "darken": {
+            "strength": 0.62,
+            "dur": 0.52,
+            "at": "cast"
+          },
+          "flash": {
+            "color": "#ecf8ff",
+            "strength": 0.92,
+            "dur": 0.18,
+            "at": "impact"
+          },
+          "shake": {
+            "power": 17,
+            "dur": 0.62,
+            "at": "impact"
+          }
+        },
+        "timeScale": 0.92,
+        "parts": [],
+        "motions": [
+          {
+            "anim": "charge",
+            "at": "cast",
+            "off": 0,
+            "dur": 0.85
+          },
+          {
+            "anim": "attack",
+            "at": "fire",
+            "off": 0,
+            "dur": 0.62
+          }
+        ]
+      },
+      "audio": []
+    },
+    {
+      "id": "mv4",
+      "name": "かえんほうしゃ",
+      "type": "ほのお",
+      "power": 36,
+      "cast": 0.45,
+      "cooldown": 4,
+      "tags": [
+        "遠距離向き",
+        "高威力"
+      ],
+      "fx": {
+        "generator": "flamethrower",
+        "id": "mv4",
+        "name": "かえんほうしゃ",
+        "seed": 7011,
+        "palKey": "炎",
+        "width": 27,
+        "particles": 52,
+        "flameSpread": 36,
+        "charge": 0.25,
+        "fire": 0.12,
+        "sustain": 0.62,
+        "fade": 0.34,
+        "powerVisual": {
+          "size": [
+            0.65,
+            2
+          ],
+          "amount": [
+            0.55,
+            2.2
+          ]
+        },
+        "palette": [
+          "#fffbe8",
+          "#ffd34f",
+          "#ff6b12",
+          "#8c1708"
+        ],
+        "screen": {
+          "tint": {
+            "color": "#ff6a10",
+            "strength": 0.28,
+            "dur": 0.5,
+            "at": "impact"
+          },
+          "shake": {
+            "power": 6,
+            "dur": 0.3,
+            "at": "impact"
+          }
+        },
+        "timeScale": 1,
+        "parts": [],
+        "motions": [
+          {
+            "anim": "attack",
+            "at": "fire",
+            "off": 0,
+            "dur": 0.8
+          }
+        ]
+      },
+      "audio": []
+    },
+    {
+      "id": "mv5",
+      "name": "ビック尻ドロップ",
+      "type": "ノーマル",
+      "power": 42,
+      "cast": 0.5,
+      "cooldown": 5,
+      "tags": [
+        "近距離向き",
+        "高威力"
+      ],
+      "fx": {
+        "generator": "big_butt_drop",
+        "id": "mv5",
+        "name": "ビック尻ドロップ",
+        "seed": 7003,
+        "palKey": null,
+        "size": 122,
+        "dropHeight": 92,
+        "dropAt": 0.56,
+        "dust": 24,
+        "duration": 1.08,
+        "powerVisual": {
+          "size": [
+            0.75,
+            1.55
+          ],
+          "amount": [
+            0.6,
+            1.8
+          ]
+        },
+        "palette": [
+          "#fff7e8",
+          "#ffbf78",
+          "#ec6f69",
+          "#6d2735"
+        ],
+        "impact": null,
+        "screen": {
+          "flash": {
+            "color": "#fff0d0",
+            "strength": 0.62,
+            "dur": 0.14,
+            "at": "impact"
+          },
+          "shake": {
+            "power": 14,
+            "dur": 0.56,
+            "at": "impact"
+          }
+        },
+        "timeScale": 1,
+        "parts": [],
+        "motions": [
+          {
+            "anim": "big_butt_drop",
+            "at": "cast",
+            "off": 0,
+            "dur": 1.65
+          }
+        ]
+      },
+      "audio": []
+    },
+    {
+      "id": "mv6",
+      "name": "はかいこうせん",
+      "type": "ノーマル",
+      "power": 52,
+      "cast": 1,
+      "cooldown": 8,
+      "tags": [
+        "高威力",
+        "とどめ向き",
+        "瀕死時危険"
+      ],
+      "fx": {
+        "generator": "beam",
+        "id": "mv6",
+        "name": "はかいこうせん",
+        "seed": 7002,
+        "palKey": "雷",
+        "width": 34,
+        "segments": 8,
+        "waver": 0.6,
+        "charge": 0.7,
+        "fire": 0.12,
+        "sustain": 0.62,
+        "fade": 0.34,
+        "palette": [
+          "#ffffff",
+          "#fff7a0",
+          "#ffd21e",
+          "#8a5a00"
+        ],
+        "impact": {
+          "size": 92,
+          "frames": 11,
+          "shards": 20,
+          "palette": [
+            "#ffffff",
+            "#fff7a0",
+            "#ffd21e",
+            "#8a5a00"
+          ]
+        },
+        "screen": {
+          "darken": {
+            "strength": 0.62,
+            "dur": 0.7,
+            "at": "cast"
+          },
+          "lines": {
+            "color": "#fff7a0",
+            "strength": 0.35,
+            "dur": 0.6,
+            "at": "cast",
+            "dir": "v"
+          },
+          "flash": {
+            "color": "#ffffff",
+            "strength": 0.95,
+            "dur": 0.2,
+            "at": "impact"
+          },
+          "shake": {
+            "power": 16,
+            "dur": 0.6,
+            "at": "impact"
+          }
+        },
+        "timeScale": 0.85,
+        "parts": [],
+        "motions": [
+          {
+            "anim": "charge",
+            "at": "cast",
+            "off": 0,
+            "dur": 1
+          },
+          {
+            "anim": "attack",
+            "at": "fire",
+            "off": 0,
+            "dur": 0.7
+          },
+          {
+            "anim": "hurt",
+            "at": "impact",
+            "off": 0.3,
+            "dur": 0.9
+          }
+        ]
+      },
+      "audio": []
+    },
+    {
+      "id": "mv7",
+      "name": "サイコキネシス",
+      "type": "エスパー",
+      "power": 36,
+      "cast": 0.45,
+      "cooldown": 4.2,
+      "tags": [
+        "高威力",
+        "とどめ向き"
+      ],
+      "fx": {
+        "generator": "psychokinesis",
+        "id": "mv7",
+        "name": "サイコキネシス",
+        "seed": 7061,
+        "palKey": "毒",
+        "fieldSize": 200,
+        "grips": 10,
+        "debris": 24,
+        "warp": 10,
+        "squeeze": 0.95,
+        "duration": 1.75,
+        "powerVisual": {
+          "size": [
+            0.7,
+            1.6
+          ],
+          "amount": [
+            0.6,
+            1.8
+          ]
+        },
+        "palette": [
+          "#f2d8ff",
+          "#d08cff",
+          "#8e33d6",
+          "#3d0a63"
+        ],
+        "impact": null,
+        "screen": {
+          "darken": {
+            "strength": 0.34,
+            "dur": 0.45,
+            "at": "cast"
+          },
+          "tint": {
+            "color": "#8e33d6",
+            "strength": 0.26,
+            "dur": 0.55,
+            "at": "cast"
+          },
+          "shake": {
+            "power": 9,
+            "dur": 0.45,
+            "at": "cast"
+          }
+        },
+        "timeScale": 0.95,
+        "parts": [],
+        "motions": [
+          {
+            "anim": "charge",
+            "at": "cast",
+            "off": 0,
+            "dur": 0.7
+          }
+        ]
+      },
+      "audio": []
+    },
+    {
+      "id": "mv8",
+      "name": "ブラックパンチ",
+      "type": "あく",
+      "power": 40,
+      "cast": 0.28,
+      "cooldown": 3.5,
+      "tags": [
+        "近距離向き",
+        "高威力",
+        "とどめ向き"
+      ],
+      "fx": {
+        "generator": "black_punch",
+        "id": "mv8",
+        "name": "ブラックパンチ",
+        "seed": 6712,
+        "palKey": null,
+        "size": 74,
+        "lift": 32,
+        "rings": 6,
+        "hitAt": 0.3,
+        "duration": 0.76,
+        "palette": [
+          "#fff3ff",
+          "#8d62d2",
+          "#351b5e",
+          "#07040d"
+        ],
+        "impact": null,
+        "powerVisual": {
+          "size": [
+            0.75,
+            1.65
+          ],
+          "amount": [
+            0.7,
+            1.6
+          ]
+        },
+        "screen": {
+          "darken": {
+            "strength": 0.44,
+            "dur": 0.24,
+            "at": "cast"
+          },
+          "shake": {
+            "power": 11,
+            "dur": 0.4,
+            "at": "impact"
+          }
+        },
+        "timeScale": 1.08,
+        "parts": [],
+        "motions": [
+          {
+            "anim": "attack",
+            "at": "fire",
+            "off": 0,
+            "dur": 0.46
+          }
+        ]
+      },
+      "audio": []
+    },
+    {
+      "id": "mv9",
+      "name": "ときのほうこう",
+      "type": "ドラゴン",
+      "power": 62,
+      "cast": 1.05,
+      "cooldown": 8.2,
+      "tags": [
+        "遠距離向き",
+        "高威力",
+        "とどめ向き",
+        "瀕死時危険",
+        "回避されやすい"
+      ],
+      "fx": {
+        "generator": "roar_time",
+        "id": "mv9",
+        "name": "ときのほうこう",
+        "seed": 7073,
+        "palKey": null,
+        "width": 76,
+        "timeRings": 18,
+        "warp": 23,
+        "charge": 1.3,
+        "fire": 0.27,
+        "sustain": 0.7,
+        "fade": 0.8,
+        "palette": [
+          "#ffffff",
+          "#d8f3ff",
+          "#9a78f0",
+          "#241052"
+        ],
+        "screen": {
+          "darken": {
+            "strength": 0.62,
+            "dur": 0.82,
+            "at": "cast"
+          },
+          "lines": {
+            "color": "#b8d8ff",
+            "strength": 0.44,
+            "dur": 0.62,
+            "at": "impact",
+            "dir": "v"
+          },
+          "flash": {
+            "color": "#eee8ff",
+            "strength": 0.82,
+            "dur": 0.2,
+            "at": "impact"
+          },
+          "shake": {
+            "power": 16,
+            "dur": 0.7,
+            "at": "impact"
+          }
+        },
+        "timeScale": 0.92,
+        "parts": [
+          {
+            "generator": "shatter",
+            "size": 152,
+            "cracks": 14,
+            "jag": 1.2,
+            "drift": 30,
+            "spin": 10,
+            "dust": 4,
+            "duration": 1.2,
+            "impact": null,
+            "id": "shatter_7080",
+            "name": "空間割れ",
+            "seed": 7080,
+            "palette": [
+              "#ffffff",
+              "#d8f3ff",
+              "#9a78f0",
+              "#241052"
+            ],
+            "at": "impact",
+            "off": 0,
+            "anchor": "to",
+            "dx": 0,
+            "dy": 0
+          }
+        ],
+        "motions": [
+          {
+            "anim": "charge",
+            "at": "cast",
+            "off": 0,
+            "dur": 1.05
+          },
+          {
+            "anim": "attack",
+            "at": "fire",
+            "off": 0,
+            "dur": 0.68
+          },
+          {
+            "anim": "recoil",
+            "at": "impact",
+            "off": 0.12,
+            "dur": 0.9
+          }
+        ]
+      },
+      "audio": []
     }
   ],
   "cry": {
