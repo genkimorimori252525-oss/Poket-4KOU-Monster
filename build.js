@@ -8,6 +8,7 @@
    ========================================================= */
 const fs = require('fs');
 const path = require('path');
+const { genStarterSource } = require('./tools/gen_starter.js');
 
 const ROOT = __dirname;
 const SRC  = path.join(ROOT, 'src');
@@ -17,6 +18,10 @@ const read = f => {
   const p = path.join(SRC, f);
   return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
 };
+
+/* 技一覧の正は data/moves/library.json 1つ（MOVELIST-01）。
+   /*__STARTER__*​/ はここから tools/gen_starter.js が組み立てる。生成物をファイルに落とさん。 */
+const library = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'moves', 'library.json'), 'utf8'));
 
 /* 置換トークン → 元ファイル */
 const MODULES = {
@@ -29,7 +34,7 @@ const MODULES = {
   '/*__ANIMS__*/'   : read('anims.js'),
   '/*__AUDIO_UI__*/': read('audio_ui.js'),
   '/*__MOVELAB__*/' : read('movelab.js'),
-  '/*__STARTER__*/' : read('starter_moves.js'),
+  '/*__STARTER__*/' : genStarterSource(library),
   '/*__ROSTER__*/'  : read('roster.js'),
 };
 

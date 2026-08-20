@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
 const offlineFonts = require('./_pw_offline.js');
+const { genStarterSource } = require('./gen_starter.js');
 
 const ROOT = path.join(__dirname, '..');
 const SHOT = path.join(__dirname, '_signature-moves-shot.png');
@@ -48,7 +49,8 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
     await pg.addScriptTag({ path: path.join(ROOT, 'src', 'fx_core.js') });
     await pg.addScriptTag({ path: path.join(ROOT, 'src', 'anims.js') });
     await pg.addScriptTag({ path: path.join(ROOT, 'src', 'move_range.js') });
-    await pg.addScriptTag({ path: path.join(ROOT, 'src', 'starter_moves.js') });
+    const library = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'moves', 'library.json'), 'utf8'));
+    await pg.addScriptTag({ content: genStarterSource(library) });
     await pg.addScriptTag({ path: path.join(ROOT, 'src', 'movelab.js') });
 
     const result = await pg.evaluate(({ expected, oldGenerators }) => {
