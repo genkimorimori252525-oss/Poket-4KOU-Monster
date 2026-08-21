@@ -91,6 +91,46 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   ok(clamp.restored, 'statOf() クランプ検証が元の atk（' + clamp.original + '）へ戻し損ねた');
   console.log('天井クランプ  atk150 → ' + clamp.result + '（元 ' + clamp.original + ' へ復元 ' + clamp.restored + '）');
 
+  /* ---- 1d. 決定論を「補助技が実際にキャストされる」状態で証明する（02.1-03、SUP-06）----
+     determinismTest() 自身がやる resetBattle(90210) は f.moves を触らんけん、ここで
+     一時的に上書きした動きは determinismTest() が回す2本の40秒ランの両方に残る。
+     「movelistに載っとるだけ」を「実際にキャストされた」の証拠にせん —— applySupportEffect
+     を一時的にカウンタ付きへ差し替え、直接呼び出し回数で確かめる（round-2 R2チェックの
+     effDelta モンキーパッチと同じ手口）。後始末は他の合成技と同じ finally で必ず戻す。 */
+  const detSupport = await pg.evaluate(() => {
+    const f = partyA[0], foe = partyB[0];
+    const savedMoves = f.moves, savedCd = f.cd;
+    const origApply = applySupportEffect;
+    let castCount = 0;
+    let result;
+    try {
+      const supportMove = {
+        id: 'det_buff_test', name: '決定論試験バフ', power: 0, cast: 0.3, cooldown: 3.0,
+        /* B7のprobeと同じく makeSpec() を使う —— launch()を実際に踏む（scoreMoveだけの
+           2a/2b/2c等と違い、determinismTest()はstepBattle経由でAuraFXまで実体化する）けん、
+           palette等を欠いた素の {generator:'aura'} だと AuraFX.update が s.palette.length で落ちる。 */
+        fx: makeSpec('aura', 918274, '決定論試験バフ', '闇'), type: '闇', tags: [],
+        kind: 'support', effect: { stat: 'atk', delta: 20, dur: 10, target: 'self' }
+      };
+      f.moves = [supportMove];
+      f.cd = {};
+      applySupportEffect = function (...args) { castCount++; return origApply.apply(this, args); };
+      result = determinismTest();
+    } finally {
+      f.moves = savedMoves;
+      f.cd = savedCd;
+      applySupportEffect = origApply;
+    }
+    return { ok: result.ok, at: result.at, castCount };
+  });
+  ok(detSupport.ok === true,
+     '補助技が実際にキャストされる状態で決定論チェックが落ちた（掟1）at=' + detSupport.at);
+  ok(detSupport.castCount > 0,
+     '補助技が movelist に載っとるだけで一度もキャストされんかった（applySupportEffect 呼び出し0回）: '
+     + detSupport.castCount);
+  console.log('決定論(補助技実働)  ok=' + detSupport.ok
+    + '  applySupportEffect呼び出し回数=' + detSupport.castCount + '（40秒×2ランの合計）');
+
   /* =========================================================
      Task 2: kind / effect / buffValue / ゲート —— 順位を「直接比較」で証明する
      ========================================================= */
