@@ -88,6 +88,13 @@ Object.assign(ANIMS,{
     K({t:1,sx:1,sy:1,dx:0,dy:0,rot:0})
   ],img:[[0,'normal'],[.18,'attack'],[.88,'normal']]},
 
+  saito_butt_hide_move:{dur:1.40,keys:[
+    K({t:0,sx:1,sy:1,dx:0,dy:0,rot:0}),K({t:.10,sx:1.10,sy:.90,dx:-4,dy:5}),
+    K({t:.22,sx:.86,sy:1.16,dx:10,dy:12,rot:.06}),K({t:.36,sx:1.05,sy:.93,dx:16,dy:6,rot:.10}),
+    K({t:.50,sx:.90,sy:1.10,dx:14,dy:9,rot:.08,ghost:.2}),K({t:.66,sx:.95,sy:1.05,dx:8,dy:4,rot:.04}),
+    K({t:.80,sx:1.02,sy:.98,dx:2,dy:1}),K({t:1,sx:1,sy:1,dx:0,dy:0,rot:0})
+  ],img:[[0,'normal'],[.16,'attack'],[.86,'normal']]},
+
   earthquake_stomp:{dur:1.58,keys:[
     K({t:0,sx:1,sy:1,dx:0,dy:0}),K({t:.12,sx:1.34,sy:.68,dy:8}),
     K({t:.24,sx:.76,sy:1.30,dy:-52,ghost:.4}),K({t:.40,sx:.94,sy:1.08,dy:-72}),

@@ -741,6 +741,32 @@ class SandAttackMoveFX extends RebuiltMoveFX{
   }
 }
 
+/* 斎藤尻隠れ：使用者の前方に二つ割れの尻の盾が競り上がり、守りの層と粒が回る。 */
+class SaitoButtHideMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||80)*this.sizeMul,P=this.sp.palette,x=this.f.x,y=this.f.y,
+      n=this.amount(this.sp.amount||14,6),seed=this.sp.seed||1;
+    const rise=rmEase(rmClamp(q/this.hitRatio,0,1));
+    const fwd=Math.cos(this.ang)>=0?1:-1;
+    const cx=x+fwd*s*.42,cy=y+s*.30-rise*s*.55,half=s*(.28+.04*q);
+    /* 二つ割れの尻の盾 */
+    pxDisc(g,cx-half*.48,cy,half*.62,P[2]);
+    pxDisc(g,cx+half*.48,cy,half*.62,P[2]);
+    rmLine(g,{x:cx,y:cy-half*.55},{x:cx,y:cy+half*.55},s*.03,P[3]);
+    /* 守りの層3枚：脈打つ */
+    for(let k=0;k<3;k++){
+      const pulse=1+.06*Math.sin(this.time*6+k*2.1);
+      pxRing(g,cx,cy,half*(1.15+.28*k)*pulse,half*(.72+.20*k)*pulse,2,P[1]);
+    }
+    /* 守りの粒：盾の上を回る */
+    for(let i=0;i<n;i++){
+      const a=this.time*2.4+i/n*RM_TAU+hash3(i,seed,5)*RM_TAU;
+      const rr=half*(1.55+.15*Math.sin(this.time*3+i));
+      rmStar(g,cx+Math.cos(a)*rr,cy-half*.15+Math.sin(a)*rr*.42,s*.045,5,P[0],a);
+    }
+  }
+}
+
 /* いわなだれ：空中に傾いた岩棚が現れ、異なる岩塊が斜面を転げ落ちる。 */
 class RockSlideMoveFX extends RebuiltMoveFX{
   drawMaterial(g){
@@ -889,6 +915,7 @@ globalThis.REBUILT_MOVE_META={
   toxic_move:{jp:'どくどく',desc:'毒滴が組み上げる髑髏',range:'remote',size:78,amount:13,duration:1.30,hitAt:.76,arc:0,clashKind:'none',palette:['#ffffff','#e8a0ff','#a43bc4','#49145e'],powerVisual:{size:[.72,1.65],amount:[.55,2.00]}},
   whirlpool_move:{jp:'うずしお',desc:'下から上へ細まる水の螺旋壁',range:'remote',size:92,amount:18,duration:1.46,hitAt:.76,arc:0,clashKind:'none',palette:['#ffffff','#bcefff','#3aafe5','#07517d'],powerVisual:{size:[.68,1.78],amount:[.52,2.10]}},
   sand_attack_move:{jp:'すなかけ',desc:'足元から巻き上がる目つぶしの砂',range:'remote',size:56,amount:20,duration:1.05,hitAt:.62,arc:0,clashKind:'none',palette:['#fff6e0','#e7c98a','#a8834a','#4e3a20'],powerVisual:{size:[.74,1.60],amount:[.55,2.00]}},
+  saito_butt_hide_move:{jp:'斎藤尻隠れ',desc:'前方に競り上がる二つ割れの尻の盾',range:'remote',size:80,amount:14,duration:1.40,hitAt:.72,arc:0,clashKind:'none',palette:['#fff0e2','#ffc08a','#b0616e','#2e1a2e'],powerVisual:{size:[.72,1.62],amount:[.58,1.92]}},
   rock_slide_move:{jp:'いわなだれ',desc:'傾いた岩棚を転げる岩塊',range:'remote',size:54,amount:9,duration:1.24,hitAt:.80,arc:0,clashKind:'none',palette:['#fff4d2','#c7a46b','#76583b','#33251a'],powerVisual:{size:[.70,1.72],amount:[.55,2.05]}},
   stone_edge_move:{jp:'ストーンエッジ',desc:'地中の稜線から押し上がる石柱',range:'remote',size:48,amount:7,duration:1.16,hitAt:.78,arc:0,clashKind:'none',palette:['#fff2cc','#c49b61','#715036','#2f2118'],powerVisual:{size:[.72,1.68],amount:[.55,2.00]}},
   earth_power_move:{jp:'だいちのちから',desc:'地脈輪から噴く土柱と熱光',range:'remote',size:66,amount:8,duration:1.28,hitAt:.76,arc:0,clashKind:'none',palette:['#ffffff','#ffd878','#b46a32','#552715'],powerVisual:{size:[.68,1.78],amount:[.55,2.05]}},
@@ -908,7 +935,8 @@ globalThis.REBUILT_MOVE_FX={
   psycho_cut_move:PsychoCutMoveFX,outrage_move:OutrageMoveFX,ice_beam_move:IceBeamMoveFX,
   flash_cannon_move:FlashCannonMoveFX,dazzling_gleam_move:DazzlingGleamMoveFX,hyper_beam_move:HyperBeamMoveFX,
   dragon_pulse_move:DragonPulseMoveFX,dragon_dance_move:DragonDanceMoveFX,toxic_move:ToxicMoveFX,
-  whirlpool_move:WhirlpoolMoveFX,sand_attack_move:SandAttackMoveFX,rock_slide_move:RockSlideMoveFX,stone_edge_move:StoneEdgeMoveFX,
+  whirlpool_move:WhirlpoolMoveFX,sand_attack_move:SandAttackMoveFX,saito_butt_hide_move:SaitoButtHideMoveFX,
+  rock_slide_move:RockSlideMoveFX,stone_edge_move:StoneEdgeMoveFX,
   earth_power_move:EarthPowerMoveFX,earthquake_move:EarthquakeMoveFX,bombing_move:BombingMoveFX
 };
 
