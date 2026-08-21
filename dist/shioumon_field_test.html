@@ -2974,6 +2974,14 @@ const MOVES = {
 };
 
 /* =========================================================
+   補助技（4.5節）。判定はここ1か所だけに置く。
+   実際の判定が要る呼び出し口は3つ —— battle.tpl.html の launch() / fxPoints()、
+   creator.tpl.html の fireMove()（Plan 02）—— 全部この同じ関数を呼ぶ
+   （亜空切断のガラス割れが戦闘にだけ出た事故と同じ形の食い違いを、最初から1本に寄せて防ぐ）。
+   `kind` を書いとらん技は attack 扱い（後方互換）。 */
+function isSupportMove(m){ return !!(m && m.kind==='support'); }
+
+/* =========================================================
    CostCalculator は `src/cost.js` へ移した（Phase 1・2026-08-19）
 
    理由は計画18.5 の警告 ——「コストは損失額と獲得額の両方を決める。
@@ -4176,6 +4184,34 @@ function damageOf(atk,def,move){
   return raw * mit * quarterBonus() * stabOf(atk,move);
 }
 
+/* 補助技の効果を適用する（4.5-2）。制作ツールUIも delta/dur をクランプするが、
+   ここでも独立に再クランプする —— statOf の1〜100クランプが二重の防衛線を張っとるのと
+   同じ考え方。stat は atk/def/eva/spd の4つだけ許可。それ以外（hp/int やタイプミス等）は
+   完全に無視する（W5：既定へ読み替えず、ただ何も起きん —— 拒否を「別のものを掛けた」に
+   すり替えたらいかん）。 */
+const SUPPORT_STATS = { atk:1, def:1, eva:1, spd:1 };
+function applySupportEffect(caster, foe, m){
+  const effect = m.effect;
+  if(!effect || !SUPPORT_STATS[effect.stat]) return;
+  const delta = Math.max(-25, Math.min(25, +effect.delta || 0));
+  const dur = Math.max(3, Math.min(20, +effect.dur || 0));
+  const target = effect.target==='foe' ? foe : caster;
+  /* no-stack（B4）：既に同じ stat のバフが乗っとったら delta は据え置き、
+     until は「今の期限」と「今回の期限」の遅い方 —— 短い再掛けで残り時間が
+     縮むことは絶対に無い（Task 3 の検証と同じ1文で書いとる。実装と検証で
+     文言が食い違うと直しても直しても揺れ戻す、というのが第1回の反省）。 */
+  const existing = target.buffs[effect.stat];
+  if(existing){
+    existing.until = Math.max(existing.until, battleTime + dur);
+  }else{
+    target.buffs[effect.stat] = { delta, until: battleTime + dur };
+  }
+  const label = STAT_JP[effect.stat] || effect.stat;
+  const note = effect.stat==='spd' ? '（次の技から効く）' : '';
+  AILog.event(target.side, target.name+'の'+label+' '+(delta>=0?'+':'')+delta
+    +'（'+dur.toFixed(1)+'秒）'+note);
+}
+
 /* =========================================================
    AIログ — 開発の根底。AIより先に落とさない
    ========================================================= */
@@ -4321,6 +4357,102 @@ function foeBusy(foe){
   return foe.moves.every(m=>(foe.cd[m.id]||0)>0);
 }
 
+/* =========================================================
+   補助の値打ち（4.5-3・plan-checker round-2 R1/R2/R3 の是正込み）
+   期待ダメージ（scoreMove の dmgV）と同じ物差しに乗せる —— 独自の重みを
+   別途足すと、支援技と攻撃技のスコアがどっちも「点」に見えて内訳の意味が消える。
+   ========================================================= */
+
+/* statOf() と同じ 1〜100 の天井をここでも通す（round-2 R2）。パルキア(atk92)に
+   atk+25 を掛けても、実際に効くんは statOf が返す100までの+8だけ。ここを素通しすると
+   AIログが「40.6点」と表示して実際は「13.0点」しか出さん —— 掟9への正面違反になる。 */
+function effDelta(base, delta){
+  return Math.max(1, Math.min(100, Math.round(base+delta))) - base;
+}
+
+/* attacker が defender へ dur 秒のうちに与える期待ダメージの総量を、
+   attacker の refAtkMove（支援技を除いた最短cooldownの技）を物差しに実測する。
+   delta は effDelta で天井クランプを通してから効かせる —— atk/def は該当stat経由、
+   spd だけは cdScale を組み替えて「1発の重さ」やのうて「撃てる回数」を動かす。
+   hits の窓は phaseLeft で切る（round-2 R3）：休憩8秒は誰も撃たん死に時間やけん、
+   dur秒ぜんぶ殴り続けられる前提だと構造的に水増しになる。副産物として
+   「クオーター頭ほど積む値打ちが高い」という状況依存が1行で手に入る。 */
+function rawFlow(attacker, defender, statSlot, delta, dur){
+  const refMove=refAtkMove(attacker);
+  if(!refMove) return 0;
+  let attackerAtk=statOf(attacker,'atk');
+  let defenderDef=statOf(defender,'def');
+  let cdScale=attacker.cdScale;
+  if(statSlot==='atk'){
+    attackerAtk = statOf(attacker,'atk') + effDelta(statOf(attacker,'atk'), delta);
+  }else if(statSlot==='def'){
+    defenderDef = statOf(defender,'def') + effDelta(statOf(defender,'def'), delta);
+  }else if(statSlot==='spd'){
+    const spd = statOf(attacker,'spd') + effDelta(statOf(attacker,'spd'), delta);
+    cdScale = 1.55 - spd/100*0.85;
+  }
+  const usable=Math.max(0, Math.min(dur, phaseLeft));
+  const hits=usable/(refMove.cooldown*cdScale);
+  /* 意図的に stabOf も回避確率も掛けん —— 期待ダメージ自体（dr/st*140）も
+     どっちも割り引かん。ここで割り引くと攻撃技のスコアと同じ物差しから外れる。 */
+  return refMove.power*(0.5+attackerAtk/100)*100/(100+defenderDef)*quarterBonus()*hits;
+}
+
+/* delta=0（ゼロ効果）を基準にした符号付きの変化量。dur の窓は両方の呼び出しで揃える。 */
+function offenseFlow(attacker,defender,statSlot,delta,dur){
+  return rawFlow(attacker,defender,statSlot,delta,dur) - rawFlow(attacker,defender,statSlot,0,dur);
+}
+
+/* eva は damageOf に一度も出てこん —— 唯一のレバーは tryDodge の
+   T('基礎回避力', statOf(f,'eva')*0.62) の傾き。attacker の基準流量に
+   「回避率換算のΔ」を掛けた割合として符号付きで返す（正のΔ回避率＝流れ込む
+   ダメージが減る＝負のフロー、defのプラスΔと同じ符号の向き）。 */
+function evaFlow(recipient,attacker,delta,dur){
+  const baseline=rawFlow(attacker,recipient,'atk',0,dur);
+  const evaDelta=effDelta(statOf(recipient,'eva'), delta);
+  return -baseline * (evaDelta*0.62/100);
+}
+
+/* 支援技を除いた、cooldown最短の攻撃技。物差しが無ければ0点（支援技しか持たん個体等）。 */
+function refAtkMove(who){
+  let best=null;
+  for(const mv of who.moves){
+    if(isSupportMove(mv)) continue;
+    if(!best || mv.cooldown<best.cooldown) best=mv;
+  }
+  return best;
+}
+
+function hasBuff(who,stat){
+  const b=who.buffs[stat];
+  return !!(b && battleTime<b.until);
+}
+
+const SUPPORT_W = { scale:140, decay:0.15 };   // HOLD_W と同じ、集中管理の調整用テーブル
+
+/* target = 効果の掛かる先。dFlowToFoe/dFlowToF のどちらか片方だけが動く1つの
+   ディスパッチ表で、自分掛け/相手掛け・強化/弱化の全組み合わせの符号が自動で合う
+   （個別の符号反転をどこにも書かん、というのがB3の実際の修正）。
+   net はどっちに有利かの向き（foeへ流れる分がプラス、fへ流れる分がマイナス）で、
+   hasBuff は「解決した target」で見る（常に f を見るのが第1回のB3の実際のバグやった）。 */
+function buffValue(f, foe, effect){
+  if(!effect) return 0;
+  const target=effect.target==='foe' ? foe : f;
+  let dFlowToFoe=0, dFlowToF=0;
+  if(effect.stat==='atk' || effect.stat==='spd'){
+    if(target===f) dFlowToFoe=offenseFlow(f,foe,effect.stat,effect.delta,effect.dur);
+    else            dFlowToF =offenseFlow(foe,f,effect.stat,effect.delta,effect.dur);
+  }else if(effect.stat==='def'){
+    if(target===f) dFlowToF  =offenseFlow(foe,f,'def',effect.delta,effect.dur);
+    else            dFlowToFoe=offenseFlow(f,foe,'def',effect.delta,effect.dur);
+  }else if(effect.stat==='eva'){
+    if(target===f) dFlowToF  =evaFlow(f,foe,effect.delta,effect.dur);
+    else            dFlowToFoe=evaFlow(foe,f,effect.delta,effect.dur);
+  }
+  const net = dFlowToFoe/foe.maxHP - dFlowToF/f.maxHP;
+  return net * SUPPORT_W.scale * (hasBuff(target, effect.stat) ? SUPPORT_W.decay : 1);
+}
+
 function scoreMove(f,foe,m){
   const terms=[];
   const dmg=damageOf(f,foe,m);
@@ -4341,6 +4473,7 @@ function scoreMove(f,foe,m){
   if(st!==1) T('タイプ一致', (dr - dr/st)*140);
   T('手数',         (2.6/cd)*9);
   T('発生の隙',     castV);
+  if(isSupportMove(m)) T('補助の値打ち', buffValue(f,foe,m.effect));
 
   /* --- 性格。50 を基準に、そこからのズレぶんだけ効く --- */
   const dAg=(per.aggr-50)/100, dCa=(per.caut-50)/100, dSe=(per.self-50)/100;
@@ -4555,7 +4688,7 @@ function pickMove(f,foe){
 /* 演出素材（fx.parts）の置き場所。技データだけで位置と時間が決まる */
 function fxPoints(f,foe,m){
   return { from:muzzle(f),
-           to:(m.fx.generator==='aura'?target(f):target(foe)),
+           to:(isSupportMove(m)?target(f):target(foe)),
            center:{x:192,y:104} };
 }
 /* 素材は当たり判定を持たん。相殺も回避判定も通さん */
@@ -4588,7 +4721,7 @@ function startAttack(f,foe,m){
 function launch(f,foe,m){
   f.cd[m.id]=m.cooldown*f.cdScale;
   f.actionTimer=m.cooldown*f.cdScale*0.50;
-  const support=m.fx.generator==='aura';
+  const support=isSupportMove(m);
   const from=muzzle(f), to=support?target(f):target(foe);
   /* 弾速は技ではなく「撃った個体の素早さ」から決まる（計画15章） */
   /* 本演出だけに使用者の攻撃を渡す。ダメージ・背景演出・parts には影響させない。
@@ -4602,7 +4735,7 @@ function launch(f,foe,m){
   const pts=fxPoints(f,foe,m);
   pushSub(spawnSubFX(m.fx,'fire',pts),f,m.name);
   const sh=spawnFX(spec,from,to,builtOf(m.fx),()=>{
-    if(support){ box.play(f.name+'の　きあいが　たかまった！'); return; }
+    if(support){ applySupportEffect(f,foe,m); box.play(f.name+'の　きあいが　たかまった！'); return; }
     playMovePhase(m.id,'impact',SPEED.battle);
     f.scheduleMotions(m.fx,'impact');
     pushSub(spawnSubFX(m.fx,'impact',pts),f,m.name);   /* 亜空切断のガラス割れ等 */
@@ -4612,6 +4745,15 @@ function launch(f,foe,m){
   sh.owner=f; sh.launchAt=battleTime; sh.powerMul=1; sh.moveName=m.name;
   sh.move=m;   /* 相殺の門番が分類を見られるように技そのものを持たせる（MOVE-03） */
   shots.push(sh);
+  /* 補助弾は自分の側で飛ぶ（forSide=f.side）—— そのままやと発射した本人が
+     stepBattle の飛来検知に自分の弾を拾われて回避を振ったり（無料の0.55秒ドッジ窓が
+     次の溜めを無言で潰す）、同じ本人の他の弾と相殺の土俵に上がったりする（B6）。
+     pushSub の装飾素材と同じ作法（clashed=true が実際の門番。stepClash の live フィルタが
+     見とるんは clashed で、forSide='none' だけでは相殺のペア判定 forSide!==other.forSide を
+     すり抜けられん）で、両方まとめて除外する。副作用は無い —— clashed/dodgeChecked は
+     除外フィルタとしてしか読まれとらんけん、補助弾の完了コールバック（applySupportEffect）
+     は潰れん。 */
+  if(support){ sh.dodgeChecked=true; sh.clashed=true; }
   AILog.event(f.side, f.name+'が '+m.name+' を発射');
 }
 
