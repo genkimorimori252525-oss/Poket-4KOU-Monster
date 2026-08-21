@@ -489,8 +489,34 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   const library = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'moves', 'library.json'), 'utf8'));
   const supportRecords = Object.values(library).filter((rec) => rec.battle && rec.battle.kind === 'support');
   ok(supportRecords.length > 0, '棚に kind:\'support\' のレコードが1件も無い（このプランの成果物やけん赤）: ' + supportRecords.length);
-  console.log('\n棚の補助技(構造・件数のみ)  ' + supportRecords.length + '件: '
+
+  /* ---- 段1「棚の補助技(構造)」 ----
+     本数は >= で見て（Plan 03 が >= 5 へ上げる）、技名で決め打ちせん。
+     「補助技やない技が kind を持っとらんこと」のような否定の全走査は書かん。 */
+  const SUPPORT_STATS_SET = new Set(['atk', 'def', 'eva', 'spd']);
+  const GENERIC_GENERATORS = new Set(['projectile', 'beam', 'slash', 'lightning', 'aura', 'shatter']);
+  console.log('\n段1「棚の補助技(構造)」  ' + supportRecords.length + '件: '
     + supportRecords.map((r) => r.name).join('、'));
+  for (const rec of supportRecords) {
+    const label = rec.name;
+    const e = rec.battle.effect;
+    ok(e && SUPPORT_STATS_SET.has(e.stat),
+       label + '：effect.stat が atk/def/eva/spd のどれでもない: ' + (e && e.stat));
+    ok(e && (e.target === 'self' || e.target === 'foe'),
+       label + '：effect.target が self/foe のどちらでもない: ' + (e && e.target));
+    ok(e && e.delta >= -25 && e.delta <= 25,
+       label + '：effect.delta が applySupportEffect の再クランプ範囲(-25〜25)の外: ' + (e && e.delta));
+    ok(e && e.dur >= 3 && e.dur <= 20,
+       label + '：effect.dur が applySupportEffect の再クランプ範囲(3〜20)の外: ' + (e && e.dur));
+    ok(rec.battle.power === 0, label + '：battle.power が 0やない（期待ダメージの嘘の点になる）: ' + rec.battle.power);
+    const nominal = e ? Math.abs(e.delta) * e.dur : 0;
+    ok(nominal >= 270, label + '：|effect.delta|×effect.dur が270未満（名目値・MOVE-02の線）: ' + nominal);
+    ok(rec.fx && !GENERIC_GENERATORS.has(rec.fx.generator),
+       label + '：fx.generatorが汎用6種のまま（掟3。専用generatorを使うこと）: ' + (rec.fx && rec.fx.generator));
+    console.log('  ' + label + '  stat=' + (e && e.stat) + ' target=' + (e && e.target)
+      + ' delta=' + (e && e.delta) + ' dur=' + (e && e.dur) + ' |delta|×dur=' + nominal
+      + ' power=' + rec.battle.power + ' generator=' + (rec.fx && rec.fx.generator));
+  }
 
   /* 棚の入れ子形（battle:{...}）を、実行時の平らなオブジェクトへ詰め替える
      （02.1で確認済みの設計・03-01-PLAN.md <context>）。tagsは必ず配列（02.1-01 Deviation 2と同じ罠）。 */
@@ -507,6 +533,114 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
     effect: rec.battle.effect,
     fx: rec.fx,
   }));
+
+  /* ---- 段2「補助の値打ち(較正実測表)」 ----
+     window.__pin(f,foe) の較正シナリオ（f=enemy・foe=ally・両者stats/per全50・
+     foe.actionTimer=1.0）で、拾った補助技それぞれについて buffValue と scoreMove().total を
+     直に呼んで測り、参照の scoreMove(f,foe,shakunetsu).total と並べて表に出す。
+     assertは「実際に落ちうる」4つだけ（scoreHold比較は03-PLAN-CHECK.md W2で外した空振り）。
+     f.moves には測る補助技と shakunetsu を載せる —— refAtkMove が物差しを f.moves から
+     選ぶけん、載せんと refAtkMove が null になって値打ちが 0 になる。 */
+  const calibration = await pg.evaluate(({ moves }) => {
+    resetBattle(4242);
+    const f = enemy, foe = ally;
+    const save = window.__pin(f, foe);
+    const savedMoves = f.moves, savedCd = f.cd;
+    const rows = [];
+    let refTotal = null;
+    try {
+      for (const m of moves) {
+        f.moves = [m, MOVES.shakunetsu];
+        f.cd = {};
+        const bv = buffValue(f, foe, m.effect);
+        const scored = scoreMove(f, foe, m);
+        const refScored = scoreMove(f, foe, MOVES.shakunetsu);
+        refTotal = refScored.total;
+
+        const buffTerm = scored.terms.find((t) => t.n === '補助の値打ち');
+        const dmgTerm = scored.terms.find((t) => t.n === '期待ダメージ');
+
+        /* 3. 向きが偶然やない：targetだけ裏返した版で測って負になること */
+        const flippedEffect = Object.assign({}, m.effect, { target: m.effect.target === 'foe' ? 'self' : 'foe' });
+        const bvFlipped = buffValue(f, foe, flippedEffect);
+
+        /* 4. 較正シナリオが天井の外にある：effDeltaを一時的に恒等関数へ差し替えて
+           同じbuffValueを測る（R2チェックと同じモンキーパッチの手口）。finallyで必ず戻す。 */
+        const origEffDelta = effDelta;
+        let bvIdentity;
+        try {
+          effDelta = (base, delta) => delta;
+          bvIdentity = buffValue(f, foe, m.effect);
+        } finally {
+          effDelta = origEffDelta;
+        }
+
+        rows.push({
+          id: m.id, name: m.name, stat: m.effect.stat, delta: m.effect.delta, dur: m.effect.dur,
+          buffValue: bv, total: scored.total,
+          hasBuffTerm: !!buffTerm, hasDmgTerm: !!dmgTerm,
+          bvFlipped, bvIdentity, effDeltaRestored: effDelta(92, 25) === 8,
+        });
+      }
+    } finally {
+      f.moves = savedMoves; f.cd = savedCd;
+      window.__unpin(f, foe, save);
+      resetBattle(4242);
+    }
+    return { rows, refTotal };
+  }, { moves: flatSupportMoves });
+
+  console.log('\n段2「補助の値打ち(較正実測表)」  参照(灼熱弾) scoreMove().total = ' + calibration.refTotal.toFixed(2));
+  console.log('技名'.padEnd(12) + 'stat'.padEnd(6) + 'delta'.padEnd(7) + 'dur'.padEnd(6)
+    + 'delta×dur'.padEnd(11) + '補助の値打ち'.padEnd(14) + '総合点'.padEnd(10) + '対灼熱弾の差');
+  for (const r of calibration.rows) {
+    const nominal = Math.abs(r.delta) * r.dur;
+    const diff = r.total - calibration.refTotal;
+    console.log(
+      r.name.padEnd(12) + r.stat.padEnd(6) + String(r.delta).padEnd(7) + String(r.dur).padEnd(6)
+      + String(nominal).padEnd(11) + r.buffValue.toFixed(2).padEnd(14) + r.total.toFixed(2).padEnd(10)
+      + (diff >= 0 ? '+' : '') + diff.toFixed(2)
+    );
+    ok(r.buffValue > 0, r.name + '：buffValue(f,foe,effect) が正やない（符号）: ' + r.buffValue);
+    ok(r.hasBuffTerm, r.name + '：scoreMove().terms に「補助の値打ち」項が出とらん');
+    ok(!r.hasDmgTerm, r.name + '：scoreMove().terms に「期待ダメージ」項が出とる（power=0にし忘れとらんか）');
+    ok(r.bvFlipped < 0, r.name + '：target反転版のbuffValueが負やない（向きが偶然やないことを確かめられん）: ' + r.bvFlipped);
+    ok(Math.abs(r.bvIdentity - r.buffValue) < 1e-9,
+       r.name + '：effDeltaを恒等関数へ差し替えたらbuffValueが変わった（較正シナリオが天井の外にない）: '
+       + r.bvIdentity + ' vs ' + r.buffValue);
+    ok(r.effDeltaRestored, r.name + '：effDelta の後始末が効いとらん（モンキーパッチが残った）');
+  }
+  console.log('（「灼熱弾に総合点で勝つこと」はassertせん —— spd/eva/defはatkの6〜7割しか換算率が無く（02.1-PLAN-CHECK.md:76-84）、'
+    + '勝ち負けをassertするとにーくらが決めたspd/eva/defの技が数字を上限まで膨らませんと緑にならん。'
+    + 'AIが実際に撃つかはPlan 03の実走行ゲートで測る（softmaxはint50でT=18.2と熱い）。）');
+
+  /* ---- 段3「実効と名目の食い違い」 ----
+     ページの素のロスターのまま（__pinせん・resetBattle(4242)直後）、拾った補助技それぞれの
+     effDelta(statOf(対象,stat), effect.delta) を測り、名目 effect.delta と並べてログに出す。
+     assertはせん、記録だけ —— 「名目で線を引いた」ことが誰にでも見えるようにする、というのが
+     この段の唯一の役目（パルキア atk92 に atk+22 を掛けたときの実効が +8 と出るのが正常）。 */
+  const nominalVsEffective = await pg.evaluate(({ moves }) => {
+    resetBattle(4242);
+    const caster = partyA[0], foe = partyB[0];
+    const rows = moves.map((m) => {
+      const target = m.effect.target === 'foe' ? foe : caster;
+      const baseStat = statOf(target, m.effect.stat);
+      const eff = effDelta(baseStat, m.effect.delta);
+      return {
+        name: m.name, targetName: target.name, stat: m.effect.stat, targetStat: baseStat,
+        nominal: m.effect.delta, effective: eff,
+      };
+    });
+    resetBattle(4242);
+    return rows;
+  }, { moves: flatSupportMoves });
+
+  console.log('\n段3「実効と名目の食い違い」  （assertなし・記録のみ）');
+  console.log('技名'.padEnd(12) + '対象個体'.padEnd(18) + '名目delta'.padEnd(12) + '実効delta');
+  for (const r of nominalVsEffective) {
+    console.log(r.name.padEnd(12) + (r.targetName + '(素の' + r.stat + '=' + r.targetStat + ')').padEnd(18)
+      + String(r.nominal).padEnd(12) + String(r.effective));
+  }
 
   /* 実走行本体。1回の呼び出しで1通り分（pinnedかどうか・seed）を回す。
      f=partyA[0]、foe=partyB[0]（03-01-PLAN.md Task 1の指定どおり）。
