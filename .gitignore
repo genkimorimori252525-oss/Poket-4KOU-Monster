@@ -25,3 +25,11 @@ shioumon_backup_*.json
 tools/_shot-*.png
 tools/_bar-shot.png
 tools/_look-shot.png
+
+# GSD/NGSD がこの実行のあいだだけ持つ状態。分離の解決結果・セッションのロック・
+# 計測の生ログ・Playwright の出力。どれも「今このマシンで起きとること」やけん載せん。
+.gsd/
+.planning/milestone.lock
+.planning/ngsd-probe/
+.planning/ngsd-ledger.jsonl
+output/
