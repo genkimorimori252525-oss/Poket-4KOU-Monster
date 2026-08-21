@@ -1802,9 +1802,11 @@ function buildMoveLib(){
     rec:()=>{
       if(!editMove) return null;
       const c=editMove;
+      const battle={type:c.type,power:c.power,cast:c.cast,cooldown:c.cooldown,
+                    tags:(c.tags||[]).slice(),kind:c.kind};
+      if(c.kind==='support') battle.effect=c.effect;
       return { name:c.name, fx:JSON.parse(JSON.stringify(c.fx)),
-               battle:{type:c.type,power:c.power,cast:c.cast,cooldown:c.cooldown,
-                       tags:(c.tags||[]).slice()},
+               battle:battle,
                audio:JSON.parse(JSON.stringify(audioListOf(c))) };
     },
     load:(rec,k)=>{
@@ -1813,6 +1815,7 @@ function buildMoveLib(){
       const c={ id:nextMoveId(), name:rec.name||k, type:b.type||'ノーマル',
                 power:b.power!=null?b.power:26, cast:b.cast!=null?b.cast:0.3,
                 cooldown:b.cooldown!=null?b.cooldown:2.4, tags:b.tags||[],
+                kind:b.kind, effect:b.effect,
                 fx:(rec.fx&&rec.fx.generator)?rec.fx:makeSpec('projectile',918273,rec.name||k,'炎'),
                 audio:Array.isArray(rec.audio)?rec.audio:[] };
       mon.customMoves.push(c);

@@ -48,6 +48,12 @@ async function setRange(pg, sel, n, v) {
   offlineFonts(b);
   const pg = await b.newPage({ viewport: { width: 420, height: 1100 } });
   const errs = [];
+  /* 明示アサーション。tools/verify_support.js の ok(cond,msg) と同じ形で、
+     同じ errs 配列へ積む（この配列が pageerror/console と一緒に最終的な終了コードを決める）。
+     このファイルはもともと「値を出す→人が読む」だけやったが、02.1-02（補助技UI）の
+     B5/B8 回帰は grep で捕まえられんかった経緯があるけん、実際にDOMを動かして
+     assert する形に足す（plan-check N5）。 */
+  const ok = (c, w) => { if (!c) errs.push(w); };
   pg.on('pageerror', e => errs.push('PAGEERROR ' + e.message));
   pg.on('console', m => { if (m.type() === 'error' && !/ERR_/.test(m.text())) errs.push('C ' + m.text()); });
   /* ダイアログは「表示できん端末」を想定して全部つっぱねる。
@@ -265,6 +271,138 @@ async function setRange(pg, sel, n, v) {
   out['8_撃った'] = await pg.evaluate(() => ({ fx: fxs.length, anim: sideA.anim }));
   await pg.waitForTimeout(1500);
   await pg.screenshot({ path: shot('cr_move.png') });
+
+  /* ---- 3.1 補助技：攻撃/補助トグルの即時反映（B8）・技棚round-trip・power:0の生存（B5） ----
+     自分専用の技を1本作って最後に消す。mon.customMoves[0]（このあとの節が触る）はそのまま残す。 */
+  await pg.evaluate(() => { newMove(); });
+  await pg.waitForTimeout(300);
+  const supId = await pg.evaluate(() => editMove.id);
+
+  const beforeToggle = await pg.evaluate(() => ({
+    威力あり: [...document.querySelectorAll('#mvBase .ctl')]
+      .some(d => d.querySelector('label') && d.querySelector('label').textContent === '威力'),
+    効果入力あり: !!document.getElementById('mvEffStat')
+  }));
+  ok(beforeToggle.威力あり && !beforeToggle.効果入力あり,
+     '前提が崩れとる：新規技は既定で攻撃のはずが威力/効果の出方がおかしい: ' + JSON.stringify(beforeToggle));
+  /* トグルを実際に操作する（selectOption は change イベントを発火させる） */
+  await pg.selectOption('#mvKind', 'support');
+  await pg.waitForTimeout(150);
+  const afterToggle = await pg.evaluate(() => ({
+    kind: editMove.kind, power: editMove.power, effect: { ...editMove.effect },
+    威力あり: [...document.querySelectorAll('#mvBase .ctl')]
+      .some(d => d.querySelector('label') && d.querySelector('label').textContent === '威力'),
+    効果入力あり: !!document.getElementById('mvEffStat'),
+    対象入力あり: !!document.getElementById('mvEffTarget'),
+    MOVESに反映: MOVES[editMove.id] ? { kind: MOVES[editMove.id].kind, effect: MOVES[editMove.id].effect } : null
+  }));
+  ok(afterToggle.kind === 'support' && afterToggle.power === 0,
+     'トグルで c.kind==="support" / c.power=0 にならん: ' + JSON.stringify(afterToggle));
+  ok(!afterToggle.威力あり,
+     'B8: 補助に切り替えても、閉じ直しなしで威力スライダが消えん（mvRebuild()呼びに戻っとらんか）');
+  ok(afterToggle.効果入力あり && afterToggle.対象入力あり,
+     'B8: 補助に切り替えても、閉じ直しなしで効果入力(効果/対象)が出らん');
+  ok(!!afterToggle.MOVESに反映 && afterToggle.MOVESに反映.kind === 'support' && !!afterToggle.MOVESに反映.effect,
+     'syncCustom() が MOVES[id] へ kind/effect を運んどらん: ' + JSON.stringify(afterToggle.MOVESに反映));
+  ok(JSON.stringify(afterToggle.effect) === JSON.stringify({ stat: 'atk', delta: 20, dur: 15, target: 'self' }),
+     '既定効果が {atk,delta:20,dur:15,target:self} やない（plan-check R4、勝てる領域からズレとる）: ' +
+     JSON.stringify(afterToggle.effect));
+  out['8h_補助トグル即時反映'] = { beforeToggle, afterToggle };
+
+  /* spd を選んだときだけ「次の技から」の注記が出るか */
+  await pg.selectOption('#mvEffStat', 'spd');
+  await pg.waitForTimeout(150);
+  const spdState = await pg.evaluate(() => ({
+    注記あり: !!document.getElementById('mvSpdNote'), stat: editMove.effect.stat
+  }));
+  ok(spdState.注記あり, 'spd効果を選んでも「次の技から効く」の注記が出らん（W1のUI半分）');
+  out['8i_spd注記'] = spdState;
+
+  /* 技棚（localStorage）round-trip：def+18/12秒/相手 で保存し、nested battle.kind/battle.effect を直接見る */
+  await pg.selectOption('#mvEffStat', 'def');
+  await pg.waitForTimeout(80);
+  await pg.evaluate(() => { editMove.effect.delta = 18; editMove.effect.dur = 12; mvRebuild(); });
+  await pg.selectOption('#mvEffTarget', 'foe');
+  await pg.waitForTimeout(150);
+  await pg.evaluate(() => {
+    document.querySelector('#mvLib input[type=text]').value = '__verify補助技棚__';
+    document.querySelector('#mvLib .ml-bar button').click();
+  });
+  await pg.waitForTimeout(300);
+  const shelfRec = await pg.evaluate(() => {
+    const lib = JSON.parse(localStorage.getItem('shioumon_move_lib_v1') || '{}');
+    const r = lib['__verify補助技棚__'];
+    return { kind: r && r.battle && r.battle.kind, effect: r && r.battle && r.battle.effect };
+  });
+  ok(shelfRec.kind === 'support',
+     '技棚(shioumon_move_lib_v1)のbattle.kindが"support"やない: ' + JSON.stringify(shelfRec));
+  ok(!!shelfRec.effect && shelfRec.effect.stat === 'def' && shelfRec.effect.delta === 18 &&
+     shelfRec.effect.dur === 12 && shelfRec.effect.target === 'foe',
+     '技棚(shioumon_move_lib_v1)のbattle.effectが入力と一致せん: ' + JSON.stringify(shelfRec.effect));
+  out['8j_技棚に保存'] = shelfRec;
+
+  /* 棚から customMoves[] へ読込み直し、フラットな kind/effect が元と一致するか */
+  await pg.evaluate(() => {
+    const rows = [...document.querySelectorAll('#mvLib .ml-ctl')];
+    const row = rows.find(r => r.querySelector('label') && r.querySelector('label').textContent === '__verify補助技棚__');
+    row.querySelectorAll('button')[0].click();
+  });
+  await pg.waitForTimeout(300);
+  const shelfLoaded = await pg.evaluate(() => {
+    const c = mon.customMoves[mon.customMoves.length - 1];
+    return { id: c.id, kind: c.kind, effect: { ...c.effect } };
+  });
+  ok(shelfLoaded.kind === 'support',
+     '技棚から読込んだ customMoves[] のkindが"support"やない: ' + JSON.stringify(shelfLoaded));
+  ok(shelfLoaded.effect.stat === 'def' && shelfLoaded.effect.delta === 18 &&
+     shelfLoaded.effect.dur === 12 && shelfLoaded.effect.target === 'foe',
+     '技棚から読込んだ effect が保存前と一致せん: ' + JSON.stringify(shelfLoaded.effect));
+  out['8k_技棚から読込'] = shelfLoaded;
+  /* 読込んで開いた技（customMoves末尾）を消す */
+  await pg.evaluate(() => { const c = editMove; editMove = null; delMove(c); });
+  await pg.waitForTimeout(150);
+
+  /* B5：power:0・cast:0 の補助技をスロットへ保存し、normalizeMon()（スロット読込と同じ経路）を
+     通しても両方とも 0 のまま残るか（+0||20 / +0||0.3 の再発防止）。 */
+  await pg.evaluate((id) => {
+    const c = mon.customMoves.find(x => x.id === id);
+    c.cast = 0;
+    syncCustom();
+  }, supId);
+  await pg.waitForTimeout(80);
+  await pg.evaluate(() => {
+    document.getElementById('slotName').value = '__verify補助技0__';
+    document.getElementById('slotSave').click();
+  });
+  await pg.waitForTimeout(300);
+  const b5 = await pg.evaluate((id) => {
+    const sl = JSON.parse(localStorage.getItem('shioumon_creator_slots') || '{}');
+    const raw = JSON.parse(sl['__verify補助技0__']);
+    const restored = normalizeMon(raw);
+    const c = restored.customMoves.find(x => x.id === id);
+    return { power: c && c.power, cast: c && c.cast, kind: c && c.kind };
+  }, supId);
+  ok(b5.power === 0,
+     'B5: normalizeMon()を通した後、power:0の補助技が0のまま残らん（+0||20の再発）: ' + JSON.stringify(b5));
+  ok(b5.cast === 0,
+     'B5: normalizeMon()を通した後、cast:0が0.3へ戻っとる（+0||0.3の再発）: ' + JSON.stringify(b5));
+  out['8l_power0が生き残る'] = b5;
+  /* このテスト専用スロットを消す（後続節の名前空間を汚さん） */
+  await pg.evaluate(() => {
+    const sl = JSON.parse(localStorage.getItem('shioumon_creator_slots') || '{}');
+    delete sl['__verify補助技0__'];
+    localStorage.setItem('shioumon_creator_slots', JSON.stringify(sl));
+  });
+
+  /* このセクション専用の技を消して、customMoves[] を元の1本（mon.customMoves[0]）だけに戻す */
+  await pg.evaluate((id) => {
+    const c = mon.customMoves.find(x => x.id === id);
+    if (c) { if (editMove === c) editMove = null; delMove(c); }
+  }, supId);
+  await pg.waitForTimeout(150);
+  out['8m_後始末'] = await pg.evaluate(() => ({
+    技の数: mon.customMoves.length, 残っとるID: mon.customMoves.map(c => c.id)
+  }));
 
   /* ---- 3.5 内蔵技をそのまま編集する ---- */
   await pg.evaluate(() => {
