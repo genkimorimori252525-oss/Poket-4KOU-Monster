@@ -409,7 +409,7 @@ class Fighter {
     /* 補助技のバフ（4.5節）。stat名 → {delta,until}。until は battleTime の絶対値。
        f.dodgeUntil と同じ「期限切れ判定」方式（毎フレーム減算せん）— stepBattle(dt) 経由
        でしか battleTime が進まん固定タイムステップの前提に自然に乗る。 */
-    this.buffs={};
+    this.buffs={}; this.callouts=[];
     this.types=['ノーマル'];
     this.per={aggr:50,caut:50,loyal:50,self:50};   // 性格（Phase 10）
     this.moves=[]; this.cd={}; this.mi=0;
@@ -605,7 +605,115 @@ class Fighter {
     g.drawImage(img,-w/2,-h,w,h);
     if(s.flash>0.01){ g.globalAlpha=s.alpha*s.flash*0.85; g.drawImage(silhouette(img),-w/2,-h,w,h); }
     g.restore();
+
+    /* 能力変化の見せ方（BUFFVIS）。本体の変形の外で描く —— 粒や札まで拡縮したら
+       跳んどる最中に大きさが変わってしまう。 */
+    drawBuffAura(g, this, px, py, w, h);
+    drawBuffChips(g, this, px, py, w, h);
+    drawBuffCallouts(g, this, px, py, w, h);
   }
+}
+
+/* =========================================================
+   能力変化の見せ方（BUFFVIS・2026-08-22）
+   にーくら「能力値が上がる際、エフェクトがあった方がわかりやすくない？
+             例えば、攻撃なら赤の粒粒エフェクトが体を纏う」
+
+   3つで役割を分ける:
+     粒   … 今 効いとることを常時伝える。色=stat、向き=上下
+     札   … その色が何かを、いつでも読める形で
+     告知 … 掛かった瞬間だけ。色の意味をここで覚えてもらう
+
+   ⚠ 乱数は hash3（fx_core.js:15）を使う。**戦闘の乱数に触らん。**
+     触ったら「絵を足しただけで試合の結果が変わる」——決定論（D-08）が壊れる。
+   ========================================================= */
+const BUFF_COL = { atk:'#e0402a', def:'#3070d8', spd:'#f0c020', eva:'#4aa840' };
+const BUFF_ORDER = ['atk','def','spd','eva'];
+
+function activeBuffs(f){
+  const out = [];
+  for(const k of BUFF_ORDER){
+    const b = f.buffs && f.buffs[k];
+    if(b && battleTime < b.until) out.push({ stat:k, delta:b.delta, col:BUFF_COL[k] });
+  }
+  return out;
+}
+
+/* 粒。加算合成やけん、赤と青が重なった所は勝手に紫に光る——混色表を持たんで済む。 */
+function drawBuffAura(g, f, px, py, w, h){
+  const list = activeBuffs(f);
+  if(!list.length) return;
+  g.save();
+  g.globalCompositeOperation = 'lighter';
+  for(const b of list){
+    const up = b.delta >= 0;
+    const seed = b.stat.charCodeAt(0);
+    for(let i=0;i<8;i++){
+      const ph = (battleTime*0.5 + hash3(i, seed, 3)) % 1;
+      /* √ を噛ませて偏らせる。等分布やと向きを変えても重心が動かん＝見た目に差が出ん。
+         強化は上へ寄り（平均2/3）、弱化は下へ寄る（平均1/3）。 */
+      const t = up ? Math.sqrt(ph) : 1 - Math.sqrt(ph);
+      const ax = px + (hash3(i, seed, 5) - 0.5) * w * 0.72;
+      const ay = py - 2 - t * h * 1.02;
+      const r  = 1.5 + hash3(i, seed, 7) * 1.4;
+      g.globalAlpha = 0.85 * Math.sin(Math.PI * ph);
+      g.fillStyle = b.col;
+      g.beginPath(); g.arc(ax, ay, r, 0, Math.PI*2); g.fill();
+    }
+  }
+  g.restore();
+}
+
+/* 札。体の横、画面の端から遠い側へ出す（はみ出さんように）。
+   にーくら「邪魔にならないよう小さく、かつ見やすく」——下地を敷いて背景に負けんようにする。 */
+function drawBuffChips(g, f, px, py, w, h){
+  const list = activeBuffs(f);
+  if(!list.length) return;
+  /* 箱の在る側と逆へ逃がす。敵の箱は左上（x 9-186, y 12-64）、味方の箱は右下（x 198-375, y 118-188）。
+     体の上へ置いたら箱へ潜る —— 敵は体が y37〜117 で、上半分がそもそも箱の帯と重なっとる。
+     縦も箱の下端(64)より下へ丸める。 */
+  const right = f.side !== 'ally';
+  const cw = 46, ch = 13, gap = 2;
+  const x = Math.max(2, Math.min(384-cw-2, right ? px + w*0.34 : px - w*0.34 - cw));
+  let y = Math.max(70, py - h*0.60);
+  g.save();
+  g.textBaseline = 'top';
+  for(const b of list){
+    g.globalAlpha = 0.78; g.fillStyle = '#141a26';
+    roundRect(g, x, y, cw, ch, 3); g.fill();
+    g.globalAlpha = 1; g.fillStyle = b.col;
+    g.font = F(10); g.textAlign = 'left';
+    g.fillText(STAT_JP[b.stat] + (b.delta>=0 ? '▲' : '▼'), x+3, y+2);
+    y += ch + gap;
+  }
+  g.restore();
+}
+
+/* 告知。掛かった瞬間から BUFF_CALLOUT_SEC 秒だけ、体の上に。 */
+const BUFF_CALLOUT_SEC = 2;
+function drawBuffCallouts(g, f, px, py, w, h){
+  if(!f.callouts || !f.callouts.length) return;
+  for(let i=f.callouts.length-1;i>=0;i--) if(battleTime >= f.callouts[i].until) f.callouts.splice(i,1);
+  if(!f.callouts.length) return;
+  g.save();
+  g.textAlign = 'center'; g.textBaseline = 'bottom';
+  g.font = F(11);
+  /* 頭のすぐ上。上げすぎると情報ボックスへ食い込む（実際に重なって読めんくなった）。
+     横は画面（384）の内側へ丸める——端の個体やと文字が切れる。 */
+  /* 頭の上。ただし敵は体の上半分が箱の帯に食われとるけん、箱の下端(64)より上へは出さん。
+     横も画面（384）の内側へ丸める——端の個体やと文字が切れる。 */
+  let y = Math.max(68, py - h*0.98);
+  const half = 58;
+  const cx = Math.max(half+2, Math.min(384-half-2, px));
+  for(const c of f.callouts){
+    const left = Math.max(0, c.until - battleTime);
+    g.globalAlpha = Math.min(1, left / 0.4);              /* 最後の0.4秒で消える */
+    g.lineWidth = 3; g.strokeStyle = 'rgba(10,14,22,0.9)';
+    g.strokeText(c.text, cx, y);
+    g.fillStyle = c.col; g.fillText(c.text, cx, y);
+    y -= 14;
+  }
+  g.restore();
 }
 
 /* =========================================================
@@ -1255,6 +1363,15 @@ function applySupportEffect(caster, foe, m){
   const note = effect.stat==='spd' ? '（次の技から効く）' : '';
   AILog.event(target.side, target.name+'の'+label+' '+(delta>=0?'+':'')+delta
     +'（'+dur.toFixed(1)+'秒）'+note);
+  /* 告知（BUFFVIS）。AIログは開発用で、遊んどる人には見えとらん。 */
+  if(!target.callouts) target.callouts = [];
+  target.callouts.push({
+    /* 名前は入れん。「ルギアもどきの攻撃力があがった！」は16文字＝約176px で、
+       384px の画面の半分近くを食う。告知はその個体の上に出るけん、誰のことかは位置で分かる。 */
+    text: label+'が'+(delta>=0?'あがった！':'さがった！'),
+    col: BUFF_COL[effect.stat] || '#ffffff',
+    until: battleTime + BUFF_CALLOUT_SEC });
+  if(target.callouts.length > 2) target.callouts.shift();
 }
 
 /* =========================================================
@@ -2111,7 +2228,7 @@ function resetBattle(seed){
   for(const s2 of ['ally','enemy']){ COSTBAR[s2].ghost=COST.ECON.start; COSTBAR[s2].flash=0; COSTBAR[s2].dir=0; }
   for(const f of [...partyA,...partyB]){
     f.dead=false; f.charging=null; f.cd={}; f.mi=0;
-    f.hp=f.maxHP; f.actionTimer=0.6; f.dodgeUntil=-1; f.immobileUntil=-1; f.lastMove=null; f.buffs={};
+    f.hp=f.maxHP; f.actionTimer=0.6; f.dodgeUntil=-1; f.immobileUntil=-1; f.lastMove=null; f.buffs={}; f.callouts=[];
     /* 演出まわりの状態も必ず消す。消し忘れると前の試合を引きずって
        決定論チェックが落ちる（`f.lastMove` で実際にやらかしとる） */
     f.seqT=null; f.cryT=null; f.durOv=null; f.pendMo.length=0;

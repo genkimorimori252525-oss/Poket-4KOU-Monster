@@ -817,6 +817,92 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   }
   console.log('（攻撃技だけの個体のコストが前後で1も動いとらんことは node tools/verify_cost.js が別途見る）');
 
+  /* ---- 段6「能力変化の見せ方」（BUFFVIS）----
+     にーくら「能力値が上がる際、エフェクトがあった方がわかりやすくない？」（2026-08-22）
+     粒＝色がstat・向きが上下、告知＝掛かった瞬間、札＝効いとる間ずっと。
+
+     ⚠ #cv やのうて fieldCv を読む。drawField() が描くんは裏のキャンバスで、
+        #cv へは loop() が後から合成する（verify_bar.js:38 が踏んだ失敗をなぞらん）。
+     ⚠ 座標は決め打ちせず f.L から取る。置き場所を動かしても検証が追従する。
+     ⚠ 背景や個体の絵にも赤い画素はあり得るけん、**バフ無しの絵を基準に取って差分で数える**。
+        絶対値で数えたら「もともと在った赤」を数えて嘘が出る。 */
+  const buffVis = await pg.evaluate(() => {
+    /* 枠は粒の範囲（±0.38w）ぴったり。札は +0.40w から出しとるけん枠外——
+       広く取ると札の文字を粒として数えて、重心が札の位置に釘付けになる（実際にやった）。 */
+    const rect = (f) => {
+      const w = f.L.size, h = f.L.size;
+      return { x: Math.max(0, Math.round(f.L.cx - w*0.38)),
+               y: Math.max(0, Math.round(f.L.platY + 10 - h*1.35)),
+               w: Math.round(w*0.76), h: Math.round(h*1.45) };
+    };
+    const grab = (f) => {
+      const r = rect(f);
+      return { r, d: Array.from(fieldCv.getContext('2d').getImageData(r.x,r.y,r.w,r.h).data) };
+    };
+    /* **差分で測る。** 粒は加算合成（lighter）で背景へ足すけん、出来上がりの画素値は
+       背景の色に左右される。「R>150 かつ G<115」みたいな絶対値の判定は、明るい背景の上では
+       成立せん（実際に赤も青も緑も検出できんかった）。どの色が"増えたか"だけを見る。 */
+    const diff = (base, cur) => {
+      const hit = { red:0, blue:0, yellow:0, green:0 };
+      let sumY = 0, n = 0;
+      const W = cur.r.w, H = cur.r.h;
+      for(let yy=0; yy<H; yy++) for(let xx=0; xx<W; xx++){
+        const i = (yy*W+xx)*4;
+        const dR = cur.d[i]-base.d[i], dG = cur.d[i+1]-base.d[i+1], dB = cur.d[i+2]-base.d[i+2];
+        let k = null;
+        if(dR>55 && dG>55 && dB < 0.45*Math.min(dR,dG)) k='yellow';        /* 黄は先に見る（赤と紛れる） */
+        else if(dR>55 && dG < 0.55*dR && dB < 0.55*dR) k='red';
+        else if(dB>55 && dR < 0.55*dB) k='blue';
+        else if(dG>55 && dR < 0.65*dG && dB < 0.65*dG) k='green';
+        if(k){ hit[k]++; sumY += yy; n++; }
+      }
+      return { ...hit, cy: n ? sumY/n/H : -1, n };
+    };
+    const shot = (setup) => {
+      resetBattle(777); const f = enemy;
+      f.buffs = {}; f.callouts = []; if(setup) setup(f);
+      drawField();
+      return grab(f);
+    };
+    const rawBase = shot(null);
+    const zero    = diff(rawBase, rawBase);
+    const atkUp   = diff(rawBase, shot((f)=>{ f.buffs.atk={delta: 22,until:battleTime+16}; }));
+    const atkDown = diff(rawBase, shot((f)=>{ f.buffs.atk={delta:-22,until:battleTime+16}; }));
+    const defUp   = diff(rawBase, shot((f)=>{ f.buffs.def={delta: 22,until:battleTime+16}; }));
+    const spdUp   = diff(rawBase, shot((f)=>{ f.buffs.spd={delta: 22,until:battleTime+16}; }));
+    const evaUp   = diff(rawBase, shot((f)=>{ f.buffs.eva={delta: 22,until:battleTime+16}; }));
+    const held    = diff(rawBase, shot((f)=>{ f.buffs.atk={delta: 22,until:battleTime+16}; }));
+    const cleared = diff(rawBase, shot(null));
+    resetBattle(777);
+    return { base: zero, atkUp, atkDown, defUp, spdUp, evaUp, held, cleared };
+  });
+
+  const bv = buffVis;
+  console.log('\n段6「能力変化の見せ方」  BUFFVIS：粒の色=stat／向き=上下（差分で数える）');
+  console.log('  基準(バフ無し)  赤=' + bv.base.red + ' 青=' + bv.base.blue
+              + ' 黄=' + bv.base.yellow + ' 緑=' + bv.base.green);
+  console.log('  攻撃↑          赤=' + bv.atkUp.red + '（+' + (bv.atkUp.red - bv.base.red) + '）重心y=' + bv.atkUp.cy.toFixed(2));
+  console.log('  攻撃↓          赤=' + bv.atkDown.red + '（+' + (bv.atkDown.red - bv.base.red) + '）重心y=' + bv.atkDown.cy.toFixed(2));
+  console.log('  防御↑          青=' + bv.defUp.blue + '（+' + (bv.defUp.blue - bv.base.blue) + '）');
+  console.log('  素早さ↑        黄=' + bv.spdUp.yellow + '（+' + (bv.spdUp.yellow - bv.base.yellow) + '）');
+  console.log('  回避↑          緑=' + bv.evaUp.green + '（+' + (bv.evaUp.green - bv.base.green) + '）');
+
+  ok(bv.atkUp.red   - bv.base.red    > 8, 'BUFFVIS-a: 攻撃バフで赤い粒が出とらん（差分 ' + (bv.atkUp.red - bv.base.red) + '）');
+  ok(bv.defUp.blue  - bv.base.blue   > 8, 'BUFFVIS-b: 防御バフで青い粒が出とらん（差分 ' + (bv.defUp.blue - bv.base.blue) + '）');
+  ok(bv.spdUp.yellow- bv.base.yellow > 8, 'BUFFVIS-c: 素早さバフで黄の粒が出とらん（差分 ' + (bv.spdUp.yellow - bv.base.yellow) + '）');
+  ok(bv.evaUp.green - bv.base.green  > 8, 'BUFFVIS-d: 回避バフで緑の粒が出とらん（差分 ' + (bv.evaUp.green - bv.base.green) + '）');
+  /* 向きが逆であること。強化は上へ昇るけん重心が上（y小）、弱化は下へ落ちるけん重心が下（y大）。 */
+  ok(bv.atkUp.cy >= 0 && bv.atkDown.cy >= 0 && bv.atkDown.cy - bv.atkUp.cy > 0.08,
+     'BUFFVIS-e: 強化と弱化で粒の向きが分かれとらん（強化の重心y=' + bv.atkUp.cy.toFixed(2)
+     + ' 弱化の重心y=' + bv.atkDown.cy.toFixed(2) + '／弱化の方が下＝y大 であるべき）');
+  /* 消したら基準へ戻る＝バフが在るときだけ描いとる証明。
+     『基準に赤が少ない』では証明にならん —— 青は基準に1721もあるけん、
+     色ごとに基準が違う。同じ絵で「掛けた／消した」を測るのが唯一の対比。 */
+  console.log('  掛けた→消した  赤 ' + bv.held.red + ' → ' + bv.cleared.red + '（基準 ' + bv.base.red + '）');
+  ok(bv.held.red - bv.base.red > 20 && Math.abs(bv.cleared.red - bv.base.red) <= 2,
+     'BUFFVIS-f: バフを消しても粒が残っとる（掛けた ' + bv.held.red + ' → 消した ' + bv.cleared.red
+     + ' ／基準 ' + bv.base.red + '）——バフが在るときだけ描く、になっとらん');
+
   await pg.close();
   await b.close();
 
