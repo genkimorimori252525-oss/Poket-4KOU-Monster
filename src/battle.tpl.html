@@ -414,6 +414,7 @@ class Fighter {
     this.per={aggr:50,caut:50,loyal:50,self:50};   // 性格（Phase 10）
     this.moves=[]; this.cd={}; this.mi=0;
     this.actionTimer=0.6; this.charging=null; this.dead=false;
+    this.immobileUntil=-1;   // 爆撃など、技が明示した行動不能の絶対時刻
     this.hp=this.maxHP;
     this.imgs={normal:null,attack:null,hurt:null,back:null};
     this.ph  ={normal:null,attack:null,hurt:null};
@@ -471,6 +472,9 @@ class Fighter {
     return null;
   }
   update(dt){
+    /* 行動不能中は通常姿勢を静止画として保持する。被弾・戦闘不能だけは止めず、
+       ダメージを受けた事実が見えなくなる事故を避ける。 */
+    if(battleTime<(this.immobileUntil||-1) && this.anim!=='hurt' && this.anim!=='faint' && this.anim!=='knockback') return;
     const def=ANIMS[this.anim]; if(!def) return;
     /* 体力が1/3以下やと待機の動きが落ちる（見た目だけ。戦闘計算には触れん） */
     const k=(this.anim==='idle' && this.ratio<=1/3)?0.85:1;
@@ -1742,6 +1746,7 @@ function pushSub(list,f,name){
 }
 
 function startAttack(f,foe,m){
+  if(f.dead||battleTime<(f.immobileUntil||-1)) return;
   f.pendMo.length=0;
   f.scheduleMotions(m.fx,'cast');
   if(!(m.fx.motions&&m.fx.motions.length)){
@@ -1785,6 +1790,15 @@ function launch(f,foe,m){
   sh.forSide = support ? f.side : foe.side;
   sh.owner=f; sh.launchAt=battleTime; sh.powerMul=1; sh.moveName=m.name;
   sh.move=m;   /* 相殺の門番が分類を見られるように技そのものを持たせる（MOVE-03） */
+  /* 爆撃の拘束。既存のひるみを流用せず、演出が生きている時間だけを絶対時刻で保持する。
+     溜め・予約モーションは中断し、通常姿勢で静止。CDは時間経過として進める。 */
+  const lockFor=Math.max(0,+spec.lockTarget||0)/Math.max(.05,sh.ts||1);
+  if(lockFor>0&&!foe.dead){
+    foe.immobileUntil=Math.max(foe.immobileUntil||-1,battleTime+lockFor);
+    foe.charging=null; foe.pendMo.length=0; foe.actionTimer=Math.max(.35,foe.actionTimer);
+    foe.play('idle');
+    AILog.event(foe.side,foe.name+'は '+m.name+' の間、行動不能');
+  }
   shots.push(sh);
   /* 補助弾は自分の側で飛ぶ（forSide=f.side）—— そのままやと発射した本人が
      stepBattle の飛来検知に自分の弾を拾われて回避を振ったり（無料の0.55秒ドッジ窓が
@@ -1872,8 +1886,8 @@ function isRangedShot(s){
   if(s && s.move && typeof MOVE_RANGE!=='undefined') return MOVE_RANGE.isRanged(s.move);
   return (s instanceof ProjectileFX) || (s instanceof BeamFX);   /* move を持たん素材はクラスで見る */
 }
-function isBullet(s){ return isRangedShot(s) && (s instanceof ProjectileFX); }
-function isBeam(s){ return isRangedShot(s) && (s instanceof BeamFX); }
+function isBullet(s){ return isRangedShot(s) && ((s instanceof ProjectileFX)||s.clashKind==='bullet'); }
+function isBeam(s){ return isRangedShot(s) && ((s instanceof BeamFX)||s.clashKind==='beam'); }
 
 /* 相殺スコア ＝ 攻撃力 × (1 + タイミング補正)
    タイミング補正は「どちらが先に撃ったか」＝采配の巧拙 */
@@ -1982,6 +1996,10 @@ function stepClash(){
 function tryDodge(f,sh,shooter){
   sh.dodgeChecked=true;
   if(f.dead||over) return;
+  if(battleTime<(f.immobileUntil||-1)){
+    AILog.event(f.side,f.name+'は行動不能で '+sh.moveName+' を回避できない');
+    return;
+  }
   const terms=[];
   const read=readOf(f), per=f.per;
   const T=(n,v)=>{ if(Math.abs(v)>=0.05) terms.push({n,v:+v.toFixed(1)}); };
@@ -2032,6 +2050,7 @@ function tryDodge(f,sh,shooter){
 function stepFighter(f,foe,dt){
   if(f.dead||over) return;
   for(const k in f.cd) f.cd[k]=Math.max(0,f.cd[k]-dt);
+  if(battleTime<(f.immobileUntil||-1)) return;
   if(f.charging){
     f.charging.t-=dt;
     if(f.charging.t<=0){ const m=f.charging.move; f.charging=null; launch(f,foe,m); }
@@ -2092,7 +2111,7 @@ function resetBattle(seed){
   for(const s2 of ['ally','enemy']){ COSTBAR[s2].ghost=COST.ECON.start; COSTBAR[s2].flash=0; COSTBAR[s2].dir=0; }
   for(const f of [...partyA,...partyB]){
     f.dead=false; f.charging=null; f.cd={}; f.mi=0;
-    f.hp=f.maxHP; f.actionTimer=0.6; f.dodgeUntil=-1; f.lastMove=null; f.buffs={};
+    f.hp=f.maxHP; f.actionTimer=0.6; f.dodgeUntil=-1; f.immobileUntil=-1; f.lastMove=null; f.buffs={};
     /* 演出まわりの状態も必ず消す。消し忘れると前の試合を引きずって
        決定論チェックが落ちる（`f.lastMove` で実際にやらかしとる） */
     f.seqT=null; f.cryT=null; f.durOv=null; f.pendMo.length=0;
