@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: 補助技を入れる
 status: in_progress
-stopped_at: 03-01完了。次はPlan 02（すなかけ・斎藤尻隠れの新規2本）
-last_updated: "2026-08-21T12:59:03.000Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-08-21T13:36:03.859Z"
 last_activity: 2026-08-21
-last_activity_desc: Phase 3 Plan 01完了。りゅうのまい・どくどく・うずしお の3本をkind:'support'化し、verify_support.jsに段1〜3＋実走行ブロックを追加（発動回数の合否は03-03へ一本化）
-state_head: 76f34281a1b1935fcc48c823f1690d20c8b9f81d
+last_activity_desc: Phase 3 Plan 02完了。すなかけ・斎藤尻隠れ の2本に専用generator・専用FXクラスを新造して棚に載せ、tools/verify_rebuilt_moves.jsの「39」決め打ちをSUPPORT_NAMES/ALLからの導出へ変えた（41 generator/class）
+state_head: 9243b80f34ec11a992da5092ae575b84e52baa8a
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 8
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -27,13 +27,13 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Phase: 03 (補助技を入れる), Plan 1 of 3 — COMPLETE
-Status: 03-01 完了。既存3本（りゅうのまい・どくどく・うずしお）を kind:'support' 化し、
-tools/verify_support.js に段1〜3＋実走行の測る仕掛けを作った（発動回数の合否は持たん・03-PLAN-CHECK.md B2）。
-次は 03-02（すなかけ・斎藤尻隠れの新規2本、専用FXクラスの新造）
-Last activity: 2026-08-21 — 03-01（3本を補助技化・verify_support.jsに較正実測表と実走行記録ブロックを追加）完了
+Phase: 03 (補助技を入れる), Plan 2 of 3 — COMPLETE
+Status: 03-02 完了。すなかけ・斎藤尻隠れ の2本に専用generator・専用FXクラス（SandAttackMoveFX/SaitoButtHideMoveFX）
+を新造して棚へ載せ、tools/verify_rebuilt_moves.js の「39」決め打ちを SUPPORT_NAMES/ALL からの導出に変えた（41
+generator/class）。補助技5本が atk/def/eva/spd と self/foe の両方を通った。次は 03-03（コストと発動回数ゲート）
+Last activity: 2026-08-21 — 03-02（すなかけ・斎藤尻隠れの専用FX新造・非流用ゲートの恒久化）完了
 
-Progress: [███░░░░░░░] 33%（1/3 プラン・このフェーズ）
+Progress: [███████░░░] 67%（2/3 プラン・このフェーズ）
 
 ## 前のマイルストーン（反動と間）
 
@@ -83,11 +83,12 @@ Progress: [███░░░░░░░] 33%（1/3 プラン・このフェー
 | Phase 02.1 P02 | 35min | 2 tasks | 2 files |
 | Phase 02.1 P03 | 13min | 2 tasks | 2 files |
 | Phase 03 P01 | 約25min | 3 tasks | 3 files |
+| Phase 03 P02 | 9min | 3 tasks | 8 files |
 
 ## Session
 
-**Last session:** 2026-08-21T12:59:03Z
-**Stopped at:** Completed 03-01-PLAN.md
+**Last session:** 2026-08-21T13:34:12.784Z
+**Stopped at:** Completed 03-02-PLAN.md
 **Resume file:** None
 
 ## Decisions
@@ -98,3 +99,5 @@ Progress: [███░░░░░░░] 33%（1/3 プラン・このフェー
 - [Phase 02.1]: workflow.test_commandにverify_creator.jsも追加登録（プラン外・NGSD掟7） — 02.1-02がB5/B8へ実アサーションを入れたのに恒久ゲートとして一度も自動で走っとらんかった。npm scriptはあってもtest_commandに乗っとらんければ発火しない
 - [Phase 03-01]: 実走行ブロックは発動回数を根拠にしたok(...)を1つも持たず、記録専用にした — 合否は03-03-PLAN.md Task 1へ一本化（03-PLAN-CHECK.md B2の是正）。降り口を2箇所に置くと片方だけ直されて食い違う日が来るため、判断は1箇所に寄せた
 - [Phase 03-01]: うずしおの配線検査は「撃った瞬間に相手の反動が縮む」を期待せず、foe.buffs.spd（delta負・until未来）とstatOf(foe,'spd')の低下の2点で「次の技から効く」ことを示した — f.cd確定タイミングの都合で前者をassertすると必ず落ちる
+- [Phase 03-02]: すなかけの基準点はthis.t(相手位置)・斎藤尻隠れはthis.f(使用者位置)。渦・炎・葉・稲妻・rmRingBurstとビック尻ドロップの語彙(落下・砂煙・衝撃輪)は避け、絵の骨格を既存技と分離した
+- [Phase 03-02]: tools/verify_rebuilt_moves.jsの件数assertは39を41へ書き換えず、SUPPORT_NAMES定数とALL=[...names,...SUPPORT_NAMES]からの導出へ変えた。次に専用技を足しても手直し不要な恒久形にした
