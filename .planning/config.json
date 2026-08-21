@@ -48,7 +48,7 @@
     "security_asvs_level": 1,
     "security_block_on": "high",
     "inline_plan_threshold": 2,
-    "test_command": "node build.js && node build.js --dev && node tools/verify_style.js && node tools/verify_signature_moves.js && node tools/verify_movelist.js && node tools/verify_learnable.js && node tools/verify_support.js && node tools/verify_creator.js && node tools/verify_cost.js && node tools/verify_rebuilt_moves.js && node tools/check_untouched.js"
+    "test_command": "node build.js && node build.js --dev && node tools/verify_style.js && node tools/verify_signature_moves.js && node tools/verify_movelist.js && node tools/verify_learnable.js && node tools/verify_support.js && node tools/verify_creator.js && node tools/verify_cost.js && node tools/verify_rebuilt_moves.js && node tools/check_untouched.js && node tools/verify_range.js && node tools/verify_bar.js && node tools/verify_butt_animation.js && node tools/verify_econ.js && node tools/verify_look.js && node tools/verify_power_scale.js && node tools/verify_resolve.js && node tools/verify_stance.js && node tools/verify_wire.js && node tools/verify_ma.js && node tools/verify_ui.js && node tools/verify_audio.js"
   },
   "ship": {
     "pr_body_sections": []
