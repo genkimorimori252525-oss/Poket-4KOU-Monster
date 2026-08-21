@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: 依存を切る** - 見本44技を外しても壊れんことを確かめ、依存箇所を洗い出す
 - [ ] **Phase 2: 軸を決める** - 威力・溜め・CD の釣り合いを**式**にする。3分類の役目を決める
-- [ ] **Phase 2.1: 補助技** (INSERTED) - 補助技が技として成立し、AI が状況を見て撃つようになる
+- [x] **Phase 2.1: 補助技** (INSERTED) - 補助技が技として成立し、AI が状況を見て撃つようになる
 - [ ] **Phase 3: 技を作る** - 軸に沿って技を揃える。相殺・回避・反動・間が意味を持つ組み合わせで
 
 ## Phase Details

@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 current_phase: 02.1
 current_phase_name: 補助技 (INSERTED)
-status: executing
-stopped_at: Completed 02.1-03-PLAN.md
+status: complete
+stopped_at: フェーズ02.1 完了・検証済み（借金2件・コードレビュー未実施）
 last_updated: "2026-08-21T07:40:39.473Z"
 last_activity: 2026-08-21
-last_activity_desc: 02.1-03（verify_support.js決定論仕上げ・恒久ゲート登録）完了。フェーズ02.1（補助技）全3プラン完了
+last_activity_desc: フェーズ02.1（補助技）完了。回帰チェーン8段green・VERIFICATION.md 作成
 state_head: ba620e1232d83670ef726d4219398ab29cfc8a50
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 1
   total_plans: 10
   completed_plans: 9
-  percent: 50
+  percent: 25
 ---
 
 # Project State
