@@ -772,6 +772,51 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
       + '（delta=' + uzushioCheck.delta + '、次に撃つときのcdScaleが重うなる）');
   }
 
+  /* ---- 段5「値段」（03-03-PLAN.md Task 2。MOVE-05）----
+     src/cost.js の supportPart(ids) が effect から等価威力を出すようになったことを、
+     拾った補助技それぞれについて実測する。
+     assert：棚から拾った補助技それぞれで costOf({stats:全50, moves:[id]}).mv が0より大きい
+     （N5の申し送り＝補助技が実質タダで通っとった穴が塞がったことの本体）。
+     加えて、その技を1本持つ個体のコストが、技を持たん同じ個体のコストより高いことも見る。
+     攻撃技（shakunetsu）だけの個体のコストが前後で変わっとらんことは
+     node tools/verify_cost.js が基準値と突き合わせて見る——ここでは二重に書かん。 */
+  const pricing = await pg.evaluate(({ moves }) => {
+    const stats = { atk: 50, def: 50, hp: 50, spd: 50, eva: 50, int: 50 };
+    const baseline = costOf({ stats, moves: [] });
+    const rows = [];
+    try {
+      for (const m of moves) {
+        MOVES[m.id] = m;
+        const withMove = costOf({ stats, moves: [m.id] });
+        rows.push({
+          id: m.id, name: m.name, stat: m.effect.stat, delta: m.effect.delta, dur: m.effect.dur,
+          mv: withMove.mv, cost: withMove.cost, baselineCost: baseline.cost,
+        });
+      }
+    } finally {
+      for (const m of moves) delete MOVES[m.id];
+    }
+    return { baseline, rows };
+  }, { moves: flatSupportMoves });
+
+  console.log('\n段5「値段」  MOVE-05：補助技もCostCalculatorを通って値段が付く（技を持たん基準コスト='
+    + pricing.baseline.cost + '）');
+  console.log('技名'.padEnd(12) + 'stat'.padEnd(6) + 'delta×dur'.padEnd(11)
+    + '等価威力(mv)'.padEnd(14) + 'コスト'.padEnd(8) + '基準コストとの差');
+  for (const r of pricing.rows) {
+    const nominal = Math.abs(r.delta) * r.dur;
+    console.log(
+      r.name.padEnd(12) + r.stat.padEnd(6) + String(nominal).padEnd(11)
+      + r.mv.toFixed(2).padEnd(14) + String(r.cost).padEnd(8)
+      + '+' + (r.cost - r.baselineCost)
+    );
+    ok(r.mv > 0, r.name + '：costOf().mv が0より大きくない（MOVE-05。補助技がタダで通っとる）: ' + r.mv);
+    ok(r.cost > r.baselineCost,
+       r.name + '：この技を1本持つ個体のコストが、持たん同じ個体（' + r.baselineCost
+       + '）より高くない: ' + r.cost);
+  }
+  console.log('（攻撃技だけの個体のコストが前後で1も動いとらんことは node tools/verify_cost.js が別途見る）');
+
   await pg.close();
   await b.close();
 

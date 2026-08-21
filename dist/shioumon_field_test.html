@@ -3984,7 +3984,9 @@ var COST = (function () {
     statCurve:  2.45,  // 上に行くほど急に高くなる。線形やと格上が安すぎる
     movePower:  0.12,  // 技の威力の合計にかける
     moveExtra:  2,     // 2本目以降の技1本あたり
-    floor:      1      // どんなに弱くてもコスト0にはせん（0除算とタダ乗りを防ぐ）
+    floor:      1,     // どんなに弱くてもコスト0にはせん（0除算とタダ乗りを防ぐ）
+    supportPivot:    270, // 02.1-PLAN-CHECK.md R4が実測した線。|delta|×durがこれで参照技1発ぶん
+    supportRefPower: 26   // 灼熱弾の威力。「1発ぶん」を威力へ読み替える換算（02.1-PLAN-CHECK.md R4）
   };
 
   /* 技IDの取り出し。文字列でも {id:...} でも受ける */
@@ -3992,17 +3994,37 @@ var COST = (function () {
     return (m.moves || []).map(function (x) { return typeof x === 'string' ? x : x.id; });
   }
 
+  /* 補助技の等価威力の合計。MOVE-05（02.1-PLAN-CHECK.md N5の申し送り）——
+     movePart が mv.power をそのまま足すだけやと、power:0 の補助技は実質タダで通る。
+     effect の delta×dur を「参照技(灼熱弾)何発ぶんか」に換算して威力へ読み替える。
+     判定は isSupportMove（src/moves.js）に必ず委ねる —— kind==='support' を自前で
+     書き直さん（判定が2か所に散るのが 02.1 が潰した事故の形）。 */
+  function supportPart(ids) {
+    var sum = 0;
+    for (var i = 0; i < ids.length; i++) {
+      var mv = (typeof MOVES !== 'undefined') ? MOVES[ids[i]] : null;
+      if (!mv || !isSupportMove(mv) || !mv.effect) continue;
+      var delta = mv.effect.delta, dur = mv.effect.dur;
+      if (!Number.isFinite(delta) || !Number.isFinite(dur)) continue;   // +x||0 は0を無い扱いする罠を避ける
+      sum += Math.abs(delta) * dur / K.supportPivot * K.supportRefPower;
+    }
+    return sum;
+  }
+
   /* 技の威力の合計。MOVES に無い技（自作技など）は 0 として扱う。
      ⚠ ここは Phase 2 以降で効いてくる —— 自作技が0点のままやと、
      強い自作技を積んだ個体が**不当に安くなる**（＝三重取りの入口）。
-     今は仮式のまま置くが、実戦で歪みが出たら真っ先に疑う場所。 */
+     今は仮式のまま置くが、実戦で歪みが出たら真っ先に疑う場所。
+     補助技（power:0）は攻撃威力の合計には乗らんが、supportPart(ids) が
+     等価威力を足す —— 攻撃技だけの入力では supportPart が常に0を返すけん、
+     ここを変えても攻撃技だけの個体のコストは1も動かん（tools/verify_cost.js が守る）。 */
   function movePart(ids) {
     var sum = 0;
     for (var i = 0; i < ids.length; i++) {
       var mv = (typeof MOVES !== 'undefined') ? MOVES[ids[i]] : null;
       sum += mv ? mv.power : 0;
     }
-    return sum * K.movePower + Math.max(0, ids.length - 1) * K.moveExtra;
+    return (sum + supportPart(ids)) * K.movePower + Math.max(0, ids.length - 1) * K.moveExtra;
   }
 
   /* 本体。**内訳ごと返す**（掟9）。cost だけ欲しいときは .cost を見ればよい */
@@ -4050,7 +4072,7 @@ var COST = (function () {
     return victimCost * ratio * ECON.k;
   }
 
-  return { W: W, K: K, of: of, moveIds: moveIds, ECON: ECON, maxOwn: maxOwn, gainOn: gainOn };
+  return { W: W, K: K, of: of, moveIds: moveIds, supportPart: supportPart, ECON: ECON, maxOwn: maxOwn, gainOn: gainOn };
 })();
 
 /* 既存の呼び出しをそのまま生かす薄い皮。
