@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: 補助技を入れる
 status: in_progress
-stopped_at: 03-03-PLAN.md Task 1 完了、Task 2/3 は にーくら判断待ちで停止
-last_updated: "2026-08-21T14:03:39.000Z"
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-08-21T14:23:59.000Z"
 last_activity: 2026-08-21
-last_activity_desc: Phase 3 Plan 03 Task 1完了（MOVE-01網羅assert格上げ＋発動回数ゲート、5本とも較正2シードの少なくとも片方で発動）。Task 2着手前の事前チェックでnode tools/verify_cost.jsが本プラン変更と無関係な原因で赤と判明、プランの明示指示どおり実装を止めてにーくらへ報告（cost.js/config.jsonは無変更）
-state_head: 2cf4134bda60203768896ef92a29a0fee8b3384b
+last_activity_desc: Phase 3 Plan 03完了。Task 1（MOVE-01網羅assert＋発動回数ゲート）→ Task 2着手前チェックで本プラン外の既存レッド(verify_cost.js)を検出しにーくらへ報告・一旦停止 → にーくらがBAZERGIUS原型復元／PALKIA変更承認＋基準値焼き直し(commit 4ef5972)で解消 → Task 2（CostCalculatorへの値段付け）とTask 3（workflow.test_commandを11段へ）を再開・完了。Phase 3（補助技を入れる）はこれで完了、MOVE-01〜05・VER-01〜03すべて達成
+state_head: 811210a7e6e9d200a834f86154ab048d3069cff5
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
 ---
 
@@ -27,17 +27,19 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Phase: 03 (補助技を入れる), Plan 3 of 3 — Task 1 完了、Task 2/3 停止（にーくら判断待ち）
-Status: 03-03 Task 1（MOVE-01網羅assert＋発動回数ゲート）完了・commit 2cf4134。
+Phase: 03 (補助技を入れる), Plan 3 of 3 — COMPLETE。**Phase 3 完了。**
+Status: 03-03 の3タスクすべて完了。Task 1（MOVE-01網羅assert＋発動回数ゲート・commit 2cf4134）で
 5本とも較正2シード(31337/90210)の少なくとも片方で発動（りゅうのまい1/4・どくどく3/2・
-うずしお5/6・すなかけ5/6・斎藤尻隠れ5/1）、梯子（段上げ）も降り口も発動せず。
-Task 2（CostCalculatorへ補助技の値段付け）着手前の必須事前チェックで
-`node tools/verify_cost.js` が本プランの変更と無関係な原因で既に赤と判明したため、
-プランの明示指示（「直さずに止めてにーくらへ報告する」）どおり src/cost.js に一切触れず停止。
-詳細は 03-03-SUMMARY.md の「Task 2/3 停止の報告」節。
-Last activity: 2026-08-21 — 03-03 Task 1完了・Task 2/3停止
+うずしお5/6・すなかけ5/6・斎藤尻隠れ5/1）を確認、梯子（段上げ）も降り口も発動せず。
+Task 2着手前の事前チェックで `node tools/verify_cost.js` の既存レッド（本プラン外・
+Phase 3着手前のデータ移行が原因）を検出し一旦停止・にーくらへ報告 →
+にーくらが保存個体BAZERGIUSを原型へ復元／PALKIAは変更を承認して基準値を焼き直し
+（commit 4ef5972）→ Task 2（`src/cost.js` へ `supportPart`/`K.supportPivot`/`K.supportRefPower`
+を追加、5本とも `costOf().mv>0`・commit f1e88cb）とTask 3（`workflow.test_command` を
+11段へ・commit 811210a）を再開して完了。MOVE-01〜05・VER-01〜03すべて達成。
+Last activity: 2026-08-21 — 03-03完了。Phase 3完了
 
-Progress: [████████░░] 80%（Task 1/3 タスク・このプラン。3プラン目のうち完了扱いはまだ2）
+Progress: [██████████] 100%（3/3 プラン・このフェーズ）
 
 ## 前のマイルストーン（反動と間）
 
@@ -88,25 +90,30 @@ Progress: [████████░░] 80%（Task 1/3 タスク・このプ�
 | Phase 02.1 P03 | 13min | 2 tasks | 2 files |
 | Phase 03 P01 | 約25min | 3 tasks | 3 files |
 | Phase 03 P02 | 9min | 3 tasks | 8 files |
+| Phase 03 P03 | 約60min（うち約15分はverify_cost.js赤の原因追跡、停止・再開込み） | 3 tasks | 4 files |
 
 ## Session
 
-**Last session:** 2026-08-21T14:03:39.000Z
-**Stopped at:** 03-03-PLAN.md Task 1 完了、Task 2/3 は にーくら判断待ちで停止
-**Resume file:** .planning/phases/03-five-support-moves/03-03-SUMMARY.md（「Task 2/3 停止の報告」節）
+**Last session:** 2026-08-21T14:23:59.000Z
+**Stopped at:** Completed 03-03-PLAN.md
+**Resume file:** None
 
-## Blockers
+## Blockers（解消済み・記録として残す）
 
-- **[Phase 03-03] `node tools/verify_cost.js` が Task 2 着手前の事前チェックで既に赤。**
+- **[Phase 03-03・解消済み] `node tools/verify_cost.js` が Task 2 着手前の事前チェックで既に赤やった。**
   原因は本プランの変更やない —— `data/monsters/BAZERGIUS.json`/`PALKIA.json` の技配列が
   commit `a544b64`（Phase 3 着手前、Codexの「技棚・個体データを専用generatorに合わせる」
   データ移行）で2本→3本へ増え、`K.moveExtra` の寄与が変わったため
   （`tools/fixtures/cost-baseline.json` は2026-08-19生成・移行より前）。
   プランの明示指示（`03-03-PLAN.md` <context> と Task 2 手順0）により、
-  赤の状態で `src/cost.js` へ触ることも `cost-baseline.json` を焼き直すことも禁じられとる。
-  **にーくらの判断待ち**：(a) 保存個体の技配列を意図した状態へ戻す (b) 現状を正として
-  `node tools/cost_baseline.js` で基準値を焼き直す、のどちらかを にーくら が選んでから
-  Task 2/3 を再開する。詳細は 03-03-SUMMARY.md。
+  赤の状態で `src/cost.js` へ触ることも `cost-baseline.json` を焼き直すことも禁じられとって、
+  一旦実装を止めて にーくら へ報告した（判断の正しさは にーくら からも確認をもらった）。
+  **にーくらの判断で解消（commit `4ef5972`）：** BAZERGIUS は「知らん間に技を装備されとった」
+  本当の改変やったけん原型（`6364722` 時点）へ復元、コストは20へ復帰。PALKIA は
+  「同じ技が専用FXで描かれるようになっただけ」で構成は変わっとらんため変更を受け入れ、
+  `tools/cost_baseline.js` で基準値を焼き直した（動いたのは `saved:PALKIA` の2項目のみ、
+  他2404通りは無変更を検算済み）。`workflow.test_command` へ `verify_cost.js` を追加登録も
+  にーくら承認で完了。この解消を受けてTask 2/3を再開・完了した。
 
 ## Decisions
 
@@ -120,3 +127,5 @@ Progress: [████████░░] 80%（Task 1/3 タスク・このプ�
 - [Phase 03-02]: tools/verify_rebuilt_moves.jsの件数assertは39を41へ書き換えず、SUPPORT_NAMES定数とALL=[...names,...SUPPORT_NAMES]からの導出へ変えた。次に専用技を足しても手直し不要な恒久形にした
 - [Phase 03-03]: 段1をMOVE-01網羅assert（件数>=5・stat4種・target2種）へ格上げし、段4の実走行ブロックに発動回数を根拠にしたok(...)を初めて追加した — 03-01/03-02は記録専用のまま、合否を持つのはこの段だけ（03-PLAN-CHECK.md B2の設計どおり）
 - [Phase 03-03]: Task 2着手前の事前チェック（プラン明示指示）でnode tools/verify_cost.jsが既に赤と判明。原因はPhase3開始前のCodexデータ移行（BAZERGIUS/PALKIAの技配列が2→3本）で、支援技のpower:0化とは無関係。「直さずに止めてにーくらへ報告する」の指示どおりsrc/cost.js・cost-baseline.jsonのどちらにも触れず停止した — 基準値を焼き直して通す手は明示的に禁じられとる
+- [Phase 03-03]: にーくらがBAZERGIUS原型復元／PALKIA変更承認＋基準値焼き直しで詰まりを解消（commit 4ef5972）。src/cost.jsにK.supportPivot(270)/K.supportRefPower(26)とsupportPart(ids)を追加し、movePartを「威力合計+supportPart(ids)」へ組み替え。攻撃技だけの個体のコストは基準値2406通りと完全一致のまま、5本とも costOf().mv>0 になった
+- [Phase 03-03]: workflow.test_commandへ空振りしとった残り2本（verify_rebuilt_moves.js／check_untouched.js）を追加し11段に。verify_cost.jsはにーくら承認済みの9段目として既存のため重複追加せず。読み直した文字列そのものを丸ごと実行してexit 0を確認

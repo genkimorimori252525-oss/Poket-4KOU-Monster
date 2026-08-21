@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: 依存を切る** - 見本44技を外しても壊れんことを確かめ、依存箇所を洗い出す
 - [ ] **Phase 2: 軸を決める** - 威力・溜め・CD の釣り合いを**式**にする。3分類の役目を決める
 - [x] **Phase 2.1: 補助技** (INSERTED) - 補助技が技として成立し、AI が状況を見て撃つようになる
-- [ ] **Phase 3: 補助技を入れる** - 補助技を5本作り、Phase 2.1 で組んだ仕組みを実際に動かす
+- [x] **Phase 3: 補助技を入れる** - 補助技を5本作り、Phase 2.1 で組んだ仕組みを実際に動かす
 
 ## Phase Details
 
@@ -145,17 +145,19 @@ generator が aura というだけで `applyHit` に到達せんけん、威力�
 **Mode:** mvp
 **Depends on**: Phase 2.1（仕組み）／Phase 2（軸・数字の根拠として）
 **Requirements**: MOVE-01〜05, VER-01, VER-02, VER-03
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 
 - [ ] 03-PLAN-CHECK.md
 - [x] 03-01-PLAN.md — 既存3本（りゅうのまい・どくどく・うずしお）に `kind`/`effect` を載せ、棚の補助技を実測するゲートを作る（wave 1）
 - [x] 03-02-PLAN.md — 新規2本（すなかけ・斎藤尻隠れ）の専用generatorと専用描画クラスを新造し、非流用ゲートの39決め打ちを解く（wave 2）
-- [ ] 03-03-PLAN.md — AI が5本とも撃つことを実走行で数え、CostCalculator で値段を付け、空振りしとった3本のゲートを `workflow.test_command` へ載せる（wave 3）
-  **Task 1（発動回数ゲート・MOVE-03）は完了・commit `2cf4134`。Task 2/3（コスト・ゲート追加）は
-  `node tools/verify_cost.js` の既存レッド（本プラン外・原因は Phase 3 着手前のデータ移行）により
-  にーくら判断待ちで停止中。詳細は `03-03-SUMMARY.md`。**
+- [x] 03-03-PLAN.md — AI が5本とも撃つことを実走行で数え、CostCalculator で値段を付け、空振りしとった3本のゲートを `workflow.test_command` へ載せる（wave 3）
+  **完了。Task 1（発動回数ゲート・MOVE-03）→ Task 2着手前チェックで本プラン外の既存レッド
+  （`node tools/verify_cost.js`、原因は Phase 3 着手前のデータ移行 commit `a544b64`）を検出し
+  一旦停止・にーくらへ報告 → にーくらが保存個体 BAZERGIUS を原型へ復元／PALKIA は変更を承認して
+  基準値を焼き直し（commit `4ef5972`）→ Task 2（CostCalculatorへの値段付け・MOVE-05）と
+  Task 3（`workflow.test_command` を11段へ）を再開・完了。詳細は `03-03-SUMMARY.md`。**
 
 **Phase 2.1 で機械は組み上がったが、動かす技が1本も無い。**
 技棚 191件を数えたら `kind:"support"` は **0本**。りゅうのまい・どくどく・うずしおは

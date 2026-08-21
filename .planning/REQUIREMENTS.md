@@ -61,7 +61,7 @@
 - [x] **MOVE-02**: 5本とも `delta × dur ≳ 270` を満たす。**AI が撃たん技を作らん**（plan-check R4 の実測線）
 - [x] **MOVE-03**: **AI が実際に5本とも撃つ**。棚に載っとるだけやのうて、戦闘の実走行で発動を数えて確かめる
 - [x] **MOVE-04**: 新規2本は専用FXクラスを持ち、既存素材の流用が無い（掟3・`verify_rebuilt_moves` と同じ非流用検査）
-- [ ] **MOVE-05**: 全部 `CostCalculator` を通って値段が付く。恒久ゲートに載り `workflow.test_command` から毎回走る
+- [x] **MOVE-05**: 全部 `CostCalculator` を通って値段が付く。恒久ゲートに載り `workflow.test_command` から毎回走る
 
 ### 補助技（SUP・Phase 2.1、INSERTED）
 
@@ -74,7 +74,7 @@
 
 ### 検証（VER）
 
-- [ ] **VER-01**: 技が式から外れとらんかを機械で確かめる
+- [x] **VER-01**: 技が式から外れとらんかを機械で確かめる
 - [x] **VER-02**: 既存の検証チェーンが全部通ったまま（12本）
 - [x] **VER-03**: `src/sfx_bank.js` が HEAD と1バイトも変わっとらん（不可触）
 
