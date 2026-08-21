@@ -34,7 +34,12 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   const errs = [];
   const ok = (c, w) => { if (!c) errs.push(w); };
   const battleSource = fs.readFileSync(path.join(ROOT, 'src', 'battle.tpl.html'), 'utf8');
-  ok(/powerLevel:Math\.max\(0,Math\.min\(1,\(\+f\.stats\.atk\|\|0\)\/100\)\)/.test(battleSource),
+  /* Phase 2.1（補助技）で f.stats.atk の直読みを statOf(f,'atk') 経由へ寄せた（4.5-2c）。
+     バフが乗っとらん間は statOf() が f.stats.atk をそのまま返す（byte-identical、
+     tools/verify_support.js で確認済み）けん、威力連動そのものは1ミリも変わっとらん。
+     ここは「使用者の atk が本演出へ渡っとるか」の配線チェックやけん、正規表現も
+     現在の読み口に合わせて更新する。 */
+  ok(/powerLevel:Math\.max\(0,Math\.min\(1,\(\+statOf\(f,'atk'\)\|\|0\)\/100\)\)/.test(battleSource),
     '使用者の atk が本演出へ渡っとらん');
   ok(/spawnSubFX\(m\.fx,'fire'/.test(battleSource) && !/spawnSubFX\(mainFx/.test(battleSource),
     '威力連動が parts や背景側へ漏れとる');

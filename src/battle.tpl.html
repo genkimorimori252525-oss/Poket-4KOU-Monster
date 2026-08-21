@@ -406,6 +406,10 @@ class Fighter {
     this.name=''; this.cost=0;
     /* --- 6ステータス（Phase 7） --- */
     this.stats={atk:50,def:50,hp:50,spd:50,eva:50,int:50};
+    /* 補助技のバフ（4.5節）。stat名 → {delta,until}。until は battleTime の絶対値。
+       f.dodgeUntil と同じ「期限切れ判定」方式（毎フレーム減算せん）— stepBattle(dt) 経由
+       でしか battleTime が進まん固定タイムステップの前提に自然に乗る。 */
+    this.buffs={};
     this.types=['ノーマル'];
     this.per={aggr:50,caut:50,loyal:50,self:50};   // 性格（Phase 10）
     this.moves=[]; this.cd={}; this.mi=0;
@@ -426,12 +430,12 @@ class Fighter {
     this.cry=null;                 // {id,vol,rate,data} 出現1.0倍／戦闘不能0.7倍
   }
   /* --- ステータスから導かれる値。すべてここに集約する --- */
-  get maxHP(){ return Math.round(40 + this.stats.hp*1.6); }          // 体力 → 最大HP
+  get maxHP(){ return Math.round(40 + statOf(this,'hp')*1.6); }          // 体力 → 最大HP
   get ratio(){ return Math.max(0,Math.min(1,this.hp/this.maxHP)); }
-  get cdScale(){ return 1.55 - this.stats.spd/100*0.85; }            // 素早さ → 行動間隔
-  get castScale(){ return 0.70 + (100-this.stats.spd)/100*0.60; }    // 素早さ → 発生の速さ
-  get shotScale(){ return 0.60 + this.stats.spd/100*0.90; }          // 素早さ → 弾速
-  get flinchRate(){ return Math.max(0.10,Math.min(0.85,0.85-this.stats.def/100*0.75)); } // 防御 → ひるみ耐性
+  get cdScale(){ return 1.55 - statOf(this,'spd')/100*0.85; }            // 素早さ → 行動間隔
+  get castScale(){ return 0.70 + (100-statOf(this,'spd'))/100*0.60; }    // 素早さ → 発生の速さ
+  get shotScale(){ return 0.60 + statOf(this,'spd')/100*0.90; }          // 素早さ → 弾速
+  get flinchRate(){ return Math.max(0.10,Math.min(0.85,0.85-statOf(this,'def')/100*0.75)); } // 防御 → ひるみ耐性
   play(n,dur){ this.anim=n; this.t=0; this.trail.length=0;
     this.durOv=(+dur>0)?+dur:null; }
   /* 技データの motions を、その瞬間ぶんだけ予約する */
@@ -1201,10 +1205,23 @@ function muzzle(f){ return { x:f.L.cx+34*f.dir, y:f.L.platY-f.L.size*0.58 }; }
 function target(f){ return { x:f.L.cx, y:f.L.platY-f.L.size*0.42 }; }
 function quarterBonus(){ return quarter<=4?1.0:(quarter<=6?1.10:1.25); }
 
+/* ステータスの唯一の読み口（4.5-2c）。素の値 → 補助技のバフ補正 →
+   （Phase 17: 特性の modifyStat フックの将来の差し込み口）→ 1〜100 に丸める。
+   buildStatUI のhpクランプと同じ丸めの作法を踏襲。
+   ⚠ battleTime（let、直前の行で宣言）を参照するが、statOf の呼び出しは常に
+   ページのトップレベル実行が終わったあと（戦闘中）なので TDZ の心配は無い
+   （creator.tpl.html の previewKey で過去に実際に TDZ を踏んだことがあるための注記）。 */
+function statOf(f,key){
+  let v=f.stats[key];
+  const buff=f.buffs[key];
+  if(buff && battleTime<buff.until) v+=buff.delta;
+  return Math.max(1, Math.min(100, Math.round(v)));
+}
+
 /* ダメージ式：標準技・攻撃50・防御50 で最大HPの約14% */
 function damageOf(atk,def,move){
-  const raw = move.power * (0.5 + atk.stats.atk/100);
-  const mit = 100/(100 + def.stats.def);
+  const raw = move.power * (0.5 + statOf(atk,'atk')/100);
+  const mit = 100/(100 + statOf(def,'def'));
   return raw * mit * quarterBonus() * stabOf(atk,move);
 }
 
@@ -1219,7 +1236,7 @@ const AILog = {
   entries:[], max:120, paused:false, filter:'all',
   decision(f,cands,pick,T){
     this.add({kind:'dec', side:f.side, t:battleTime, who:f.name,
-              pick, T, int:f.stats.int, cands});
+              pick, T, int:statOf(f,'int'), cands});
   },
   event(side,text){ this.add({kind:'ev', side, t:battleTime, text}); },
   clash(a,b,sa,sb,result,diff){
@@ -1227,7 +1244,7 @@ const AILog = {
               an:a.owner.name, bn:b.owner.name, sa, sb, result, diff});
   },
   dodge(f,terms,prob,ok){
-    this.add({kind:'dg', side:f.side, t:battleTime, who:f.name, terms, prob, ok, int:f.stats.int});
+    this.add({kind:'dg', side:f.side, t:battleTime, who:f.name, terms, prob, ok, int:statOf(f,'int')});
   },
   add(e){
     if(this.paused) return;
@@ -1330,7 +1347,7 @@ function orderActive(id){ return order.id===id && battleTime<order.until; }
 
 /* 命令への従いやすさ：忠実性で上がり、賢さで下がる（計画9.3） */
 function obedience(f){
-  return Math.max(0.05, Math.min(1, 0.25 + f.per.loyal/100*0.95 - f.stats.int/100*0.30));
+  return Math.max(0.05, Math.min(1, 0.25 + f.per.loyal/100*0.95 - statOf(f,'int')/100*0.30));
 }
 
 function incomingShot(f){
@@ -1340,7 +1357,7 @@ function incomingShot(f){
 /* 賢さ＝既存の条件をどれだけ使えるか。読みの精度（0〜1）
    指示「見切れ！」は、足りん読みをプレイヤーが肩代わりする */
 function readOf(f){
-  const base=f.stats.int/100;
+  const base=statOf(f,'int')/100;
   if(f.side==='ally' && orderActive('read')) return base + (1-base)*obedience(f);
   return base;
 }
@@ -1424,7 +1441,7 @@ function scoreMove(f,foe,m){
    賢い個体は加点しても順位が覆らん → 命令が効きにくい（10.3(b)）
    ========================================================= */
 function tempOf(f){
-  let T=1.2 + (100 - f.stats.int) * 0.34;
+  let T=1.2 + (100 - statOf(f,'int')) * 0.34;
   if(f.side==='ally' && TACTIC_TEMP[panel.tactic]) T*=TACTIC_TEMP[panel.tactic];
   return T;
 }
@@ -1523,7 +1540,7 @@ function scoreHold(f,foe){
   const dCa=(per.caut-50)/100, dAg=(per.aggr-50)/100, dSe=(per.self-50)/100;
   /* 賢さの効き。**賢いほど「今は待つべき」が分かる**。
      ただし掟どおり賢さは有利にも不利にも働く —— 賢すぎると待ちすぎる */
-  const iq=f.stats.int/100;
+  const iq=statOf(f,'int')/100;
 
   P('撃てるなら撃つ', HOLD_W.base);
 
@@ -1625,7 +1642,7 @@ function launch(f,foe,m){
   /* 弾速は技ではなく「撃った個体の素早さ」から決まる（計画15章） */
   /* 本演出だけに使用者の攻撃を渡す。ダメージ・背景演出・parts には影響させない。
      atk=50 が従来の1倍。技ごとの増減範囲は fx.powerVisual が決める。 */
-  const mainFx={...m.fx, powerLevel:Math.max(0,Math.min(1,(+f.stats.atk||0)/100))};
+  const mainFx={...m.fx, powerLevel:Math.max(0,Math.min(1,(+statOf(f,'atk')||0)/100))};
   const spec = mainFx.travel
     ? {...mainFx, travel:{...mainFx.travel, speed:Math.round(mainFx.travel.speed*f.shotScale)}}
     : mainFx;
@@ -1729,7 +1746,7 @@ function isBeam(s){ return isRangedShot(s) && (s instanceof BeamFX); }
 function clashScore(sh,other){
   const lead=(other.launchAt - sh.launchAt)/CLASH.timingWindow;
   const tim=Math.max(-1,Math.min(1,lead))*CLASH.timingMax;
-  return { total:sh.owner.stats.atk*(1+tim), atk:sh.owner.stats.atk, tim };
+  return { total:statOf(sh.owner,'atk')*(1+tim), atk:statOf(sh.owner,'atk'), tim };
 }
 
 function burstAt(x,y,frames){ bursts.push({x,y,frames,i:0}); }
@@ -1837,7 +1854,7 @@ function tryDodge(f,sh,shooter){
   const R=(n,v)=>{ const w=v*read; if(Math.abs(w)>=0.05) terms.push({n,v:+w.toFixed(1),r:1}); };
   const P=(n,v)=>{ if(Math.abs(v)>=0.05) terms.push({n,v:+v.toFixed(1),p:1}); };
 
-  T('基礎回避力', f.stats.eva*0.62);
+  T('基礎回避力', statOf(f,'eva')*0.62);
   R('見極め', 30);                                   // 賢さ＝避けるべき瞬間が分かる
   T('弾速', -(shooter.shotScale-0.6)*34);            // 撃った側の素早さが速いほど難しい
 
@@ -1941,7 +1958,7 @@ function resetBattle(seed){
   for(const s2 of ['ally','enemy']){ COSTBAR[s2].ghost=COST.ECON.start; COSTBAR[s2].flash=0; COSTBAR[s2].dir=0; }
   for(const f of [...partyA,...partyB]){
     f.dead=false; f.charging=null; f.cd={}; f.mi=0;
-    f.hp=f.maxHP; f.actionTimer=0.6; f.dodgeUntil=-1; f.lastMove=null;
+    f.hp=f.maxHP; f.actionTimer=0.6; f.dodgeUntil=-1; f.lastMove=null; f.buffs={};
     /* 演出まわりの状態も必ず消す。消し忘れると前の試合を引きずって
        決定論チェックが落ちる（`f.lastMove` で実際にやらかしとる） */
     f.seqT=null; f.cryT=null; f.durOv=null; f.pendMo.length=0;
