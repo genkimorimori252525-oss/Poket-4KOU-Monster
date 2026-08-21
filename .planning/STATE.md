@@ -1,18 +1,18 @@
 ---
 gsd_state_version: 1.0
-current_phase: 02.1
-current_phase_name: 補助技 (INSERTED)
-status: complete
-stopped_at: フェーズ02.1 完了・検証済み（借金2件・コードレビュー未実施）
-last_updated: "2026-08-21T10:19:59.543Z"
+current_phase: 03
+current_phase_name: 補助技を入れる
+status: in_progress
+stopped_at: 03-01完了。次はPlan 02（すなかけ・斎藤尻隠れの新規2本）
+last_updated: "2026-08-21T12:59:03.000Z"
 last_activity: 2026-08-21
-last_activity_desc: フェーズ02.1（補助技）完了。回帰チェーン8段green・VERIFICATION.md 作成
-state_head: 7bac4da2bd2dbbda9f53ba8b4e589a5cd41f1328
+last_activity_desc: Phase 3 Plan 01完了。りゅうのまい・どくどく・うずしお の3本をkind:'support'化し、verify_support.jsに段1〜3＋実走行ブロックを追加（発動回数の合否は03-03へ一本化）
+state_head: 76f34281a1b1935fcc48c823f1690d20c8b9f81d
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 4
-  completed_plans: 3
+  total_plans: 8
+  completed_plans: 4
   percent: 0
 ---
 
@@ -23,15 +23,17 @@ progress:
 See: .planning/PROJECT.md
 
 **Core value:** 技が**四皇モンの仕組みを実際に使う**こと。
-**Current focus:** Phase 02.1 — 補助技 (INSERTED)
+**Current focus:** Phase 3 — 補助技を入れる
 
 ## Current Position
 
-Phase: 02.1 (補助技 (INSERTED)), Plan 3 of 3 — COMPLETE
-Status: 02.1-03 完了。フェーズ02.1（補助技）は3/3プランで完了。次はPhase 3（技一覧の一本化・りゅうのまい等の実装）
-Last activity: 2026-08-21 — 02.1-03（tools/verify_support.jsの決定論仕上げ・workflow.test_commandへのverify_support/verify_creator登録）完了
+Phase: 03 (補助技を入れる), Plan 1 of 3 — COMPLETE
+Status: 03-01 完了。既存3本（りゅうのまい・どくどく・うずしお）を kind:'support' 化し、
+tools/verify_support.js に段1〜3＋実走行の測る仕掛けを作った（発動回数の合否は持たん・03-PLAN-CHECK.md B2）。
+次は 03-02（すなかけ・斎藤尻隠れの新規2本、専用FXクラスの新造）
+Last activity: 2026-08-21 — 03-01（3本を補助技化・verify_support.jsに較正実測表と実走行記録ブロックを追加）完了
 
-Progress: [██████████] 100%（3/3 プラン・このフェーズ）
+Progress: [███░░░░░░░] 33%（1/3 プラン・このフェーズ）
 
 ## 前のマイルストーン（反動と間）
 
@@ -80,11 +82,12 @@ Progress: [██████████] 100%（3/3 プラン・このフェ�
 | Phase 02.1 P01 | 38min | 3 tasks | 4 files |
 | Phase 02.1 P02 | 35min | 2 tasks | 2 files |
 | Phase 02.1 P03 | 13min | 2 tasks | 2 files |
+| Phase 03 P01 | 約25min | 3 tasks | 3 files |
 
 ## Session
 
-**Last session:** 2026-08-21T07:40:20.030Z
-**Stopped at:** Completed 02.1-03-PLAN.md
+**Last session:** 2026-08-21T12:59:03Z
+**Stopped at:** Completed 03-01-PLAN.md
 **Resume file:** None
 
 ## Decisions
@@ -93,3 +96,5 @@ Progress: [██████████] 100%（3/3 プラン・このフェ�
 - [Phase 02.1]: normalizeMon()はpower/cast/cooldownをNumber.isFiniteガードへ変更し、statは無効値でも書き換えずapplySupportEffectを唯一の権威にする — +c.power||20は0を無い扱いして支援技のpower:0/cast:0を毎回蘇らせていた（plan-check B5）。stat妥当性の二重判定は分岐を作るので避けた
 - [Phase 02.1]: determinismTest()の40秒×2ランで補助技が実際にキャストされたことをapplySupportEffectの呼び出し回数を数えて直接証明する（movelist掲載だけでは証拠にならん） — R2チェックのeffDeltaモンキーパッチと同じ手口を決定論チェックに展開。determinismTest()自体は使用技の統計を返さんため
 - [Phase 02.1]: workflow.test_commandにverify_creator.jsも追加登録（プラン外・NGSD掟7） — 02.1-02がB5/B8へ実アサーションを入れたのに恒久ゲートとして一度も自動で走っとらんかった。npm scriptはあってもtest_commandに乗っとらんければ発火しない
+- [Phase 03-01]: 実走行ブロックは発動回数を根拠にしたok(...)を1つも持たず、記録専用にした — 合否は03-03-PLAN.md Task 1へ一本化（03-PLAN-CHECK.md B2の是正）。降り口を2箇所に置くと片方だけ直されて食い違う日が来るため、判断は1箇所に寄せた
+- [Phase 03-01]: うずしおの配線検査は「撃った瞬間に相手の反動が縮む」を期待せず、foe.buffs.spd（delta負・until未来）とstatOf(foe,'spd')の低下の2点で「次の技から効く」ことを示した — f.cd確定タイミングの都合で前者をassertすると必ず落ちる

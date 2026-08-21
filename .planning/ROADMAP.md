@@ -145,10 +145,12 @@ generator が aura というだけで `applyHit` に到達せんけん、威力�
 **Mode:** mvp
 **Depends on**: Phase 2.1（仕組み）／Phase 2（軸・数字の根拠として）
 **Requirements**: MOVE-01〜05, VER-01, VER-02, VER-03
-**Plans:** 3 plans
+**Plans:** 1/4 plans executed
 
 Plans:
-- [ ] 03-01-PLAN.md — 既存3本（りゅうのまい・どくどく・うずしお）に `kind`/`effect` を載せ、棚の補助技を実測するゲートを作る（wave 1）
+
+- [ ] 03-PLAN-CHECK.md
+- [x] 03-01-PLAN.md — 既存3本（りゅうのまい・どくどく・うずしお）に `kind`/`effect` を載せ、棚の補助技を実測するゲートを作る（wave 1）
 - [ ] 03-02-PLAN.md — 新規2本（すなかけ・斎藤尻隠れ）の専用generatorと専用描画クラスを新造し、非流用ゲートの39決め打ちを解く（wave 2）
 - [ ] 03-03-PLAN.md — AI が5本とも撃つことを実走行で数え、CostCalculator で値段を付け、空振りしとった3本のゲートを `workflow.test_command` へ載せる（wave 3）
 
