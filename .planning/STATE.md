@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 current_phase: 02.1
 current_phase_name: 補助技 (INSERTED)
 status: executing
-stopped_at: Completed 02.1-02-PLAN.md
-last_updated: "2026-08-21T07:24:29.579Z"
+stopped_at: Completed 02.1-03-PLAN.md
+last_updated: "2026-08-21T07:40:39.473Z"
 last_activity: 2026-08-21
-last_activity_desc: 02.1-02（技クリエーターの補助技UI）完了
-state_head: c2dee263fee5bce7e4b8d35d0aed51ab38f19412
+last_activity_desc: 02.1-03（verify_support.js決定論仕上げ・恒久ゲート登録）完了。フェーズ02.1（補助技）全3プラン完了
+state_head: ba620e1232d83670ef726d4219398ab29cfc8a50
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
-  completed_plans: 8
-  percent: 25
+  completed_plans: 9
+  percent: 50
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Phase: 02.1 (補助技 (INSERTED)), Plan 2 of 3 — EXECUTING
-Status: 02.1-02 完了。次は 02.1-03（verify_support.js の determinismTest 拡張・verify:support 登録）
-Last activity: 2026-08-21 — 02.1-02（技クリエーターの攻撃/補助トグル・効果入力・normalizeMonのpower:0保存）完了
+Phase: 02.1 (補助技 (INSERTED)), Plan 3 of 3 — COMPLETE
+Status: 02.1-03 完了。フェーズ02.1（補助技）は3/3プランで完了。次はPhase 3（技一覧の一本化・りゅうのまい等の実装）
+Last activity: 2026-08-21 — 02.1-03（tools/verify_support.jsの決定論仕上げ・workflow.test_commandへのverify_support/verify_creator登録）完了
 
-Progress: [████████░░] 80%（2/3 プラン・このフェーズ）
+Progress: [██████████] 100%（3/3 プラン・このフェーズ）
 
 ## 前のマイルストーン（反動と間）
 
@@ -78,14 +78,17 @@ Progress: [████████░░] 80%（2/3 プラン・このフェー
 |------|----------|-------|-------|
 | Phase 02.1 P01 | 38min | 3 tasks | 4 files |
 | Phase 02.1 P02 | 35min | 2 tasks | 2 files |
+| Phase 02.1 P03 | 13min | 2 tasks | 2 files |
 
 ## Session
 
-**Last session:** 2026-08-21T07:23:57.525Z
-**Stopped at:** Completed 02.1-02-PLAN.md
+**Last session:** 2026-08-21T07:40:20.030Z
+**Stopped at:** Completed 02.1-03-PLAN.md
 **Resume file:** None
 
 ## Decisions
 
 - [Phase 02.1]: 攻撃/補助トグルはonchangeでbuildMoveEditor()（全体作り直し）を呼ぶ — mvRebuild()はmvBaseを触らんため、切替直後に威力/効果が出し分けられない（plan-check B8）
 - [Phase 02.1]: normalizeMon()はpower/cast/cooldownをNumber.isFiniteガードへ変更し、statは無効値でも書き換えずapplySupportEffectを唯一の権威にする — +c.power||20は0を無い扱いして支援技のpower:0/cast:0を毎回蘇らせていた（plan-check B5）。stat妥当性の二重判定は分岐を作るので避けた
+- [Phase 02.1]: determinismTest()の40秒×2ランで補助技が実際にキャストされたことをapplySupportEffectの呼び出し回数を数えて直接証明する（movelist掲載だけでは証拠にならん） — R2チェックのeffDeltaモンキーパッチと同じ手口を決定論チェックに展開。determinismTest()自体は使用技の統計を返さんため
+- [Phase 02.1]: workflow.test_commandにverify_creator.jsも追加登録（プラン外・NGSD掟7） — 02.1-02がB5/B8へ実アサーションを入れたのに恒久ゲートとして一度も自動で走っとらんかった。npm scriptはあってもtest_commandに乗っとらんければ発火しない

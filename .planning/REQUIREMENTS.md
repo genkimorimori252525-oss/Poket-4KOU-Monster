@@ -67,7 +67,7 @@
 - [x] **SUP-03**: 補助技の効果（`atk`/`def`/`eva`/`spd`）が実際に効いて `dur` 秒で切れる。試合をまたがん
 - [x] **SUP-04**: `scoreMove` に補助の値打ちの項があって、AI が状況に応じて補助技を選ぶ
 - [x] **SUP-05**: 制作ツールで攻撃／補助を切り替えられ、`effect` を入力できる
-- [ ] **SUP-06**: `tools/verify_support.js` が回帰ゲートとして走り、`workflow.test_command` に入っとる
+- [x] **SUP-06**: `tools/verify_support.js` が回帰ゲートとして走り、`workflow.test_command` に入っとる
 
 ### 検証（VER）
 
