@@ -12,6 +12,7 @@
    （パルキア atk92 等）は全50やないけん、決め打ちの復元は個体を壊したまま後続の検査へ
    持ち越す（見た目には出らんまま、determinismTest すら2回とも同じ壊れ方で緑になる）。
    「検証が検証自身の後始末で失敗するんは、いちばん質の悪い赤や」。 */
+const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 const offlineFonts = require('./_pw_offline.js');
@@ -475,6 +476,96 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   ok(spdNote.text && spdNote.text.includes('次の技から'),
      'spd効果のAILogに「次の技から」の注記が無い: ' + JSON.stringify(spdNote.text));
   console.log('spd注記       ' + spdNote.text);
+
+  /* =========================================================
+     03-01: 棚の補助技を拾い、実走行で発動を数える（記録のみ）。
+
+     ⚠ このブロックには「発動回数を根拠にしたok(...)」を1つも書かん
+     （03-PLAN-CHECK.md B2の是正）。回数の合否は03-03-PLAN.md Task 1に一本化しとる
+     —— このプランはPlan 03より前のwaveやけん、ここで回数を根拠に落としたら
+     降り口（段階的な数字上げ／にーくらへの報告）へ辿り着く前にWave 1で止まってしまう。
+
+     拾う本数・名前は決め打ちせん（Plan 02が2本足したらそのまま5本を見る）。 */
+  const library = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'moves', 'library.json'), 'utf8'));
+  const supportRecords = Object.values(library).filter((rec) => rec.battle && rec.battle.kind === 'support');
+  ok(supportRecords.length > 0, '棚に kind:\'support\' のレコードが1件も無い（このプランの成果物やけん赤）: ' + supportRecords.length);
+  console.log('\n棚の補助技(構造・件数のみ)  ' + supportRecords.length + '件: '
+    + supportRecords.map((r) => r.name).join('、'));
+
+  /* 棚の入れ子形（battle:{...}）を、実行時の平らなオブジェクトへ詰め替える
+     （02.1で確認済みの設計・03-01-PLAN.md <context>）。tagsは必ず配列（02.1-01 Deviation 2と同じ罠）。 */
+  const flatSupportMoves = supportRecords.map((rec) => ({
+    id: rec.fx.id,
+    name: rec.name,
+    type: rec.battle.type,
+    power: rec.battle.power,
+    cast: rec.battle.cast,
+    cooldown: rec.battle.cooldown,
+    range: rec.battle.range,
+    tags: Array.isArray(rec.battle.tags) ? rec.battle.tags : [],
+    kind: rec.battle.kind,
+    effect: rec.battle.effect,
+    fx: rec.fx,
+  }));
+
+  /* 実走行本体。1回の呼び出しで1通り分（pinnedかどうか・seed）を回す。
+     f=partyA[0]、foe=partyB[0]（03-01-PLAN.md Task 1の指定どおり）。
+     毎ステップ両者のhpをmaxHPへ戻す —— 戦闘不能で交代が挟まると測っとる個体が
+     入れ替わって数が嘘になる（書き換え自体は決定的やけん決定論は壊れん）。 */
+  const runActivation = async (seed, pinned) => pg.evaluate(({ moves, seed, pinned }) => {
+    const f = partyA[0], foe = partyB[0];
+    const savedMoves = f.moves, savedCd = f.cd;
+    const origApply = applySupportEffect;
+    const counts = {};
+    for (const m of moves) counts[m.id] = 0;
+    let ryuunomaiWiringOk = true;   // 真空で真。撃たれたときだけ判定を持つ（配線の正しさ、回数と無関係）
+    let pinSave = null;
+    try {
+      resetBattle(seed);
+      if (pinned) pinSave = window.__pin(f, foe);
+      for (const m of moves) MOVES[m.id] = m;
+      f.moves = moves.map((m) => MOVES[m.id]).concat([MOVES.shakunetsu]);
+      f.cd = {};
+      applySupportEffect = function (caster, targetFoe, mv) {
+        const r = origApply.apply(this, arguments);
+        if (Object.prototype.hasOwnProperty.call(counts, mv.id)) counts[mv.id]++;
+        if (mv.id === 'ryuunomai') {
+          if (!(caster.buffs && caster.buffs.atk)) ryuunomaiWiringOk = false;
+        }
+        return r;
+      };
+      for (let i = 0; i < 60 * 90; i++) {
+        stepBattle(1 / 60); ally.update(1 / 60); enemy.update(1 / 60);
+        ally.hp = ally.maxHP; enemy.hp = enemy.maxHP;
+      }
+    } finally {
+      f.moves = savedMoves; f.cd = savedCd; applySupportEffect = origApply;
+      for (const m of moves) delete MOVES[m.id];
+      if (pinned && pinSave) window.__unpin(f, foe, pinSave);
+      resetBattle(4242);
+    }
+    return { counts, ryuunomaiWiringOk };
+  }, { moves: flatSupportMoves, seed, pinned });
+
+  const runCal31337 = await runActivation(31337, true);
+  const runCal90210 = await runActivation(90210, true);
+  const runDefault = await runActivation(4242, false);
+
+  const wiringOk = runCal31337.ryuunomaiWiringOk && runCal90210.ryuunomaiWiringOk && runDefault.ryuunomaiWiringOk;
+  ok(wiringOk, 'りゅうのまいが撃たれたのに f.buffs.atk が立っとらんかった（配線の正しさ。回数と無関係に落ちる）');
+
+  console.log('\n実走行(発動を数える・記録のみ)');
+  console.log('技名'.padEnd(12) + '較正seed31337'.padEnd(16) + '較正seed90210'.padEnd(16) + '既定ロスター');
+  for (const m of flatSupportMoves) {
+    console.log(
+      m.name.padEnd(12)
+      + String(runCal31337.counts[m.id]).padEnd(16)
+      + String(runCal90210.counts[m.id]).padEnd(16)
+      + String(runDefault.counts[m.id])
+    );
+  }
+  console.log('（0回の技があってもこのTaskは落ちん。回数の合否は03-03-PLAN.md Task 1に一本化。'
+    + 'wiringOk=' + wiringOk + '）');
 
   await pg.close();
   await b.close();
