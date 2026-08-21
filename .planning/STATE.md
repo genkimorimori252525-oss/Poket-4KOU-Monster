@@ -4,16 +4,16 @@ current_phase: 02.1
 current_phase_name: 補助技 (INSERTED)
 status: complete
 stopped_at: フェーズ02.1 完了・検証済み（借金2件・コードレビュー未実施）
-last_updated: "2026-08-21T07:40:39.473Z"
+last_updated: "2026-08-21T10:19:59.543Z"
 last_activity: 2026-08-21
 last_activity_desc: フェーズ02.1（補助技）完了。回帰チェーン8段green・VERIFICATION.md 作成
-state_head: ba620e1232d83670ef726d4219398ab29cfc8a50
+state_head: 7bac4da2bd2dbbda9f53ba8b4e589a5cd41f1328
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 10
-  completed_plans: 9
-  percent: 25
+  completed_phases: 0
+  total_plans: 4
+  completed_plans: 3
+  percent: 0
 ---
 
 # Project State
@@ -71,6 +71,7 @@ Progress: [██████████] 100%（3/3 プラン・このフェ�
 ### Roadmap Evolution
 
 - Phase 2.1 inserted after Phase 2: 補助技（aura の3本がダメージ0の件の決着。scoreMove の採点項が本体）
+- Phase 3 edited: 「技を作る」→「補助技を入れる」へ書き換え。技の作り直しは Codex が並行して完了（54/56 が専用generator）。残るは Phase 2.1 の仕組みを動かす補助技5本
 
 ## Performance Metrics
 
