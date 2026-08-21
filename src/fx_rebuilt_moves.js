@@ -709,6 +709,38 @@ class WhirlpoolMoveFX extends RebuiltMoveFX{
   }
 }
 
+/* すなかけ：相手の足元に砂の三日月が現れ、粒が扇状に舞い上がって目の高さに膜を残す。 */
+class SandAttackMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||56)*this.sizeMul,P=this.sp.palette,x=this.t.x,y=this.t.y,
+      n=this.amount(this.sp.amount||20,6),seed=this.sp.seed||1;
+    /* 砂床の三日月：足元にじわりと広がる */
+    const cw=s*(.70+.30*q);
+    rmPoly(g,[[x-cw,y+s*.60],[x-cw*.55,y+s*.46],[x+cw*.55,y+s*.46],[x+cw,y+s*.60],
+      [x+cw*.62,y+s*.72],[x-cw*.62,y+s*.72]],P[2]);
+    /* 舞い上がる砂粒：個別の初速・横ぶれ・大きさをhash3から決める上向きの放物線 */
+    for(let i=0;i<n;i++){
+      const spread=(hash3(i,seed,7)-.5)*s*1.7,sway=(hash3(i,seed,13)-.5)*s*.34;
+      const delay=(i/n)*.28,u=rmClamp((q-delay)/this.hitRatio,0,1);
+      if(u<=0) continue;
+      const xx=x+spread*u+sway*Math.sin(u*Math.PI),yy=y+s*.58-s*1.42*u+s*1.10*u*u;
+      const r=s*(.035+.03*hash3(i,seed,11)),fade=rmClamp(1-Math.max(0,u-.72)/.28,0,1);
+      rmAlpha(g,fade,()=>{
+        if(i%3===0) rmDiamond(g,xx,yy,r*1.2,r*.85,P[1+(i%2)]);
+        else pxDisc(g,xx,yy,r,P[1+(i%2)]);
+      });
+    }
+    /* 命中後：相手の目の高さに横長の砂の膜が残って薄れる */
+    if(this.hit){
+      const fall=rmClamp((q-this.hitRatio)/(1-this.hitRatio),0,1);
+      for(let i=0;i<10;i++){
+        const xx=x+(hash3(i,seed,21)-.5)*s*1.5,yy=y-s*.35+(hash3(i,seed,22)-.5)*s*.16;
+        rmAlpha(g,(1-fall)*.9,()=>pxDisc(g,xx,yy,s*.05,P[3]));
+      }
+    }
+  }
+}
+
 /* いわなだれ：空中に傾いた岩棚が現れ、異なる岩塊が斜面を転げ落ちる。 */
 class RockSlideMoveFX extends RebuiltMoveFX{
   drawMaterial(g){
@@ -856,6 +888,7 @@ globalThis.REBUILT_MOVE_META={
   dragon_dance_move:{jp:'りゅうのまい',desc:'反対向きに舞う二頭の竜帯',range:'remote',size:86,amount:16,duration:1.55,hitAt:.78,arc:0,clashKind:'none',palette:['#ffffff','#cc9cff','#7351ca','#2b155f'],powerVisual:{size:[.74,1.60],amount:[.58,1.95]}},
   toxic_move:{jp:'どくどく',desc:'毒滴が組み上げる髑髏',range:'remote',size:78,amount:13,duration:1.30,hitAt:.76,arc:0,clashKind:'none',palette:['#ffffff','#e8a0ff','#a43bc4','#49145e'],powerVisual:{size:[.72,1.65],amount:[.55,2.00]}},
   whirlpool_move:{jp:'うずしお',desc:'下から上へ細まる水の螺旋壁',range:'remote',size:92,amount:18,duration:1.46,hitAt:.76,arc:0,clashKind:'none',palette:['#ffffff','#bcefff','#3aafe5','#07517d'],powerVisual:{size:[.68,1.78],amount:[.52,2.10]}},
+  sand_attack_move:{jp:'すなかけ',desc:'足元から巻き上がる目つぶしの砂',range:'remote',size:56,amount:20,duration:1.05,hitAt:.62,arc:0,clashKind:'none',palette:['#fff6e0','#e7c98a','#a8834a','#4e3a20'],powerVisual:{size:[.74,1.60],amount:[.55,2.00]}},
   rock_slide_move:{jp:'いわなだれ',desc:'傾いた岩棚を転げる岩塊',range:'remote',size:54,amount:9,duration:1.24,hitAt:.80,arc:0,clashKind:'none',palette:['#fff4d2','#c7a46b','#76583b','#33251a'],powerVisual:{size:[.70,1.72],amount:[.55,2.05]}},
   stone_edge_move:{jp:'ストーンエッジ',desc:'地中の稜線から押し上がる石柱',range:'remote',size:48,amount:7,duration:1.16,hitAt:.78,arc:0,clashKind:'none',palette:['#fff2cc','#c49b61','#715036','#2f2118'],powerVisual:{size:[.72,1.68],amount:[.55,2.00]}},
   earth_power_move:{jp:'だいちのちから',desc:'地脈輪から噴く土柱と熱光',range:'remote',size:66,amount:8,duration:1.28,hitAt:.76,arc:0,clashKind:'none',palette:['#ffffff','#ffd878','#b46a32','#552715'],powerVisual:{size:[.68,1.78],amount:[.55,2.05]}},
@@ -875,7 +908,7 @@ globalThis.REBUILT_MOVE_FX={
   psycho_cut_move:PsychoCutMoveFX,outrage_move:OutrageMoveFX,ice_beam_move:IceBeamMoveFX,
   flash_cannon_move:FlashCannonMoveFX,dazzling_gleam_move:DazzlingGleamMoveFX,hyper_beam_move:HyperBeamMoveFX,
   dragon_pulse_move:DragonPulseMoveFX,dragon_dance_move:DragonDanceMoveFX,toxic_move:ToxicMoveFX,
-  whirlpool_move:WhirlpoolMoveFX,rock_slide_move:RockSlideMoveFX,stone_edge_move:StoneEdgeMoveFX,
+  whirlpool_move:WhirlpoolMoveFX,sand_attack_move:SandAttackMoveFX,rock_slide_move:RockSlideMoveFX,stone_edge_move:StoneEdgeMoveFX,
   earth_power_move:EarthPowerMoveFX,earthquake_move:EarthquakeMoveFX,bombing_move:BombingMoveFX
 };
 
