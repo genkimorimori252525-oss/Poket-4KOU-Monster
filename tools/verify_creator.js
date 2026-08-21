@@ -939,6 +939,105 @@ async function setRange(pg, sel, n, v) {
   await pg.waitForTimeout(800);
   out['15_復元'] = await pg.evaluate(() => ({ name: mon.name, 草むら: document.querySelectorAll('#wildList .mv').length }));
 
+
+
+  /* ---- 16. 試し打ちを戻らんで押せるか（FIRE-UX・2026-08-22） ----
+     にーくら「試し打ちボタンがスクロールされて、いちいち数値を変えたら
+     　　　　　そこまで戻って押す、の作業が面倒」
+     ⚠ 撃たれた技は fxs を覗かず fireMove を包んで記録する。玉はすぐ消えるけん数え損ねる。 */
+  await pg.click('#btnNewMove'); await pg.waitForTimeout(300);
+  out['16_試し打ち'] = await pg.evaluate(() => {
+    window.__fired = [];
+    if (!window.__origFire) { window.__origFire = fireMove;
+      window.fireMove = function(id){ window.__fired.push(id); return window.__origFire(id); }; }
+    const r = {};
+    const editId = editMove ? editMove.id : null;
+    const sel = $('fireSel');
+    const other = Array.from(sel.options).map(o => o.value).find(v => v && v !== editId);
+    if (other) sel.value = other;
+    r.編集中 = editId; r.ドロップダウン = sel.value;
+    window.__fired.length = 0;
+    $('btnFire').click();
+    r.撃たれた技 = window.__fired[window.__fired.length - 1] || null;
+    return r;
+  });
+  ok(out['16_試し打ち'].撃たれた技 === out['16_試し打ち'].編集中,
+     'FIRE-UX-a: sticky の ▶撃つ が編集中の技を撃っとらん（撃たれた=' + out['16_試し打ち'].撃たれた技
+     + ' 編集中=' + out['16_試し打ち'].編集中 + '）——下まで戻らんと試し打ちできん');
+
+  out['16b_触ったら撃つ'] = await pg.evaluate(async () => {
+    const wait = (ms) => new Promise(r => setTimeout(r, ms));
+    const r = {};
+    r.トグルあり = !!$('btnLive');
+    if (!$('btnLive')) return r;
+    if (!liveFire) $('btnLive').click();
+    r.入 = !!liveFire;
+    window.__fired.length = 0;
+    editMove.power = (editMove.power || 20) + 1; mvRebuild();
+    await wait(120); r.すぐには撃たん = window.__fired.length;
+    await wait(400); r.止めたら撃つ = window.__fired.length;
+    $('btnLive').click(); r.切った = !!liveFire;
+    window.__fired.length = 0;
+    editMove.power = (editMove.power || 20) + 1; mvRebuild();
+    await wait(520); r.切ったら撃たん = window.__fired.length;
+    return r;
+  });
+  ok(out['16b_触ったら撃つ'].トグルあり === true, 'FIRE-UX-b: 「触ったら撃つ」のトグルが無い');
+  ok(out['16b_触ったら撃つ'].すぐには撃たん === 0, 'FIRE-UX-c: 値を動かした瞬間に撃っとる（ドラッグ中に連発する）');
+  ok(out['16b_触ったら撃つ'].止めたら撃つ >= 1, 'FIRE-UX-d: 手を止めても撃たれん（触ったら撃つが効いとらん）');
+  ok(out['16b_触ったら撃つ'].切ったら撃たん === 0, 'FIRE-UX-e: トグルを切っても撃たれる');
+
+  /* ---- 17. 一覧から上書き先を選ぶ（PICK-OVERWRITE・2026-08-22） ----
+     にーくら「名前リストをクリックして選んで上書きできるようにして」
+     ⚠ 本命は「名前を押しても中身が変わらん」こと。読込と違う道やけん——
+       上書きしたい作業を消してしもうたら意味が無い。 */
+  out['17_四皇モンの上書き先'] = await pg.evaluate(() => {
+    const r = {};
+    mon.name = 'えらぶモンA'; refresh(); $('slotName').value = 'えらぶモンA'; $('slotSave').click();
+    mon.name = 'えらぶモンB'; refresh(); $('slotName').value = 'えらぶモンB'; $('slotSave').click();
+    mon.name = 'いま編集しとる'; refresh();
+    setBound(null);
+    const rows = document.querySelectorAll('#slotList .mv');
+    r.行数 = rows.length;
+    const nm = rows[0] && rows[0].querySelector('.nm');
+    r.名前を押せる = !!(nm && nm.onclick);
+    if (nm) nm.click();
+    r.選ばれた = boundSlot;
+    r.中身は変わっとらん = (mon.name === 'いま編集しとる');
+    r.選択が見て分かる = !!document.querySelector('#slotList .mv.picked');
+    return r;
+  });
+  ok(out['17_四皇モンの上書き先'].名前を押せる === true, 'PICK-OVERWRITE-a: 保存一覧の名前が押せん');
+  ok(!!out['17_四皇モンの上書き先'].選ばれた, 'PICK-OVERWRITE-b: 名前を押しても上書き先が選ばれとらん');
+  ok(out['17_四皇モンの上書き先'].中身は変わっとらん === true,
+     'PICK-OVERWRITE-c: 名前を押したら編集中の中身が読み込まれた——上書きしたい作業が消える（読込と同じになっとる）');
+  ok(out['17_四皇モンの上書き先'].選択が見て分かる === true, 'PICK-OVERWRITE-d: 選ばれとる行が見て分からん');
+
+  out['17b_技の上書き'] = await pg.evaluate(() => {
+    const r = {};
+    const before = Object.keys(mlLibAll()).length;
+    r.棚の数 = before;
+    r.上書きボタンあり = !!document.querySelector('#mvLib .ml-over');
+    /* 保存欄（「名前をつけて」＋入力）も .ml-ctl で label を持つ。input を持つ行は棚やない。 */
+    const rows = Array.from(document.querySelectorAll('#mvLib .ml-ctl'))
+      .filter(d => d.querySelector('label') && !d.querySelector('input'));
+    const lb = rows[0] && rows[0].querySelector('label');
+    r.名前を押せる = !!(lb && lb.onclick);
+    if (lb) lb.click();
+    const ov = document.querySelector('#mvLib .ml-over');
+    r.選んだら有効 = !!(ov && !ov.disabled);
+    if (ov) ov.click();
+    r.一度押しでは書かん = Object.keys(mlLibAll()).length === before;
+    if (ov) ov.click();
+    r.棚の数は増えとらん = Object.keys(mlLibAll()).length === before;
+    return r;
+  });
+  ok(out['17b_技の上書き'].上書きボタンあり === true, 'PICK-OVERWRITE-e: 技ライブラリに上書きの口が無い');
+  ok(out['17b_技の上書き'].名前を押せる === true, 'PICK-OVERWRITE-f: 技の一覧の名前が押せん');
+  ok(out['17b_技の上書き'].選んだら有効 === true, 'PICK-OVERWRITE-g: 名前を選んでも上書きボタンが有効にならん');
+  ok(out['17b_技の上書き'].一度押しでは書かん === true, 'PICK-OVERWRITE-h: 上書きが一度押しで走っとる（二度押しの掟）');
+  ok(out['17b_技の上書き'].棚の数は増えとらん === true, 'PICK-OVERWRITE-i: 上書きしたのに棚が増えとる（新規保存になっとる）');
+
   await pg.screenshot({ path: shot('cr_final.png'), fullPage: false });
   out['ダイアログに頼っとらんか'] = { 出たダイアログ: dialogs.length, 内容: dialogs.slice(0, 3) };
   out['errs'] = errs;

@@ -87,6 +87,7 @@
   #top.mini #stage{display:flex;justify-content:center;background:#000;}
   #top.mini #stage canvas{height:31vh;min-height:120px;max-height:200px;width:auto;max-width:100%;}
   #top.mini .bar{margin:4px 0;}
+  #slotList .mv.picked{outline:1px solid #7ad6a0;background:#12261c;}
   #top.mini .bar button,#top.mini .bar select{padding:5px 4px;font-size:10px;}
   .sec{scroll-margin-top:250px;}
 </style>
@@ -111,6 +112,7 @@
     <select id="fireSel" style="flex:1;background:#0c0f15;border:1px solid var(--line);color:var(--text);
       border-radius:3px;padding:7px;font-size:11px;font-family:inherit;min-width:0;"></select>
     <button id="btnAuto" style="flex:0 0 50px;" title="2秒おきに撃ち続ける">連射</button>
+    <button id="btnLive" style="flex:0 0 78px;white-space:nowrap;font-size:10px;padding-left:2px;padding-right:2px;" title="値を動かして手を止めると自動で撃つ">触ったら撃つ</button>
     <button id="btnMini" style="flex:0 0 34px;" title="プレビューを小さく／大きく">⤢</button>
     <select id="fxSpeedSel" title="エフェクトの再生速度"
       style="flex:0 0 80px;background:#0c0f15;border:1px solid var(--line);color:var(--accent);
@@ -307,6 +309,7 @@
     <button id="slotSave" class="go">名前を付けて保存</button>
     <button id="slotOver">上書き保存</button>
   </div>
+  <div class="hint" style="margin:2px 0 4px">名前を押すと<b style="color:#7ad6a0">上書き先に選べる</b>（中身は読み込まん）。読込は今までどおり。</div>
   <div id="slotList"></div>
   <div class="hint">入力するたびに<b style="color:#7ad6a0">自動保存</b>しとる。ページを閉じても残る。<br>
   ただし別の場所から開き直すと消えることがあるけん、大事なやつは下のJSONもコピーして残しといて。</div>
@@ -5223,6 +5226,9 @@ function mlLibDel(name){
        localStorage.setItem(MOVE_LIB_KEY,JSON.stringify(a)); return true; }catch(e){ return false; }
 }
 /* opts = { rec():保存する中身（無ければ null）, name():既定の名前, load(rec,名前) } */
+/* いま選んどる上書き先。mlLibrary は保存のたびに描き直すけん、外に置いて覚えとく。 */
+let mlOverTarget=null;
+
 function mlLibrary(host,opts){
   mlInjectCSS();
   host.innerHTML='';
@@ -5232,7 +5238,10 @@ function mlLibrary(host,opts){
   inp.value=(opts.name&&opts.name())||'';
   host.appendChild(row);
   const bar=document.createElement('div'); bar.className='ml-bar';
-  bar.innerHTML='<button>この名前で保存</button>';
+  /* 「この名前で保存」は今までどおり絶対に上書きせん（同名は ◯◯2）。
+     上書きは**一覧から名前を選んで、この専用ボタンを二度押ししたとき**だけ。
+     黙って上書きせん、という掟はそのまま。 */
+  bar.innerHTML='<button>この名前で保存</button><button class="ml-over">上書き</button>';
   bar.querySelector('button').onclick=()=>{
     const rec=opts.rec();
     if(!rec){ alert('先に技を開いて'); return; }
@@ -5255,6 +5264,28 @@ function mlLibrary(host,opts){
     host.insertBefore(note,host.firstChild);
     if(!dup) setTimeout(()=>{ if(note.parentNode) note.parentNode.removeChild(note); },2500);
   };
+  const ovb=bar.querySelector('.ml-over');
+  const allNow=mlLibAll();
+  if(mlOverTarget && !allNow[mlOverTarget]) mlOverTarget=null;   /* 消された先は忘れる */
+  ovb.disabled=!mlOverTarget;
+  ovb.style.opacity=mlOverTarget?1:0.4;
+  ovb.textContent=mlOverTarget?('「'+mlOverTarget+'」へ上書き'):'上書き';
+  ovb.title=mlOverTarget?'もう一度押すと決まる':'先に下の一覧から名前を押して選ぶ';
+  if(mlOverTarget){
+    mlArmDelete(ovb,()=>{
+      const rec=opts.rec&&opts.rec();
+      if(!rec){ alert('先に技を開いて'); return; }
+      const r=mlLibPut(mlOverTarget,rec);
+      if(!r.ok){ alert('保存できん（'+r.msg+'）。要らん技を消して。'); return; }
+      const nm=mlOverTarget;
+      mlLibrary(host,opts);
+      const note=document.createElement('div'); note.className='ml-hint';
+      note.style.margin='0 0 6px';
+      note.innerHTML='<b style="color:#7ad6a0">「'+nm+'」へ上書きした</b>';
+      host.insertBefore(note,host.firstChild);
+      setTimeout(()=>{ if(note.parentNode) note.parentNode.removeChild(note); },2500);
+    },'「'+mlOverTarget+'」を上書きする？');
+  }
   host.appendChild(bar);
 
   const all=mlLibAll(), keys=Object.keys(all);
@@ -5274,7 +5305,14 @@ function mlLibrary(host,opts){
       '<span style="font-size:9px;color:#8b97a8;flex:none">'+gen+(np?'+素材'+np:'')+' / '+pw+'</span>'+
       '<button style="width:52px;flex:none">読込</button>'+
       '<button style="width:32px;flex:none;background:#2a1a1a;border-color:#5a2a2a;color:#e08080">×</button>';
-    d.querySelector('label').textContent=k;
+    const lb=d.querySelector('label');
+    lb.textContent=k;
+    /* 名前を押す＝上書き先に選ぶだけ。読込は隣のボタン。
+       今までは上書きの口がそもそも無うて、技を直すには
+       「◯◯2 で保存 → ◯◯ を削除」の2手が要っとった。 */
+    lb.style.cursor='pointer'; lb.style.textDecoration='underline dotted';
+    lb.onclick=()=>{ mlOverTarget=k; mlLibrary(host,opts); };
+    if(mlOverTarget===k){ d.style.outline='1px solid #7ad6a0'; d.style.background='#12261c'; }
     const [bl,bx]=d.querySelectorAll('button');
     bl.onclick=()=>opts.load(JSON.parse(JSON.stringify(all[k])),k);
     mlArmDelete(bx,()=>{ mlLibDel(k); mlLibrary(host,opts); });
@@ -5349,6 +5387,16 @@ let scene=null;                       // 草むら放流の演出
 let editMove=null, editBuilt={};      // 技クリエーターで開いとる技
 let mvSndOn=false;
 let autoFire=false, autoT=0;          // 自動連射（スライダを触りながら見るため）
+/* 触ったら撃つ。値を動かす手を止めて LIVE_WAIT 秒で1回だけ撃つ。
+   ドラッグ中は撃たん（動かすたびに撃つと画面が渋滞して、かえって見えん）。
+   ここは制作ツールのプレビューやけん setTimeout でよい——戦闘の決定論とは無関係（掟1は戦闘の話）。 */
+let liveFire=true, liveT=null;
+const LIVE_WAIT=300;
+function liveKick(){
+  if(!liveFire || !editMove) return;
+  if(liveT) clearTimeout(liveT);
+  liveT=setTimeout(()=>{ liveT=null; if(liveFire&&editMove){ previewKey=null; fireMove(editMove.id); } }, LIVE_WAIT);
+}
 let fxSpeed=0.85;                     // プレビューの再生速度（等速＝0.85）
 let cryTimer=null, cryTimerE=null;
 let cryBackup=null;                   // 軽くする前の音（元に戻す用）
@@ -6725,12 +6773,24 @@ function setMini(on){
 }
 function setAuto(on){
   autoFire=!!on; autoT=0;
+  if(autoFire) setLive(false);    /* 二重に撃たん。連射＝手を止めて眺める、触ったら撃つ＝調整中 */
   $('btnAuto').textContent=autoFire?'連射中':'自動連射';
   $('btnAuto').classList.toggle('on',autoFire);
   if(autoFire) previewKey=null;
 }
 $('btnMini').onclick=()=>setMini(!$('top').classList.contains('mini'));
 $('btnAuto').onclick=()=>setAuto(!autoFire);
+function setLive(on){
+  liveFire=!!on;
+  if(!liveFire && liveT){ clearTimeout(liveT); liveT=null; }
+  const b=$('btnLive');
+  b.textContent=liveFire?'触ったら撃つ':'手動';
+  b.classList.toggle('on',liveFire);
+  b.title=liveFire?'値を動かして手を止めると自動で撃つ':'値を動かしても撃たん（▶撃つで撃つ）';
+  if(liveFire && autoFire) setAuto(false);
+}
+$('btnLive').onclick=()=>setLive(!liveFire);
+setLive(true);
 $('fxSpeedSel').onchange=e=>{ fxSpeed=parseFloat(e.target.value)||1; };
 
 /* 技ライブラリ（技ラボと共通の保存棚） */
@@ -6784,6 +6844,7 @@ const mvCtx={
   rebuild:()=>{ buildMoveEditor(); }
 };
 function mvRebuild(){
+  liveKick();          /* 値が動いた合図。全部のスライダがここを通る（ctx.change → mvRebuild） */
   if(!editMove) return;
   editMove.fx.id=editMove.id; editMove.fx.name=editMove.name;
   try{ editBuilt=buildEffect(editMove.fx); }catch(e){ console.error('buildEffect',e); editBuilt={}; }
@@ -6950,7 +7011,12 @@ function fireMove(id){
   const cast=+m.cast||0;
   if(cast>0.01) setTimeout(go,cast*1000/fxSpeed); else go();   // 溜めもスローに乗せる
 }
-$('btnFire').onclick=()=>{ previewKey=null; fireMove($('fireSel').value); };
+/* 技を開いとるならその技を撃つ。**連射（setAuto）は最初からそうしとった**のに
+   ここだけ fireSel を見とって、同じ画面で判断が食い違うとった。そのせいで編集中は
+   下の「▶ この技を撃つ」まで毎回スクロールで戻らんといかんかった（にーくらの訴え）。
+   #top は sticky やけん、ここを揃えるだけで戻る必要が消える。 */
+function fireTarget(){ return editMove ? editMove.id : $('fireSel').value; }
+$('btnFire').onclick=()=>{ previewKey=null; fireMove(fireTarget()); };
 $('mvFire').onclick=()=>{ if(editMove){ previewKey=null; fireMove(editMove.id); } };
 
 /* ---- 基本・ステータス・性格 ---- */
@@ -7149,9 +7215,16 @@ function buildSlotList(){
   if(!keys.length){ host.innerHTML='<div class="hint" style="margin:0">まだ保存されとらん</div>'; return; }
   keys.forEach(k=>{
     const d=document.createElement('div'); d.className='mv';
-    d.innerHTML='<span class="nm">'+k+'</span>'+
+    if(boundSlot===k) d.classList.add('picked');
+    d.innerHTML='<span class="nm" style="cursor:pointer;text-decoration:underline dotted">'+k+'</span>'+
       '<span class="st">'+Math.round(sl[k].length/1024)+'KB</span>'+
       '<button>読込</button><button>削除</button>';
+    /* 名前を押す＝**上書き先に選ぶだけ**。中身は読み込まん。
+       上書きするのに「読込」を先に押さないかんかったせいで、
+       **上書きしたかった作業そのものが消えとった**（にーくらの訴え）。 */
+    d.querySelector('.nm').onclick=()=>{ setBound(k); buildSlotList();
+      $('autoState').innerHTML='<b style="color:#7ad6a0">「'+k+'」を上書き先に選んだ</b>'+
+        '<span style="color:#6a7484">（中身は読み込んどらん）</span>'; };
     const [bl,bd]=d.querySelectorAll('button');
     bl.onclick=()=>{ try{ applySnapshot(JSON.parse(sl[k])); setBound(k);
       $('slotName').value=k;

@@ -720,6 +720,9 @@ function mlLibDel(name){
        localStorage.setItem(MOVE_LIB_KEY,JSON.stringify(a)); return true; }catch(e){ return false; }
 }
 /* opts = { rec():保存する中身（無ければ null）, name():既定の名前, load(rec,名前) } */
+/* いま選んどる上書き先。mlLibrary は保存のたびに描き直すけん、外に置いて覚えとく。 */
+let mlOverTarget=null;
+
 function mlLibrary(host,opts){
   mlInjectCSS();
   host.innerHTML='';
@@ -729,7 +732,10 @@ function mlLibrary(host,opts){
   inp.value=(opts.name&&opts.name())||'';
   host.appendChild(row);
   const bar=document.createElement('div'); bar.className='ml-bar';
-  bar.innerHTML='<button>この名前で保存</button>';
+  /* 「この名前で保存」は今までどおり絶対に上書きせん（同名は ◯◯2）。
+     上書きは**一覧から名前を選んで、この専用ボタンを二度押ししたとき**だけ。
+     黙って上書きせん、という掟はそのまま。 */
+  bar.innerHTML='<button>この名前で保存</button><button class="ml-over">上書き</button>';
   bar.querySelector('button').onclick=()=>{
     const rec=opts.rec();
     if(!rec){ alert('先に技を開いて'); return; }
@@ -752,6 +758,28 @@ function mlLibrary(host,opts){
     host.insertBefore(note,host.firstChild);
     if(!dup) setTimeout(()=>{ if(note.parentNode) note.parentNode.removeChild(note); },2500);
   };
+  const ovb=bar.querySelector('.ml-over');
+  const allNow=mlLibAll();
+  if(mlOverTarget && !allNow[mlOverTarget]) mlOverTarget=null;   /* 消された先は忘れる */
+  ovb.disabled=!mlOverTarget;
+  ovb.style.opacity=mlOverTarget?1:0.4;
+  ovb.textContent=mlOverTarget?('「'+mlOverTarget+'」へ上書き'):'上書き';
+  ovb.title=mlOverTarget?'もう一度押すと決まる':'先に下の一覧から名前を押して選ぶ';
+  if(mlOverTarget){
+    mlArmDelete(ovb,()=>{
+      const rec=opts.rec&&opts.rec();
+      if(!rec){ alert('先に技を開いて'); return; }
+      const r=mlLibPut(mlOverTarget,rec);
+      if(!r.ok){ alert('保存できん（'+r.msg+'）。要らん技を消して。'); return; }
+      const nm=mlOverTarget;
+      mlLibrary(host,opts);
+      const note=document.createElement('div'); note.className='ml-hint';
+      note.style.margin='0 0 6px';
+      note.innerHTML='<b style="color:#7ad6a0">「'+nm+'」へ上書きした</b>';
+      host.insertBefore(note,host.firstChild);
+      setTimeout(()=>{ if(note.parentNode) note.parentNode.removeChild(note); },2500);
+    },'「'+mlOverTarget+'」を上書きする？');
+  }
   host.appendChild(bar);
 
   const all=mlLibAll(), keys=Object.keys(all);
@@ -771,7 +799,14 @@ function mlLibrary(host,opts){
       '<span style="font-size:9px;color:#8b97a8;flex:none">'+gen+(np?'+素材'+np:'')+' / '+pw+'</span>'+
       '<button style="width:52px;flex:none">読込</button>'+
       '<button style="width:32px;flex:none;background:#2a1a1a;border-color:#5a2a2a;color:#e08080">×</button>';
-    d.querySelector('label').textContent=k;
+    const lb=d.querySelector('label');
+    lb.textContent=k;
+    /* 名前を押す＝上書き先に選ぶだけ。読込は隣のボタン。
+       今までは上書きの口がそもそも無うて、技を直すには
+       「◯◯2 で保存 → ◯◯ を削除」の2手が要っとった。 */
+    lb.style.cursor='pointer'; lb.style.textDecoration='underline dotted';
+    lb.onclick=()=>{ mlOverTarget=k; mlLibrary(host,opts); };
+    if(mlOverTarget===k){ d.style.outline='1px solid #7ad6a0'; d.style.background='#12261c'; }
     const [bl,bx]=d.querySelectorAll('button');
     bl.onclick=()=>opts.load(JSON.parse(JSON.stringify(all[k])),k);
     mlArmDelete(bx,()=>{ mlLibDel(k); mlLibrary(host,opts); });
