@@ -313,6 +313,129 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   console.log('B7 SC1        isSupportMove=' + b7.isSupport + '  種' + b7.winner + 'で着弾を確認  '
     + JSON.stringify(b7.attempts));
 
+  /* =========================================================
+     Task 3: def/eva/spd の検証カバレッジ、no-stack の証明、hp/int拒否
+     新しい本番コードは無い（Task 2 の rawFlow/offenseFlow/evaFlow/buffValue が
+     ディスパッチ表で4stat全部を既に汎用対応しとる）。ここは検証カバレッジと、
+     Task 2 が意図的に後回しにした2点（spdの「次の技から」注記の確認）だけ。
+     ========================================================= */
+
+  /* ---- 3a. def/eva/spd も atk と同じ物差しで正の有限値を返すか ---- */
+  const statCoverage = await pg.evaluate(() => {
+    resetBattle(4242);
+    const f = enemy, foe = ally;
+    const save = window.__pin(f, foe);
+    try {
+      return {
+        def: buffValue(f, foe, { stat: 'def', delta: 15, dur: 8, target: 'self' }),
+        eva: buffValue(f, foe, { stat: 'eva', delta: 15, dur: 8, target: 'self' }),
+        spd: buffValue(f, foe, { stat: 'spd', delta: 15, dur: 8, target: 'self' })
+      };
+    } finally {
+      window.__unpin(f, foe, save);
+    }
+  });
+  for (const stat of ['def', 'eva', 'spd']) {
+    const v = statCoverage[stat];
+    ok(Number.isFinite(v), stat + ' の buffValue が有限やない: ' + v);
+    ok(v > 0, stat + ' の buffValue が正やない（自分掛けの強化なのにマイナス）: ' + v);
+  }
+  console.log('stat網羅      def=' + statCoverage.def.toFixed(2) + ' eva=' + statCoverage.eva.toFixed(2)
+    + ' spd=' + statCoverage.spd.toFixed(2));
+
+  /* ---- 3b. no-stack：先着のdeltaが残り、untilは長い方だけが勝つ（縮まん） ----
+     B4 の1規則（Task 2の applySupportEffect と文言をそろえとる）を、
+     「短い掛け直し→据え置き」「長い掛け直し→伸びる」の両方向で確かめる。 */
+  const noStack = await pg.evaluate(() => {
+    resetBattle(4242);
+    const f = enemy, foe = ally;
+    const mk = (delta, dur) => ({
+      id: 'buff_' + delta + '_' + dur, name: '試験', power: 0, cast: 0.1, cooldown: 1,
+      fx: { generator: 'aura', motions: [] }, type: 'ノーマル', tags: [], kind: 'support',
+      effect: { stat: 'atk', delta, dur, target: 'self' }
+    });
+    applySupportEffect(f, foe, mk(10, 5));
+    const step1 = { delta: f.buffs.atk.delta, until: f.buffs.atk.until };
+    applySupportEffect(f, foe, mk(20, 2));    // 短い掛け直し → until は据え置き
+    const step2 = { delta: f.buffs.atk.delta, until: f.buffs.atk.until };
+    applySupportEffect(f, foe, mk(30, 10));   // 長い掛け直し → until は伸びる
+    const step3 = { delta: f.buffs.atk.delta, until: f.buffs.atk.until };
+    return { step1, step2, step3 };
+  });
+  ok(noStack.step1.delta === 10 && noStack.step1.until === 5,
+     'no-stack：初回掛けの結果がおかしい: ' + JSON.stringify(noStack.step1));
+  ok(noStack.step2.delta === 10,
+     'no-stack：短い掛け直しで delta が変わっとる（先着維持のはず）: ' + noStack.step2.delta);
+  ok(noStack.step2.until === 5,
+     'no-stack：短い掛け直しで until が縮んどる（据え置きのはず）: ' + noStack.step2.until);
+  ok(noStack.step3.delta === 10,
+     'no-stack：長い掛け直しで delta が変わっとる（先着維持のはず）: ' + noStack.step3.delta);
+  ok(noStack.step3.until === 10,
+     'no-stack：長い掛け直しで until が伸びとらん: ' + noStack.step3.until);
+  console.log('no-stack      delta=' + noStack.step1.delta + '（据え置き） until '
+    + noStack.step1.until + ' → ' + noStack.step2.until + '(据置) → ' + noStack.step3.until + '(伸長)');
+
+  /* ---- 3c. hp/int/未知statは真のno-op（既定へ読み替えず、何も起きん） ---- */
+  const rejected = await pg.evaluate(() => {
+    resetBattle(4242);
+    const f = enemy, foe = ally;
+    const mk = (stat) => ({
+      id: 'buff_' + stat, name: '試験', power: 0, cast: 0.1, cooldown: 1,
+      fx: { generator: 'aura', motions: [] }, type: 'ノーマル', tags: [], kind: 'support',
+      effect: { stat, delta: 15, dur: 8, target: 'self' }
+    });
+    const before = JSON.stringify(f.buffs);
+    applySupportEffect(f, foe, mk('hp'));
+    const afterHp = JSON.stringify(f.buffs);
+    applySupportEffect(f, foe, mk('int'));
+    const afterInt = JSON.stringify(f.buffs);
+    applySupportEffect(f, foe, mk('foo'));
+    const afterBogus = JSON.stringify(f.buffs);
+    return { before, afterHp, afterInt, afterBogus };
+  });
+  ok(rejected.before === rejected.afterHp, 'hp効果がno-opやない: f.buffs が変化しとる: ' + rejected.afterHp);
+  ok(rejected.before === rejected.afterInt, 'int効果がno-opやない: f.buffs が変化しとる: ' + rejected.afterInt);
+  ok(rejected.before === rejected.afterBogus, '未知statがno-opやない: f.buffs が変化しとる: ' + rejected.afterBogus);
+  console.log('hp/int拒否    3種とも f.buffs 不変（' + rejected.before + '）');
+
+  /* ---- 3d. resetBattle() は4stat分すべてクリアするか（atkだけやない） ---- */
+  const clearAll = await pg.evaluate(() => {
+    resetBattle(4242);
+    const f = enemy, foe = ally;
+    for (const stat of ['atk', 'def', 'eva', 'spd']) {
+      applySupportEffect(f, foe, {
+        id: 'buff_' + stat, name: '試験', power: 0, cast: 0.1, cooldown: 1,
+        fx: { generator: 'aura', motions: [] }, type: 'ノーマル', tags: [], kind: 'support',
+        effect: { stat, delta: 10, dur: 8, target: 'self' }
+      });
+    }
+    const hasAllFour = ['atk', 'def', 'eva', 'spd'].every((s) => !!f.buffs[s]);
+    const beforeReset = Object.keys(f.buffs).length;
+    resetBattle(4242);
+    const afterReset = Object.keys(f.buffs).length;
+    return { hasAllFour, beforeReset, afterReset };
+  });
+  ok(clearAll.hasAllFour, 'resetBattle前提の下ごしらえが崩れとる（4stat分のバフが立っとらん）: ' + clearAll.beforeReset);
+  ok(clearAll.afterReset === 0,
+     'resetBattle() が f.buffs を全stat分クリアしとらん（atkだけ残っとる等）: 残り' + clearAll.afterReset + '件');
+  console.log('resetBattleクリア  4stat分バフ後 ' + clearAll.beforeReset + '件 → resetBattle後 ' + clearAll.afterReset + '件');
+
+  /* ---- 3e. spd効果のAILogに「次の技から」の注記があるか（Task 2で実装済み、ここは確認だけ） ---- */
+  const spdNote = await pg.evaluate(() => {
+    resetBattle(4242);
+    const f = enemy, foe = ally;
+    applySupportEffect(f, foe, {
+      id: 'buff_spd_note', name: '試験', power: 0, cast: 0.1, cooldown: 1,
+      fx: { generator: 'aura', motions: [] }, type: 'ノーマル', tags: [], kind: 'support',
+      effect: { stat: 'spd', delta: 10, dur: 8, target: 'self' }
+    });
+    const entry = AILog.entries[AILog.entries.length - 1];
+    return { text: entry && entry.text };
+  });
+  ok(spdNote.text && spdNote.text.includes('次の技から'),
+     'spd効果のAILogに「次の技から」の注記が無い: ' + JSON.stringify(spdNote.text));
+  console.log('spd注記       ' + spdNote.text);
+
   await pg.close();
   await b.close();
 
