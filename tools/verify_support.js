@@ -478,21 +478,20 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   console.log('spd注記       ' + spdNote.text);
 
   /* =========================================================
-     03-01: 棚の補助技を拾い、実走行で発動を数える（記録のみ）。
+     03-01/02: 棚の補助技を拾い、実走行で発動を数える。
+     03-03: ここで初めて発動回数を根拠にした ok(...) を足す（B2の是正どおり、
+     合否を持つのはこの段だけ。03-01/03-02のブロックには回数ベースのassertは無い）。
 
-     ⚠ このブロックには「発動回数を根拠にしたok(...)」を1つも書かん
-     （03-PLAN-CHECK.md B2の是正）。回数の合否は03-03-PLAN.md Task 1に一本化しとる
-     —— このプランはPlan 03より前のwaveやけん、ここで回数を根拠に落としたら
-     降り口（段階的な数字上げ／にーくらへの報告）へ辿り着く前にWave 1で止まってしまう。
-
-     拾う本数・名前は決め打ちせん（Plan 02が2本足したらそのまま5本を見る）。 */
+     拾う本数・名前は決め打ちせん（>=5で見る。将来6本目が増えても無改修で追随する）。 */
   const library = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'moves', 'library.json'), 'utf8'));
   const supportRecords = Object.values(library).filter((rec) => rec.battle && rec.battle.kind === 'support');
-  ok(supportRecords.length > 0, '棚に kind:\'support\' のレコードが1件も無い（このプランの成果物やけん赤）: ' + supportRecords.length);
 
   /* ---- 段1「棚の補助技(構造)」 ----
-     本数は >= で見て（Plan 03 が >= 5 へ上げる）、技名で決め打ちせん。
-     「補助技やない技が kind を持っとらんこと」のような否定の全走査は書かん。 */
+     本数は >= 5 で見る（MOVE-01。===5にせん —— にーくらが6本目を足した日に赤くならんため）。
+     技名で決め打ちせん。「補助技やない技が kind を持っとらんこと」のような否定の全走査は書かん。 */
+  ok(supportRecords.length >= 5,
+     '棚の kind:\'support\' レコードが5件未満（MOVE-01）: ' + supportRecords.length
+     + '件（今ある技名: ' + supportRecords.map((r) => r.name).join('、') + '）');
   const SUPPORT_STATS_SET = new Set(['atk', 'def', 'eva', 'spd']);
   const GENERIC_GENERATORS = new Set(['projectile', 'beam', 'slash', 'lightning', 'aura', 'shatter']);
   console.log('\n段1「棚の補助技(構造)」  ' + supportRecords.length + '件: '
@@ -517,6 +516,26 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
       + ' delta=' + (e && e.delta) + ' dur=' + (e && e.dur) + ' |delta|×dur=' + nominal
       + ' power=' + rec.battle.power + ' generator=' + (rec.fx && rec.fx.generator));
   }
+
+  /* ---- MOVE-01：網羅assert（件数だけやのうて、stat/targetの集合を見る） ----
+     件数は上のok()で>=5を見た。ここは「4stat全部揃うか」「self/foe両方あるか」。
+     失敗メッセージには「今ある集合」を出す（何が足りんかが1行で分かるように）。 */
+  const REQUIRED_STATS = ['atk', 'def', 'eva', 'spd'];
+  const observedStats = new Set(supportRecords.map((r) => r.battle.effect && r.battle.effect.stat));
+  const missingStats = REQUIRED_STATS.filter((s) => !observedStats.has(s));
+  ok(missingStats.length === 0,
+     'MOVE-01：effect.stat が atk/def/eva/spd の4つを網羅しとらん。今ある集合={'
+     + [...observedStats].sort().join(',') + '} 足りんのは={' + missingStats.join(',') + '}');
+
+  const REQUIRED_TARGETS = ['self', 'foe'];
+  const observedTargets = new Set(supportRecords.map((r) => r.battle.effect && r.battle.effect.target));
+  const missingTargets = REQUIRED_TARGETS.filter((t) => !observedTargets.has(t));
+  ok(missingTargets.length === 0,
+     'MOVE-01：effect.target が self/foe の両方を網羅しとらん。今ある集合={'
+     + [...observedTargets].sort().join(',') + '} 足りんのは={' + missingTargets.join(',') + '}');
+
+  console.log('MOVE-01網羅   件数=' + supportRecords.length + '（>=5必要）  stat集合={'
+    + [...observedStats].sort().join(',') + '}  target集合={' + [...observedTargets].sort().join(',') + '}');
 
   /* 棚の入れ子形（battle:{...}）を、実行時の平らなオブジェクトへ詰め替える
      （02.1で確認済みの設計・03-01-PLAN.md <context>）。tagsは必ず配列（02.1-01 Deviation 2と同じ罠）。 */
@@ -688,18 +707,34 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   const wiringOk = runCal31337.ryuunomaiWiringOk && runCal90210.ryuunomaiWiringOk && runDefault.ryuunomaiWiringOk;
   ok(wiringOk, 'りゅうのまいが撃たれたのに f.buffs.atk が立っとらんかった（配線の正しさ。回数と無関係に落ちる）');
 
-  console.log('\n実走行(発動を数える・記録のみ)');
+  /* ---- 段4「実走行(5本とも発動)」 ----
+     ここで初めて発動回数を根拠にしたok(...)を足す（03-03-PLAN.md Task 1。
+     このフェーズで発動回数の合否を持つんはこの段だけ）。
+     assert：拾った補助技すべてが、較正(全50)の2シード(31337/90210)の
+     少なくとも片方で発動回数1以上（MOVE-03）。3列目（既定ロスター）は記録のみ・合否に使わん。
+     落ちたときのメッセージには、技名／2シードぶんの回数／その技の補助の値打ちと総合点／
+     参照(灼熱弾)との差を全部入れる（段2のcalibration.rowsから引く）。 */
+  console.log('\n段4「実走行(5本とも発動)」  MOVE-03：較正2シード(31337/90210)の少なくとも片方で発動回数1以上');
   console.log('技名'.padEnd(12) + '較正seed31337'.padEnd(16) + '較正seed90210'.padEnd(16) + '既定ロスター');
   for (const m of flatSupportMoves) {
-    console.log(
-      m.name.padEnd(12)
-      + String(runCal31337.counts[m.id]).padEnd(16)
-      + String(runCal90210.counts[m.id]).padEnd(16)
-      + String(runDefault.counts[m.id])
-    );
+    const c1 = runCal31337.counts[m.id];
+    const c2 = runCal90210.counts[m.id];
+    const c3 = runDefault.counts[m.id];
+    console.log(m.name.padEnd(12) + String(c1).padEnd(16) + String(c2).padEnd(16) + String(c3));
+
+    const calRow = calibration.rows.find((r) => r.id === m.id);
+    const diff = calRow ? (calRow.total - calibration.refTotal) : null;
+    ok(c1 >= 1 || c2 >= 1,
+       m.name + '：較正2シード(31337/90210)のどちらでも発動回数が0（MOVE-03）。'
+       + '段2の上限(dur→20 / |delta|→25)まで上げてもなお2本とも0なら降り口——'
+       + '実装を止めて にーくら へ報告する（数字を膨らませ続けて撃たせん）: '
+       + 'seed31337=' + c1 + ' seed90210=' + c2
+       + '　補助の値打ち=' + (calRow ? calRow.buffValue.toFixed(2) : 'N/A')
+       + '　総合点=' + (calRow ? calRow.total.toFixed(2) : 'N/A')
+       + '　対灼熱弾(' + calibration.refTotal.toFixed(2) + ')の差='
+       + (diff !== null ? (diff >= 0 ? '+' : '') + diff.toFixed(2) : 'N/A'));
   }
-  console.log('（0回の技があってもこのTaskは落ちん。回数の合否は03-03-PLAN.md Task 1に一本化。'
-    + 'wiringOk=' + wiringOk + '）');
+  console.log('（既定ロスター列は記録のみ・合否に使わん。wiringOk=' + wiringOk + '）');
 
   /* ---- うずしお：「次の技から」に合わせた検査（03-01 Task 2） ----
      f.cd[m.id]=m.cooldown*f.cdScale（src/battle.tpl.html:1768）は撃った瞬間に確定するけん、
