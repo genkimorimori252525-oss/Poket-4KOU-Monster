@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-current_phase: 1
-current_phase_name: 依存を切る
-status: ready
-last_updated: "2026-08-20T06:28:33.346Z"
-last_activity: 2026-08-20
-last_activity_desc: 覚えられる技／覚える技を2段に割り、内蔵技を個体ごとに外せるようにした
-state_head: fdf7fd08a20d82733c7ee712962b5fae7b1db57e
+current_phase: 02.1
+current_phase_name: 補助技 (INSERTED)
+status: executing
+stopped_at: Completed 02.1-01-PLAN.md
+last_updated: "2026-08-21T06:51:34.873Z"
+last_activity: 2026-08-21
+last_activity_desc: Phase 02.1 execution started
+state_head: adc38b461d1f6ec60471b0c49a03efcbb6832840
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 10
+  completed_plans: 7
   percent: 25
-stopped_at: マイルストーン開始（技の作り直し）
 ---
 
 # Project State
@@ -23,15 +23,15 @@ stopped_at: マイルストーン開始（技の作り直し）
 See: .planning/PROJECT.md
 
 **Core value:** 技が**四皇モンの仕組みを実際に使う**こと。
-**Current focus:** Phase 1 —— 見本44技を外しても壊れんことを確かめる
+**Current focus:** Phase 02.1 — 補助技 (INSERTED)
 
 ## Current Position
 
-Phase: 1 of 3 (依存を切る)
-Status: 着手
-Last activity: 2026-08-20 —— quick 260820-kit 完了（覚える表）
+Phase: 02.1 (補助技 (INSERTED)), Plan 1 of 3 — EXECUTING
+Status: 02.1-01 完了。次は 02.1-02（制作ツールUI）
+Last activity: 2026-08-21 — 02.1-01（statOf/isSupportMove/buffValue）完了
 
-Progress: [░░░░░░░░░░] 0%（0/3 フェーズ）
+Progress: [███████░░░] 70%（1/3 プラン・このフェーズ）
 
 ## 前のマイルストーン（反動と間）
 
@@ -71,3 +71,15 @@ Progress: [░░░░░░░░░░] 0%（0/3 フェーズ）
 ### Roadmap Evolution
 
 - Phase 2.1 inserted after Phase 2: 補助技（aura の3本がダメージ0の件の決着。scoreMove の採点項が本体）
+
+## Performance Metrics
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 02.1 P01 | 38min | 3 tasks | 4 files |
+
+## Session
+
+**Last session:** 2026-08-21T06:51:34.664Z
+**Stopped at:** Completed 02.1-01-PLAN.md
+**Resume file:** None

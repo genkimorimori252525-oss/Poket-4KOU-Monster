@@ -62,10 +62,10 @@
 
 ### 補助技（SUP・Phase 2.1、INSERTED）
 
-- [ ] **SUP-01**: ステータスの読み口が `statOf()` 1本に寄っとって、直読みが残っとらん
-- [ ] **SUP-02**: support 判定が `kind` に移り、`kind` を書いとらん技は `attack` のまま挙動が変わらん
-- [ ] **SUP-03**: 補助技の効果（`atk`/`def`/`eva`/`spd`）が実際に効いて `dur` 秒で切れる。試合をまたがん
-- [ ] **SUP-04**: `scoreMove` に補助の値打ちの項があって、AI が状況に応じて補助技を選ぶ
+- [x] **SUP-01**: ステータスの読み口が `statOf()` 1本に寄っとって、直読みが残っとらん
+- [x] **SUP-02**: support 判定が `kind` に移り、`kind` を書いとらん技は `attack` のまま挙動が変わらん
+- [x] **SUP-03**: 補助技の効果（`atk`/`def`/`eva`/`spd`）が実際に効いて `dur` 秒で切れる。試合をまたがん
+- [x] **SUP-04**: `scoreMove` に補助の値打ちの項があって、AI が状況に応じて補助技を選ぶ
 - [ ] **SUP-05**: 制作ツールで攻撃／補助を切り替えられ、`effect` を入力できる
 - [ ] **SUP-06**: `tools/verify_support.js` が回帰ゲートとして走り、`workflow.test_command` に入っとる
 
