@@ -10,11 +10,11 @@ const { isMade } = require('./gen_starter.js');
 
 const ROOT = path.join(__dirname, '..');
 const LIB_PATH = path.join(ROOT, 'data', 'moves', 'library.json');
-/* 亜空切断・灼熱弾・Codexの14本（design doc §6-4）。1本も欠けとらんかを見張る。 */
+/* 亜空切断・灼熱弾・専用14本・爆撃。1本も欠けとらんかを見張る。 */
 const MUST_SURVIVE = [
   '亜空切断', '灼熱弾', '10まんボルト', '１００万ボルト', '２ボルト', 'ハイドロポンプ',
   'インファイト', 'ブラックキック', 'ブラックパンチ', 'ブラックショット', 'ビック尻ドロップ',
-  'かえんほうしゃ', 'ソーラービーム', 'エレキボール', 'サイコキネシス', 'ときのほうこう'
+  'かえんほうしゃ', 'ソーラービーム', 'エレキボール', 'サイコキネシス', 'ときのほうこう', '爆撃'
 ];
 const DIST_URL = 'file://' + path.join(ROOT, 'dist') + '/';
 const SHOT = path.join(__dirname, '_movelist-shot.png');

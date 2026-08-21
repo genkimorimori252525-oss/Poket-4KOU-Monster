@@ -20,72 +20,11 @@
     "self": 75
   },
   "moves": [
-    "shakunetsu"
+    "shakunetsu",
+    "mv1",
+    "mv2"
   ],
   "customMoves": [
-    {
-      "id": "Bomb",
-      "name": "爆撃",
-      "type": "ひこう",
-      "power": 50,
-      "cast": 1,
-      "cooldown": 8,
-      "tags": [],
-      "fx": {
-        "generator": "projectile",
-        "shape": "orb",
-        "size": 22,
-        "frames": 6,
-        "wobble": 0.16,
-        "core": 0.5,
-        "spin": 0.15,
-        "specks": 5,
-        "trail": {
-          "type": "flame",
-          "length": 14,
-          "rate": 0.8,
-          "size": 0.8
-        },
-        "travel": {
-          "speed": 230,
-          "arc": -26,
-          "spin": 0
-        },
-        "impact": {
-          "size": 56,
-          "frames": 9,
-          "shards": 14,
-          "palette": [
-            "#ffffff",
-            "#ffd44a",
-            "#ff7a18",
-            "#c8260c"
-          ]
-        },
-        "id": "Bomb",
-        "name": "爆撃",
-        "seed": 918273,
-        "palette": [
-          "#ffffff",
-          "#ffd44a",
-          "#ff7a18",
-          "#c8260c"
-        ],
-        "screen": {},
-        "palKey": "炎",
-        "timeScale": 1,
-        "motions": [
-          {
-            "anim": "fly",
-            "at": "fire",
-            "off": 0,
-            "dur": 2
-          }
-        ],
-        "parts": []
-      },
-      "audio": []
-    },
     {
       "id": "shakunetsu",
       "name": "灼熱弾",
@@ -156,8 +95,136 @@
         "parts": []
       },
       "audio": null
+    },
+    {
+      "id": "mv1",
+      "name": "爆撃",
+      "type": "ほのお",
+      "power": 54,
+      "cast": 0.45,
+      "cooldown": 9,
+      "tags": [
+        "高威力",
+        "とどめ向き",
+        "瀕死時危険",
+        "回避されにくい"
+      ],
+      "fx": {
+        "generator": "bombing_move",
+        "id": "mv1",
+        "name": "爆撃",
+        "seed": 82021,
+        "palKey": null,
+        "size": 62,
+        "amount": 12,
+        "duration": 4.55,
+        "hitAt": 0.94,
+        "arc": 0,
+        "clashKind": "none",
+        "palette": [
+          "#ffffff",
+          "#ffd33c",
+          "#ff6418",
+          "#8e1609"
+        ],
+        "impact": null,
+        "powerVisual": {
+          "size": [
+            0.62,
+            2
+          ],
+          "amount": [
+            0.5,
+            2.3
+          ]
+        },
+        "screen": {},
+        "timeScale": 1,
+        "parts": [],
+        "motions": [
+          {
+            "anim": "bombing_flight",
+            "at": "cast",
+            "off": 0,
+            "dur": 4.55
+          }
+        ],
+        "flames": 60,
+        "embers": 42,
+        "lockTarget": 4.55
+      },
+      "audio": []
+    },
+    {
+      "id": "mv2",
+      "name": "ブレイブバード",
+      "type": "ひこう",
+      "power": 46,
+      "cast": 0.4,
+      "cooldown": 5.4,
+      "tags": [
+        "近距離向き",
+        "高威力",
+        "瀕死時危険"
+      ],
+      "fx": {
+        "generator": "brave_bird_move",
+        "id": "mv2",
+        "name": "ブレイブバード",
+        "seed": 7053,
+        "palKey": null,
+        "size": 66,
+        "amount": 12,
+        "duration": 1.02,
+        "hitAt": 0.86,
+        "arc": -42,
+        "clashKind": "bullet",
+        "palette": [
+          "#ffffff",
+          "#a8e8ff",
+          "#2c8fd0",
+          "#17436f"
+        ],
+        "impact": null,
+        "powerVisual": {
+          "size": [
+            0.67,
+            1.78
+          ],
+          "amount": [
+            0.55,
+            2
+          ]
+        },
+        "screen": {
+          "lines": {
+            "color": "#ffffff",
+            "strength": 0.32,
+            "dur": 0.26,
+            "at": "fire",
+            "dir": "v"
+          },
+          "shake": {
+            "power": 11,
+            "dur": 0.4,
+            "at": "impact"
+          }
+        },
+        "timeScale": 1.15,
+        "parts": [],
+        "motions": [
+          {
+            "anim": "brave_bird_dive",
+            "at": "fire",
+            "off": 0,
+            "dur": 1.02
+          }
+        ]
+      },
+      "audio": []
     }
   ],
+  "excludeBuiltin": [],
   "cry": {
     "id": "cry_BAZERGIUS",
     "vol": 0.95,

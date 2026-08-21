@@ -484,33 +484,32 @@
         "瀕死時危険"
       ],
       "fx": {
-        "generator": "beam",
+        "generator": "hyper_beam_move",
         "id": "mv6",
         "name": "はかいこうせん",
         "seed": 7002,
-        "palKey": "雷",
-        "width": 34,
-        "segments": 8,
-        "waver": 0.6,
-        "charge": 0.7,
-        "fire": 0.12,
-        "sustain": 0.62,
-        "fade": 0.34,
+        "palKey": null,
+        "size": 54,
+        "amount": 16,
+        "duration": 1.72,
+        "hitAt": 0.54,
+        "arc": 0,
+        "clashKind": "beam",
         "palette": [
           "#ffffff",
-          "#fff7a0",
-          "#ffd21e",
-          "#8a5a00"
+          "#ffe071",
+          "#ff8a20",
+          "#8b2a0d"
         ],
-        "impact": {
-          "size": 92,
-          "frames": 11,
-          "shards": 20,
-          "palette": [
-            "#ffffff",
-            "#fff7a0",
-            "#ffd21e",
-            "#8a5a00"
+        "impact": null,
+        "powerVisual": {
+          "size": [
+            0.64,
+            1.9
+          ],
+          "amount": [
+            0.5,
+            2.2
           ]
         },
         "screen": {
@@ -548,16 +547,10 @@
             "dur": 1
           },
           {
-            "anim": "attack",
+            "anim": "hyper_beam_fire",
             "at": "fire",
             "off": 0,
-            "dur": 0.7
-          },
-          {
-            "anim": "hurt",
-            "at": "impact",
-            "off": 0.3,
-            "dur": 0.9
+            "dur": 1.72
           }
         ]
       },
