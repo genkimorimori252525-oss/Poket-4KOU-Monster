@@ -22,6 +22,9 @@ const names=['ひのこ','はっぱカッター','タネマシンガン','トラ
   'サイコカッター','げきりん','れいとうビーム','ラスターカノン','マジカルシャイン','はかいこうせん',
   'りゅうのはどう','りゅうのまい','どくどく','うずしお','いわなだれ','ストーンエッジ',
   'だいちのちから','じしん','爆撃'];
+/* このフェーズ（03）で足した補助の専用技。以後この表に技を足しても件数の手直しは要らん。 */
+const SUPPORT_NAMES=['すなかけ','斎藤尻隠れ'];
+const ALL=[...names,...SUPPORT_NAMES];
 
 /* fx_core + 専用素材をブラウザ同等のglobal scriptとして読む。 */
 const context={console,document:{createElement(){ return {width:0,height:0,getContext(){return null;}}; }}};
@@ -30,14 +33,14 @@ vm.createContext(context);
 vm.runInContext(fxCore+'\n'+rebuilt+'\n;globalThis.__R={meta:REBUILT_MOVE_META,reg:REBUILT_MOVE_FX,spawnFX,buildEffect};',context);
 const {meta,reg,spawnFX,buildEffect}=context.__R;
 
-ok(Object.keys(meta).length===39,'専用metadataが39本ではない');
-ok(Object.keys(reg).length===39,'専用class登録が39本ではない');
-ok(new Set(Object.values(reg).map(C=>C.name)).size===39,'複数generatorが同じclassを流用している');
+ok(Object.keys(meta).length===ALL.length,'専用metadataが'+ALL.length+'本ではない: '+Object.keys(meta).length);
+ok(Object.keys(reg).length===ALL.length,'専用class登録が'+ALL.length+'本ではない: '+Object.keys(reg).length);
+ok(new Set(Object.values(reg).map(C=>C.name)).size===ALL.length,'複数generatorが同じclassを流用している');
 ok(names.every(n=>Object.values(meta).some(m=>m.jp===n)),'対象39技とmetadata名が一致しない');
 
 const generic=new Set(['projectile','beam','slash','lightning','aura','shatter']);
 const generators=[];
-for(const name of names){
+for(const name of ALL){
   const rec=lib[name],m=Object.entries(meta).find(([,v])=>v.jp===name);
   ok(!!rec,name+' がlibraryにない'); if(!rec||!m) continue;
   const [generator,md]=m,fx=rec.fx||{};
@@ -50,7 +53,7 @@ for(const name of names){
   ok(fx.powerVisual&&fx.powerVisual.size&&fx.powerVisual.amount,name+' に威力連動範囲がない');
   ok(Array.isArray(fx.motions),name+' のmotionsが配列ではない');
 }
-ok(new Set(generators).size===39,'専用generatorが技ごとに一意ではない');
+ok(new Set(generators).size===ALL.length,'専用generatorが技ごとに一意ではない');
 ok(lib['亜空切断']&&lib['亜空切断'].fx.generator==='shatter','亜空切断の監修済みgeneratorを変更した');
 ok(!Object.values(meta).some(m=>m.jp==='亜空切断'),'亜空切断を専用化対象へ混ぜた');
 ok(/function\s+mlGeneratorKeys\s*\(/.test(movelab),'技ラボに専用generatorの隔離処理がない');
@@ -88,7 +91,7 @@ function renderSignature(fx,power){
   return {hash:out>>>0,ops:totalOps};
 }
 const seen=new Map();
-for(const name of names){
+for(const name of ALL){
   const fx=lib[name].fx;
   try{
     const low=renderSignature(fx,0),high=renderSignature(fx,1),again=renderSignature(fx,0);
@@ -108,7 +111,7 @@ for(const name of names){
 const actx={}; actx.globalThis=actx; vm.createContext(actx);
 vm.runInContext(anims+'\n;globalThis.__A=ANIMS;',actx);
 const A=actx.__A;
-for(const name of names) for(const mo of lib[name].fx.motions||[]) ok(!!A[mo.anim],name+' の専用motion '+mo.anim+' がない');
+for(const name of ALL) for(const mo of lib[name].fx.motions||[]) ok(!!A[mo.anim],name+' の専用motion '+mo.anim+' がない');
 const bomb=lib['爆撃'];
 ok(Math.abs((bomb.battle.cast+bomb.fx.duration)-5)<.25,'爆撃が約5秒ではない');
 ok(bomb.fx.lockTarget===bomb.fx.duration,'爆撃の拘束時間と本演出時間が一致しない');
@@ -125,4 +128,4 @@ if(errors.length){
   for(const e of errors) console.error('  - '+e);
   process.exit(1);
 }
-console.log('verify_rebuilt_moves: OK — 38技+爆撃、39 generator/class、非流用、威力連動、決定論、約5秒拘束');
+console.log('verify_rebuilt_moves: OK — 38技+爆撃+補助'+SUPPORT_NAMES.length+'本、'+ALL.length+' generator/class、非流用、威力連動、決定論、約5秒拘束');
