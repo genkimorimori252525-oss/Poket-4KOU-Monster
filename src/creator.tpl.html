@@ -1593,7 +1593,8 @@ function syncCustom(){
     if(!c.fx) c.fx=makeSpec('projectile',918273,c.name||'技','炎');
     c.fx.id=c.id; c.fx.name=c.name;
     MOVES[c.id]={id:c.id,name:c.name,type:c.type,power:c.power,cast:c.cast,
-                 cooldown:c.cooldown,fx:c.fx,tags:c.tags||[],custom:true};
+                 cooldown:c.cooldown,fx:c.fx,tags:c.tags||[],custom:true,
+                 kind:c.kind,effect:c.effect};
     /* 内蔵技の上書きは、音まで四皇モン側に抱えん。
        音は音ラボと共有の AUDIO_CFG が正。ここで上書きすると鴨川の設定を壊す。 */
     if(isBuiltinId(c.id)) c.audio=null;
@@ -1870,7 +1871,54 @@ function buildMoveEditor(){
   ts.onchange=()=>{ c.type=ts.value; ts.style.borderLeft='6px solid '+(TYPES[c.type]||'#2c3442');
     mvRebuild(); };
   b.appendChild(td);
-  slider(b,'威力',      ()=>c.power,   v=>{c.power=v;   mvRebuild();},1,80,1);
+  /* 攻撃／補助 切替。onchange は必ず buildMoveEditor()（全体作り直し）を呼ぶ ――
+     mvRebuild() は $('mvBase') を触らんけん、それやと 威力/効果 の出し分けが
+     閉じて開き直すまで切り替わらん（plan-check B8）。 */
+  const kd=document.createElement('div'); kd.className='ctl';
+  kd.innerHTML='<label>攻撃／補助</label><select id="mvKind">'+
+    '<option value="attack">攻撃</option><option value="support">補助</option></select>';
+  const ks=kd.querySelector('select');
+  ks.value=isSupportMove(c)?'support':'attack';
+  ks.onchange=()=>{
+    if(ks.value==='support'){
+      c.kind='support'; c.power=0;
+      if(!c.effect) c.effect={stat:'atk',delta:20,dur:15,target:'self'};
+    }else{
+      c.kind=undefined;
+    }
+    buildMoveEditor();
+  };
+  b.appendChild(kd);
+  if(!isSupportMove(c)){
+    slider(b,'威力', ()=>c.power, v=>{c.power=v; mvRebuild();},1,80,1);
+  }else{
+    if(!c.effect) c.effect={stat:'atk',delta:20,dur:15,target:'self'};
+    const adv=document.createElement('div'); adv.className='hint'; adv.style.margin='0 0 6px';
+    adv.textContent='強く・長く効かせな、殴った方が得になる（目安：delta×durがだいたい250を超える'+
+      'くらいから、cast/CDが軽い技ほど有利）';
+    b.appendChild(adv);
+    const sd=document.createElement('div'); sd.className='ctl';
+    sd.innerHTML='<label>効果</label><select id="mvEffStat">'+
+      ['atk','def','eva','spd'].map(k=>`<option value="${k}">${STAT_JP[k]}</option>`).join('')+
+      '</select>';
+    const ss=sd.querySelector('select'); ss.value=c.effect.stat;
+    ss.onchange=()=>{ c.effect.stat=ss.value; buildMoveEditor(); };  // spd注記の出し分けがあるけん全体作り直し
+    b.appendChild(sd);
+    slider(b,'変化量',()=>c.effect.delta,v=>{c.effect.delta=v; mvRebuild();},-25,25,1);
+    slider(b,'持続',  ()=>c.effect.dur,  v=>{c.effect.dur=v;   mvRebuild();},3,20,0.5,v=>v.toFixed(1)+'s');
+    const gd=document.createElement('div'); gd.className='ctl';
+    gd.innerHTML='<label>対象</label><select id="mvEffTarget">'+
+      '<option value="self">自分</option><option value="foe">相手</option></select>';
+    const gs=gd.querySelector('select'); gs.value=(c.effect.target==='foe')?'foe':'self';
+    gs.onchange=()=>{ c.effect.target=gs.value; mvRebuild(); };
+    b.appendChild(gd);
+    if(c.effect.stat==='spd'){
+      const spdNote=document.createElement('div'); spdNote.className='hint'; spdNote.id='mvSpdNote';
+      spdNote.style.margin='0 0 6px';
+      spdNote.textContent='素早さは次に撃つ技から効く（今チャージ中の技には効かん）';
+      b.appendChild(spdNote);
+    }
+  }
   slider(b,'溜め',      ()=>c.cast,    v=>{c.cast=v;    mvRebuild();},0,1.5,0.02,v=>v.toFixed(2)+'s');
   slider(b,'クールダウン',()=>c.cooldown,v=>{c.cooldown=v;mvRebuild();},0.5,10,0.1,v=>v.toFixed(1)+'s');
   mlTimeScale(b,mvCtx);
@@ -1922,7 +1970,7 @@ function fxBuiltOf(id){
 function fireMove(id){
   const m=MOVES[id]; if(!m||!m.fx){ return; }
   const sp=m.fx;
-  const self=(sp.generator==='aura');      // 技ラボと同じ扱いにする
+  const self=isSupportMove(m);             // battle.tpl.html と同じ isSupportMove() を使う（plan-check W2）
   const FROM={x:LAY_A.cx, y:LAY_A.platY-46};
   const TO  ={x:LAY_E.cx, y:LAY_E.platY-32};
   const pts={from:FROM, to:(self?FROM:TO), center:{x:W/2,y:104}};
@@ -2055,7 +2103,27 @@ function normalizeMon(o){
   m.customMoves=Array.isArray(o.customMoves)?o.customMoves.filter(c=>c&&c.id):[];
   for(const c of m.customMoves){
     c.name=c.name||c.id; c.type=c.type||'ノーマル';
-    c.power=+c.power||20; c.cast=+c.cast||0.3; c.cooldown=+c.cooldown||2.4;
+    /* +0||20 は 0 を「無い」扱いして 20 に戻してしまう ―― 補助技の power:0/cast:0 を
+       毎回の読込（自動保存・スロット・JSON読込どれも normalizeMon 経由）で殺す
+       (plan-check B5)。0 は finite やけん、Number.isFinite なら生き残る。 */
+    c.power=Number.isFinite(+c.power)?+c.power:20;
+    c.cast=Number.isFinite(+c.cast)?+c.cast:0.3;
+    c.cooldown=Number.isFinite(+c.cooldown)?+c.cooldown:2.4;
+    /* kind/effect のサニタイズ。stat の妥当性判定はここで二重にせん ――
+       hp/int 等の無効値もそのまま通し、applySupportEffect（battle側）だけを
+       「無効stat=no-op」の唯一の権威にする（この改訂の核心の判断）。 */
+    c.kind=(c.kind==='support')?'support':undefined;
+    if(c.kind==='support'){
+      const e=(c.effect&&typeof c.effect==='object')?c.effect:{};
+      c.effect={
+        stat:e.stat,
+        delta:Math.max(-25,Math.min(25,Number.isFinite(+e.delta)?+e.delta:20)),
+        dur:Math.max(3,Math.min(20,Number.isFinite(+e.dur)?+e.dur:15)),
+        target:(e.target==='foe')?'foe':'self'
+      };
+    }else{
+      delete c.effect;
+    }
     if(!Array.isArray(c.audio)) c.audio=[];
     if(!c.fx||!c.fx.generator) c.fx=makeSpec('projectile',918273,c.name,'炎');
     c.fx.timeScale=Math.max(0.25,Math.min(3,+c.fx.timeScale||1));
