@@ -567,6 +567,42 @@ if (process.env.PW_CHROMIUM) LAUNCH.executablePath = process.env.PW_CHROMIUM;
   console.log('（0回の技があってもこのTaskは落ちん。回数の合否は03-03-PLAN.md Task 1に一本化。'
     + 'wiringOk=' + wiringOk + '）');
 
+  /* ---- うずしお：「次の技から」に合わせた検査（03-01 Task 2） ----
+     f.cd[m.id]=m.cooldown*f.cdScale（src/battle.tpl.html:1768）は撃った瞬間に確定するけん、
+     今走っとる相手の反動は縮まらん。「撃った瞬間に相手のactionTimer/cdが縮む」を
+     assertしたら必ず落ちる。代わりに確かめるんは次の2つ:
+     (a) applySupportEffect のあと foe.buffs.spd が立っとる（delta負・untilが未来）
+     (b) その状態で statOf(foe,'spd') が素の値より小さい
+     —— つまり「次に撃つときのcdScaleが重うなる」ことをステータス側で示す。 */
+  const uzushioFlat = flatSupportMoves.find((m) => m.id === 'uzushio');
+  if (uzushioFlat) {
+    const uzushioCheck = await pg.evaluate((mv) => {
+      resetBattle(4242);
+      const f = enemy, foe = ally;
+      const beforeSpd = statOf(foe, 'spd');
+      applySupportEffect(f, foe, mv);
+      const buff = foe.buffs.spd;
+      const afterSpd = statOf(foe, 'spd');
+      const untilFuture = !!buff && battleTime < buff.until;
+      resetBattle(4242);
+      return {
+        buffPresent: !!buff,
+        delta: buff ? buff.delta : null,
+        untilFuture,
+        beforeSpd, afterSpd,
+      };
+    }, uzushioFlat);
+    ok(uzushioCheck.buffPresent, 'うずしお：applySupportEffect後、foe.buffs.spd が立っとらん');
+    ok(uzushioCheck.delta < 0, 'うずしお：foe.buffs.spd.delta が負やない: ' + uzushioCheck.delta);
+    ok(uzushioCheck.untilFuture, 'うずしお：foe.buffs.spd.until が未来やない（撃った瞬間に切れとる）');
+    ok(uzushioCheck.afterSpd < uzushioCheck.beforeSpd,
+       'うずしお：statOf(foe,\'spd\') が素の値より小さくなっとらん: before='
+       + uzushioCheck.beforeSpd + ' after=' + uzushioCheck.afterSpd);
+    console.log('うずしお(次の技から)  素のspd=' + uzushioCheck.beforeSpd
+      + ' → buffs.spd適用後のstatOf=' + uzushioCheck.afterSpd
+      + '（delta=' + uzushioCheck.delta + '、次に撃つときのcdScaleが重うなる）');
+  }
+
   await pg.close();
   await b.close();
 
