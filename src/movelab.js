@@ -39,7 +39,8 @@ const LABEL={
   'impact.size':'着弾の大きさ','impact.frames':'着弾のコマ数','impact.shards':'着弾の破片',
   strength:'強さ',dur:'長さ',times:'点滅の回数',power:'揺れ幅',color:'色',
   at:'いつ',dir:'線の向き',
-  off:'ずらす',dx:'横の位置',dy:'縦の位置',anchor:'どこを基準に'
+  off:'ずらす',dx:'横の位置',dy:'縦の位置',anchor:'どこを基準に',
+  amount:'本演出の要素数',flames:'炎柱の数',embers:'火の粉の数'
 };
 const SCREEN_JP={flash:'閃光',blink:'背景点滅',tint:'背景に色',darken:'暗転',shake:'画面揺れ',lines:'走査線'};
 const GEN_JP={projectile:'飛び道具',beam:'光線',slash:'斬撃',lightning:'雷',aura:'オーラ',shatter:'空間割れ',
@@ -77,7 +78,14 @@ const ANIM_JP={ attack:'突き出す', charge:'力を溜める', jump:'跳ぶ', 
                 dodge:'横へ跳ぶ', zigzag:'往復横跳び', hurt:'のけぞる', knockback:'ふっとぶ',
                 appear:'降りてくる', idle:'動かん',
                 /* 戦闘の「間」に使うのをやめた動き。捨てずにここへ回した（2026-08-19） */
-                hold:'構える', recoil:'白く明滅', big_butt_drop:'尻から急降下' };
+                 hold:'構える', recoil:'白く明滅', big_butt_drop:'尻から急降下' };
+Object.assign(ANIM_JP,{
+  seed_machine_gun_burst:'タネ連射',focus_blast_charge:'気合圧縮',quick_attack_dash:'電光突進',
+  aqua_jet_rush:'水流突進',drill_run_spin:'ドリル回転',brave_bird_dive:'猛禽急降下',
+  aerial_ace_turn:'燕返し旋回',thunder_punch_drive:'雷拳踏み込み',outrage_rampage:'逆鱗乱舞',
+  hyper_beam_fire:'破壊光線反動',dragon_dance_move:'竜舞',earthquake_stomp:'地震踏み落とし',
+  bombing_flight:'爆撃優雅飛行'
+});
 const SCHEMA={
   projectile:[['shape','sel',['orb','shard','ring','bolt']],['size','rng',6,96,1,'px'],
     ['frames','rng',1,12,1,'コマ'],['wobble','rng',0,0.5,0.01],['core','rng',0.1,1.2,0.05],
@@ -137,6 +145,20 @@ const SCHEMA={
   black_shot:[['size','rng',12,90,2,'px'],['blocks','rng',3,30,1],['sway','rng',0,24,1,'px'],
     ['travel.speed','rng',80,650,10,'px/s'],['burst','rng',0.15,1.2,0.05,'秒']]
 };
+/* 専用技は構成素材を汎用スキーマへ戻さず、本演出そのものの規模・密度・時間だけを編集する。 */
+if(globalThis.REBUILT_MOVE_META){
+  for(const [g,m] of Object.entries(globalThis.REBUILT_MOVE_META)){
+    GEN_JP[g]=m.jp+'専用'; GEN_DESC[g]=m.desc;
+    SCHEMA[g]=[['size','rng',6,180,2,'px'],['amount','rng',1,64,1],
+      ['duration','rng',.18,6,.01,'秒'],['hitAt','rng',.08,.98,.01]];
+    if(g==='bombing_move') SCHEMA[g].splice(2,0,['flames','rng',6,60,1],['embers','rng',8,100,1]);
+  }
+}
+/* 専用素材は、その技を開いとるときだけ編集候補に見せる。
+   別技の本体やpartsへ選べたら「専用」をUI自身が流用できてしまう。 */
+function mlGeneratorKeys(current){
+  return Object.keys(SCHEMA).filter(k=>!globalThis.REBUILT_MOVE_META||!globalThis.REBUILT_MOVE_META[k]||k===current);
+}
 
 const specGet=(o,p)=>p.split('.').reduce((a,k)=>a&&a[k],o);
 const specSet=(o,p,v)=>{ const ks=p.split('.'); let t=o;
@@ -243,7 +265,7 @@ function mlText(host,label,get0,set0,onChange){
 function mlGens(host,ctx){
   mlInjectCSS();
   const gs=document.createElement('div'); gs.className='ml-gens';
-  Object.keys(SCHEMA).forEach(k=>{
+  mlGeneratorKeys(ctx.spec().generator).forEach(k=>{
     const b=document.createElement('button');
     b.textContent=GEN_JP[k]; b.classList.toggle('on',ctx.spec().generator===k);
     b.onclick=()=>{
@@ -423,7 +445,7 @@ function mlParts(host,ctx){
 
     /* 種類 */
     const gs=document.createElement('div'); gs.className='ml-gens';
-    Object.keys(SCHEMA).forEach(k=>{
+    mlGeneratorKeys(p.generator).forEach(k=>{
       const b=document.createElement('button'); b.textContent=GEN_JP[k];
       b.classList.toggle('on',p.generator===k);
       b.onclick=()=>{

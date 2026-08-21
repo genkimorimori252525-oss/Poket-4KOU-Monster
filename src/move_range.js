@@ -49,6 +49,12 @@ var MOVE_RANGE = (function () {
     black_punch:'melee',        // 黒い拳で直接殴る
     black_shot: 'ranged'        // 暗黒弾が空間を進む
   };
+  /* 作り直した技はgeneratorごとに分類を持つ。技データ側のrangeが正だが、
+     制作ツールで新規に複製した直後も同じ分類になるよう登録する。 */
+  if(globalThis.REBUILT_MOVE_META){
+    for(const g of Object.keys(globalThis.REBUILT_MOVE_META))
+      BY_GENERATOR[g]=globalThis.REBUILT_MOVE_META[g].range;
+  }
 
   /* 技の分類を返す。技データに range が明示されとればそっちが勝つ
      （新しいジェネレータを足したときや、例外を作りたいとき用）。 */

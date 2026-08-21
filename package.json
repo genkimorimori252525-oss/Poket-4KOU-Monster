@@ -34,7 +34,9 @@
     "verify:movelist": "node tools/verify_movelist.js",
     "verify:learnable": "node tools/verify_learnable.js",
     "verify:butt": "node tools/verify_butt_animation.js",
-    "verify:power": "node tools/verify_power_scale.js"
+    "verify:power": "node tools/verify_power_scale.js",
+    "verify:rebuilt": "node tools/verify_rebuilt_moves.js",
+    "verify:support": "node tools/verify_support.js"
   },
   "devDependencies": {
     "playwright": "^1.62.1"

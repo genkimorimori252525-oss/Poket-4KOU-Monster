@@ -26,12 +26,12 @@ const library = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'moves', 'lib
 /* 置換トークン → 元ファイル */
 const MODULES = {
   '/*__STORE__*/'   : read('store_bridge.js'),
-  '/*__FX_CORE__*/' : read('fx_core.js'),
+  '/*__FX_CORE__*/' : read('fx_core.js')+'\n'+read('fx_rebuilt_moves.js'),
   '/*__SFX_BANK__*/': read('sfx_bank.js'),
   '/*__RANGE__*/'   : read('move_range.js'),
   '/*__MOVES__*/'   : read('moves.js'),
   '/*__COST__*/'    : read('cost.js'),
-  '/*__ANIMS__*/'   : read('anims.js'),
+  '/*__ANIMS__*/'   : read('anims.js')+'\n'+read('anims_rebuilt_moves.js'),
   '/*__AUDIO_UI__*/': read('audio_ui.js'),
   '/*__MOVELAB__*/' : read('movelab.js'),
   '/*__STARTER__*/' : genStarterSource(library),

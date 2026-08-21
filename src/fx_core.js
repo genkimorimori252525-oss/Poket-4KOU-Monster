@@ -1510,6 +1510,10 @@ class BlackShotFX extends ProjectileFX{
 
 /* ---- 生成ディスパッチ ---- */
 function spawnFX(sp,from,to,built,onHit){
+  /* ポケモン由来38技と爆撃は専用classへ直結する。
+     汎用generatorへ落とすと、見た目だけ別名の素材流用になるため先に分岐する。 */
+  const Rebuilt=globalThis.REBUILT_MOVE_FX&&globalThis.REBUILT_MOVE_FX[sp.generator];
+  if(Rebuilt) return new Rebuilt(sp,from,to,built,onHit);
   switch(sp.generator){
     case 'ten_thousand_volt':return new TenThousandVoltFX(sp,from,to,built,onHit);
     case 'million_volt':return new MillionVoltFX(sp,from,to,built,onHit);
