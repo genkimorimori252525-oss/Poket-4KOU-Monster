@@ -2108,6 +2108,10 @@ class BlackShotFX extends ProjectileFX{
 
 /* ---- 生成ディスパッチ ---- */
 function spawnFX(sp,from,to,built,onHit){
+  /* ポケモン由来38技と爆撃は専用classへ直結する。
+     汎用generatorへ落とすと、見た目だけ別名の素材流用になるため先に分岐する。 */
+  const Rebuilt=globalThis.REBUILT_MOVE_FX&&globalThis.REBUILT_MOVE_FX[sp.generator];
+  if(Rebuilt) return new Rebuilt(sp,from,to,built,onHit);
   switch(sp.generator){
     case 'ten_thousand_volt':return new TenThousandVoltFX(sp,from,to,built,onHit);
     case 'million_volt':return new MillionVoltFX(sp,from,to,built,onHit);
@@ -2334,6 +2338,894 @@ function makeSpec(gen,seed,name,palKey){
   if(d.impact) d.impact.palette=[...pal];
   d.screen={};                      // 画面演出は既定では無し。技ラボで足す
   return d;
+}
+
+/* =========================================================
+   ポケモン由来38技＋オリジナル技「爆撃」の専用本演出
+
+   ここにある共有処理は時間・座標・低水準図形だけを扱う。
+   技の見た目は各 class の drawMaterial() が個別に組み立て、
+   既存の projectile / beam / slash / lightning / aura / shatter や
+   parts を一切呼ばない。
+   ========================================================= */
+const RM_TAU=Math.PI*2;
+const rmClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rmLerp=(a,b,t)=>a+(b-a)*t;
+const rmEase=t=>t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+function rmAlpha(g,a,fn){ g.save(); g.globalAlpha=rmClamp(a,0,1); fn(); g.restore(); }
+function rmPoly(g,pts,col){ fillPolyPx(g,pts.map(p=>({x:Math.round(p[0]),y:Math.round(p[1])})),col); }
+function rmLine(g,a,b,w,col){ pxLine(g,a.x,a.y,b.x,b.y,Math.max(1,Math.round(w)),col); }
+function rmStar(g,x,y,r,n,col,rot){
+  const pts=[]; rot=rot||0;
+  for(let i=0;i<n*2;i++){
+    const a=rot+i*Math.PI/n, rr=i%2?r:r*0.38;
+    pts.push([x+Math.cos(a)*rr,y+Math.sin(a)*rr]);
+  }
+  rmPoly(g,pts,col);
+}
+function rmDiamond(g,x,y,rx,ry,col){ rmPoly(g,[[x,y-ry],[x+rx,y],[x,y+ry],[x-rx,y]],col); }
+function rmLeaf(g,x,y,len,w,ang,col,vein){
+  const ca=Math.cos(ang),sa=Math.sin(ang), nx=-sa,ny=ca;
+  const a=[x-ca*len*0.5,y-sa*len*0.5], b=[x+ca*len*0.5,y+sa*len*0.5];
+  rmPoly(g,[a,[x+nx*w,y+ny*w],b,[x-nx*w,y-ny*w]],col);
+  if(vein) pxLine(g,a[0],a[1],b[0],b[1],1,vein);
+}
+function rmFlame(g,x,y,r,col,hot,lean){
+  lean=lean||0;
+  rmPoly(g,[[x-r*0.72,y+r*0.55],[x-r*0.45+lean,y-r*0.10],[x-r*0.08+lean*1.8,y-r],
+    [x+r*0.12+lean,y-r*0.34],[x+r*0.58,y-r*0.72],[x+r*0.72,y+r*0.55]],col);
+  if(hot) rmPoly(g,[[x-r*0.30,y+r*0.45],[x-r*0.10+lean*0.3,y-r*0.25],
+    [x+r*0.18+lean*0.2,y-r*0.52],[x+r*0.34,y+r*0.45]],hot);
+}
+function rmBolt(g,x0,y0,x1,y1,steps,jag,w,col,seed){
+  let px=x0,py=y0;
+  const dx=x1-x0,dy=y1-y0,L=Math.max(1,Math.hypot(dx,dy)),nx=-dy/L,ny=dx/L;
+  for(let i=1;i<=steps;i++){
+    const u=i/steps, h=(hash3(seed||1,i,steps)-0.5)*jag*(i===steps?0:1);
+    const x=x0+dx*u+nx*h,y=y0+dy*u+ny*h;
+    pxLine(g,px,py,x,y,w,col); px=x;py=y;
+  }
+}
+function rmRingBurst(g,x,y,r,count,col,phase){
+  for(let i=0;i<count;i++){
+    const a=RM_TAU*i/count+phase, rr=r*(0.64+0.28*hash3(i,count,17));
+    const x2=x+Math.cos(a)*rr,y2=y+Math.sin(a)*rr;
+    pxLine(g,x+Math.cos(a)*r*0.18,y+Math.sin(a)*r*0.18,x2,y2,1+(i%2),col);
+  }
+}
+
+/* 専用素材共通の「時計」。描画は持たず、既存素材の見た目を継承しない。 */
+class RebuiltMoveFX extends BaseFX{
+  constructor(sp,from,to,built,onHit){
+    super(sp,from,to,built||{},onHit);
+    this.duration=Math.max(0.18,+sp.duration||0.9);
+    this.hitRatio=rmClamp(+sp.hitAt||0.72,0.08,0.98);
+    this.clashKind=sp.clashKind||'none';
+    this.p=0; this.limit=1; this.blocked=false; this.passThrough=false;
+    this.ang=Math.atan2(to.y-from.y,to.x-from.x);
+  }
+  get q(){ return rmClamp(this.time/this.duration,0,1); }
+  get sizeMul(){ return fxVisualScale(this.sp,'size'); }
+  get amountMul(){ return fxVisualScale(this.sp,'amount'); }
+  amount(n,min){ return fxVisualCount(n,this.amountMul,min||1); }
+  get radius(){ return Math.max(4,(+this.sp.size||28)*0.48*this.sizeMul); }
+  get halfWidth(){ return Math.max(2,(+this.sp.size||28)*0.18*this.sizeMul); }
+  get firing(){ return this.clashKind==='beam' && this.q>=0.10 && this.q<0.94; }
+  get travelP(){
+    const raw=this.q/this.hitRatio;
+    return this.passThrough?Math.min(1.65,raw):Math.min(1,raw);
+  }
+  pos(){
+    const u=this.travelP,arc=(+this.sp.arc||0)*Math.sin(Math.min(1,u)*Math.PI);
+    return {x:rmLerp(this.f.x,this.t.x,u),y:rmLerp(this.f.y,this.t.y,u)+arc};
+  }
+  endPoint(){
+    const u=Math.min(this.travelP,this.limit===undefined?1:this.limit);
+    return {x:rmLerp(this.f.x,this.t.x,u),y:rmLerp(this.f.y,this.t.y,u)};
+  }
+  update(dt){
+    dt*=this.ts; this.stepCommon(dt); this.p=this.travelP;
+    if(this.blocked && this.clashKind==='bullet' && this.travelP>=this.limit){ this.state='dead'; return; }
+    if(!this.hit && this.q>=this.hitRatio && !this.passThrough && !this.blocked) this.doHit();
+    if(this.q>=1) this.state='dead';
+  }
+  draw(g){ if(this.state==='dead') return; g.save(); this.drawMaterial(g); g.restore(); }
+  drawMaterial(g){}
+}
+
+/* ひのこ：不揃いの火種が寄り集まり、着弾で小さな火口を作る。 */
+class EmberMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,p=this.pos(),s=(this.sp.size||18)*this.sizeMul,P=this.sp.palette;
+    const n=this.amount(this.sp.amount||9,3);
+    for(let i=0;i<n;i++){
+      const age=((q*2.8+i/n)%1), back=age*s*2.8;
+      const x=p.x-Math.cos(this.ang)*back+Math.sin(this.ang)*Math.sin(i*4+q*20)*s*0.28;
+      const y=p.y-Math.sin(this.ang)*back-Math.cos(this.ang)*Math.sin(i*4+q*20)*s*0.28;
+      rmAlpha(g,1-age,()=>rmFlame(g,x,y,s*(0.24+0.22*(1-age)),P[2],P[0],-Math.cos(this.ang)*2));
+    }
+    rmFlame(g,p.x,p.y,s*0.74,P[3],P[1],-Math.cos(this.ang)*4);
+    pxDisc(g,p.x,p.y+s*0.1,s*0.22,P[0]);
+    if(this.hit) rmRingBurst(g,this.t.x,this.t.y,s*(0.8+q),n,P[2],q*5);
+  }
+}
+
+/* はっぱカッター：葉そのものが扇状に旋回する。斬撃の弧は使わない。 */
+class RazorLeafMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const u=this.travelP,s=(this.sp.size||22)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||7,3);
+    for(let i=0;i<n;i++){
+      const lag=Math.max(0,u-i*0.045), fan=(i-(n-1)/2)*0.16;
+      const x=rmLerp(this.f.x,this.t.x,lag), y=rmLerp(this.f.y,this.t.y,lag)+Math.sin(lag*Math.PI+fan)*24*fan;
+      rmLeaf(g,x,y,s*(0.72+0.08*(i%3)),s*0.24,this.ang+fan+this.time*8*(i%2?1:-1),P[1+(i%3)],P[0]);
+    }
+    if(this.hit){
+      for(let i=0;i<n;i++){
+        const a=RM_TAU*i/n+this.time*4,r=s*(0.6+0.08*i);
+        rmLeaf(g,this.t.x+Math.cos(a)*r,this.t.y+Math.sin(a)*r,s*0.52,s*0.16,a+1.2,P[2],P[0]);
+      }
+    }
+  }
+}
+
+/* タネマシンガン：莢の照準から硬い種子を一列ずつ射出する。 */
+class SeedMachineGunMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const s=(this.sp.size||12)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||8,4),u=this.travelP;
+    rmLeaf(g,this.f.x,this.f.y,s*1.8,s*0.55,this.ang,P[3],P[1]);
+    for(let i=0;i<n;i++){
+      const v=rmClamp(u-i*0.075,0,1), wob=Math.sin(i*3.1+v*18)*s*0.35;
+      const x=rmLerp(this.f.x,this.t.x,v)-Math.sin(this.ang)*wob;
+      const y=rmLerp(this.f.y,this.t.y,v)+Math.cos(this.ang)*wob;
+      pxDisc(g,x,y,s*0.48,P[3]); pxDisc(g,x-2*Math.cos(this.ang),y-2*Math.sin(this.ang),s*0.22,P[1]);
+      pxLine(g,x-Math.cos(this.ang)*s*0.5,y-Math.sin(this.ang)*s*0.5,
+        x-Math.cos(this.ang)*s,y-Math.sin(this.ang)*s,1,P[0]);
+    }
+  }
+}
+
+/* トライアタック：炎・氷・雷の三頂点を結ぶ移動三角形。 */
+class TriAttackMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const p=this.pos(),s=(this.sp.size||34)*this.sizeMul,P=this.sp.palette,a=this.time*3.2;
+    const pts=[];
+    for(let i=0;i<3;i++) pts.push({x:p.x+Math.cos(a+i*RM_TAU/3)*s*0.72,y:p.y+Math.sin(a+i*RM_TAU/3)*s*0.72});
+    rmLine(g,pts[0],pts[1],2,'#ffffff'); rmLine(g,pts[1],pts[2],2,'#ffffff'); rmLine(g,pts[2],pts[0],2,'#ffffff');
+    rmFlame(g,pts[0].x,pts[0].y,s*0.30,'#e83c12','#ffd34a',0);
+    rmDiamond(g,pts[1].x,pts[1].y,s*0.27,s*0.40,'#bff5ff'); pxLine(g,pts[1].x,pts[1].y-s*.3,pts[1].x,pts[1].y+s*.3,1,'#ffffff');
+    rmBolt(g,pts[2].x,pts[2].y-s*.34,pts[2].x,pts[2].y+s*.34,4,s*.22,2,'#ffe43b',31);
+    pxDisc(g,p.x,p.y,s*0.16,P[0]||'#fff');
+    if(this.hit) rmStar(g,this.t.x,this.t.y,s*1.15,6,'#ffffff',a);
+  }
+}
+
+/* みらいよち：未来の着弾点を示す時計眼が閉じ、時間差で光を落とす。 */
+class FutureSightMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||74)*this.sizeMul,P=this.sp.palette,x=this.t.x,y=this.t.y;
+    const open=Math.sin(Math.PI*rmClamp(q/this.hitRatio,0,1));
+    pxRing(g,x,y,s,s*0.48,2,P[2]); pxRing(g,x,y,s*0.62,s*0.28,1,P[1]);
+    rmPoly(g,[[x-s,y],[x,y-s*.48*open],[x+s,y],[x,y+s*.48*open]],P[3]);
+    pxDisc(g,x,y,s*0.18,P[0]); pxDisc(g,x,y,s*0.07,P[2]);
+    const ticks=this.amount(this.sp.amount||12,6);
+    for(let i=0;i<ticks;i++){
+      const a=RM_TAU*i/ticks-q*4,r=s*0.82;
+      pxLine(g,x+Math.cos(a)*r,y+Math.sin(a)*r*.5,x+Math.cos(a)*r*1.12,y+Math.sin(a)*r*.56,1,P[1]);
+    }
+    if(this.hit) rmAlpha(g,1-q,()=>{ pxLine(g,x,y-s*1.5,x,y+s*1.1,s*.18,P[0]); rmStar(g,x,y,s*.62,8,P[1],q); });
+  }
+}
+
+/* つららばり：長さの違う氷槍を順に打ち込む。 */
+class IcicleSpearMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const u=this.travelP,s=(this.sp.size||18)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||6,3);
+    for(let i=0;i<n;i++){
+      const v=rmClamp(u-i*0.07,0,1),off=(i-(n-1)/2)*s*0.48;
+      const x=rmLerp(this.f.x,this.t.x,v)-Math.sin(this.ang)*off;
+      const y=rmLerp(this.f.y,this.t.y,v)+Math.cos(this.ang)*off;
+      const ca=Math.cos(this.ang),sa=Math.sin(this.ang),nx=-sa,ny=ca,L=s*(1.25+0.18*(i%3)),W=s*.22;
+      rmPoly(g,[[x+ca*L,y+sa*L],[x-ca*L*.65+nx*W,y-sa*L*.65+ny*W],
+        [x-ca*L*.85,y-sa*L*.85],[x-ca*L*.65-nx*W,y-sa*L*.65-ny*W]],P[2]);
+      pxLine(g,x-ca*L*.45,y-sa*L*.45,x+ca*L*.65,y+sa*L*.65,1,P[0]);
+    }
+    if(this.hit) for(let i=0;i<n;i++) rmDiamond(g,this.t.x+(i-(n-1)/2)*s*.4,this.t.y+s*.2,s*.12,s*.5,P[1]);
+  }
+}
+
+/* きあいだま：拳法の方位印が圧縮された球として飛ぶ。 */
+class FocusBlastMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const p=this.pos(),s=(this.sp.size||42)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||8,4),a=-this.time*5;
+    for(let i=0;i<3;i++) pxRing(g,p.x,p.y,s*(0.48+i*.18),s*(0.24+i*.08),2,P[3-i]);
+    for(let i=0;i<n;i++){
+      const th=a+i*RM_TAU/n,r=s*(0.55+0.12*Math.sin(i*7));
+      rmDiamond(g,p.x+Math.cos(th)*r,p.y+Math.sin(th)*r*.55,s*.09,s*.17,P[1]);
+    }
+    pxDisc(g,p.x,p.y,s*.34,P[2]); pxDisc(g,p.x,p.y,s*.18,P[0]);
+    rmPoly(g,[[p.x-s*.13,p.y-s*.05],[p.x,p.y-s*.20],[p.x+s*.13,p.y-s*.05],[p.x+s*.08,p.y+s*.18],[p.x-s*.08,p.y+s*.18]],P[3]);
+    if(this.hit) rmRingBurst(g,this.t.x,this.t.y,s*1.5,n,P[1],a);
+  }
+}
+
+/* ヘドロばくだん：粘る毒塊が変形しながら飛び、飛沫の池になる。 */
+class SludgeBombMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const p=this.pos(),s=(this.sp.size||31)*this.sizeMul,P=this.sp.palette,w=Math.sin(this.time*16),n=this.amount(this.sp.amount||11,4);
+    rmPoly(g,[[p.x-s*.75,p.y+s*.30],[p.x-s*.55,p.y-s*(.35+.12*w)],[p.x-s*.12,p.y-s*.72],
+      [p.x+s*.26,p.y-s*(.52-.10*w)],[p.x+s*.72,p.y-s*.12],[p.x+s*.55,p.y+s*.48],[p.x,p.y+s*.64]],P[3]);
+    pxDisc(g,p.x-s*.12,p.y-s*.12,s*.34,P[1]); pxDisc(g,p.x-s*.24,p.y-s*.24,s*.11,P[0]);
+    for(let i=0;i<n;i++){
+      const a=RM_TAU*i/n+this.time*2,r=s*(.65+.25*hash3(i,9,3));
+      pxDisc(g,p.x+Math.cos(a)*r,p.y+Math.sin(a)*r,s*.08,P[2]);
+    }
+    if(this.hit){
+      pxRing(g,this.t.x,this.t.y,s*1.35,s*.42,3,P[2]);
+      for(let i=0;i<n;i++) pxDisc(g,this.t.x+(hash3(i,3,1)-.5)*s*2.4,this.t.y+(hash3(i,7,2)-.5)*s*.6,s*.12,P[1]);
+    }
+  }
+}
+
+/* ミサイルばり：昆虫の翅を持つ針弾が編隊を組む。 */
+class PinMissileMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const u=this.travelP,s=(this.sp.size||14)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||7,3);
+    for(let i=0;i<n;i++){
+      const v=rmClamp(u-i*.055,0,1),lane=(i-(n-1)/2)*s*.55;
+      const x=rmLerp(this.f.x,this.t.x,v)-Math.sin(this.ang)*lane;
+      const y=rmLerp(this.f.y,this.t.y,v)+Math.cos(this.ang)*lane;
+      const ca=Math.cos(this.ang),sa=Math.sin(this.ang),nx=-sa,ny=ca;
+      rmPoly(g,[[x+ca*s*1.2,y+sa*s*1.2],[x-ca*s*.55+nx*s*.18,y-sa*s*.55+ny*s*.18],
+        [x-ca*s*.82,y-sa*s*.82],[x-ca*s*.55-nx*s*.18,y-sa*s*.55-ny*s*.18]],P[3]);
+      rmPoly(g,[[x-ca*s*.2,y-sa*s*.2],[x-ca*s*.62+nx*s*.54,y-sa*s*.62+ny*s*.54],[x-ca*s*.72,y-sa*s*.72]],P[1]);
+      rmPoly(g,[[x-ca*s*.2,y-sa*s*.2],[x-ca*s*.62-nx*s*.54,y-sa*s*.62-ny*s*.54],[x-ca*s*.72,y-sa*s*.72]],P[2]);
+      pxLine(g,x,y,x+ca*s*.9,y+sa*s*.9,1,P[0]);
+    }
+  }
+}
+
+/* シャドーボール：光を吸う核から影の手が伸びる。 */
+class ShadowBallMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const p=this.pos(),s=(this.sp.size||38)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||9,4),a=this.time*2.7;
+    for(let i=0;i<n;i++){
+      const th=a+i*RM_TAU/n,r=s*(.55+.22*Math.sin(i*5+a));
+      const x=p.x+Math.cos(th)*r,y=p.y+Math.sin(th)*r;
+      pxLine(g,p.x,p.y,x,y,Math.max(1,s*.07),P[3]);
+      pxDisc(g,x,y,s*.12,P[2]);
+      for(let k=-1;k<=1;k++) pxLine(g,x,y,x+Math.cos(th+k*.35)*s*.30,y+Math.sin(th+k*.35)*s*.30,1,P[1]);
+    }
+    pxDisc(g,p.x,p.y,s*.62,P[3]); pxRing(g,p.x,p.y,s*.48,s*.48,3,P[2]);
+    pxDisc(g,p.x-s*.16,p.y-s*.18,s*.12,P[0]);
+    if(this.hit) rmAlpha(g,.8,()=>rmRingBurst(g,this.t.x,this.t.y,s*1.5,n,P[2],-a));
+  }
+}
+
+/* おにび：三つの鬼火が互いを追い、蛇行しながら対象へ集まる。 */
+class WillOWispMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const u=this.travelP,s=(this.sp.size||25)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||5,3);
+    for(let i=0;i<n;i++){
+      const phase=i*RM_TAU/n+u*9, off=Math.sin(phase)*s*.9;
+      const x=rmLerp(this.f.x,this.t.x,u)-Math.sin(this.ang)*off;
+      const y=rmLerp(this.f.y,this.t.y,u)+Math.cos(this.ang)*off-Math.abs(Math.cos(phase))*s*.35;
+      rmFlame(g,x,y,s*(.34+.06*(i%2)),P[2],P[0],Math.sin(phase)*3);
+      pxDisc(g,x,y+s*.12,s*.09,P[3]);
+    }
+    if(this.hit){
+      for(let i=0;i<n;i++){
+        const a=i*RM_TAU/n+this.time*2;
+        rmFlame(g,this.t.x+Math.cos(a)*s*1.1,this.t.y+Math.sin(a)*s*.55,s*.38,P[2],P[0],0);
+      }
+    }
+  }
+}
+
+/* ムーンフォース：月相が満ち、三日月の潮汐光を落とす。 */
+class MoonForceMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const p=this.pos(),s=(this.sp.size||48)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||10,5),a=this.time*1.5;
+    pxDisc(g,p.x,p.y,s*.65,P[1]); pxDisc(g,p.x+s*.23,p.y-s*.12,s*.58,P[3]);
+    pxRing(g,p.x,p.y,s*.85,s*.85,2,P[0]);
+    for(let i=0;i<n;i++){
+      const th=i*RM_TAU/n-a,r=s*(1+.16*Math.sin(i*4));
+      rmStar(g,p.x+Math.cos(th)*r,p.y+Math.sin(th)*r,s*.09,4,P[i%2],th);
+    }
+    pxLine(g,p.x,p.y+s*.35,this.t.x,this.t.y,s*.09,P[1]);
+    if(this.hit){ pxRing(g,this.t.x,this.t.y,s*1.25,s*.42,3,P[1]); rmStar(g,this.t.x,this.t.y,s*.55,8,P[0],a); }
+  }
+}
+
+/* でんこうせっか：白い速度殻が一直線に裂け、残像の輪郭を置く。 */
+class QuickAttackMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const u=this.travelP,s=(this.sp.size||30)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||8,4);
+    const head={x:rmLerp(this.f.x,this.t.x,u),y:rmLerp(this.f.y,this.t.y,u)};
+    for(let i=0;i<n;i++){
+      const lag=Math.max(0,u-i*.085),x=rmLerp(this.f.x,this.t.x,lag),y=rmLerp(this.f.y,this.t.y,lag);
+      rmAlpha(g,1-i/n,()=>{
+        const ca=Math.cos(this.ang),sa=Math.sin(this.ang),nx=-sa,ny=ca,L=s*(1.2+i*.22),W=s*(.36-i/n*.18);
+        rmPoly(g,[[x+ca*L,y+sa*L],[x-ca*L*.5+nx*W,y-sa*L*.5+ny*W],[x-ca*L,y-sa*L],[x-ca*L*.5-nx*W,y-sa*L*.5-ny*W]],P[i%2]);
+      });
+    }
+    pxRing(g,head.x,head.y,s*.75,s*.38,2,P[0]);
+    if(this.hit) rmStar(g,this.t.x,this.t.y,s*1.1,5,P[1],this.ang);
+  }
+}
+
+/* だいもんじ：五本の炎路が「大」の字を描いて対象を焼く。 */
+class FireBlastMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||74)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||22,8);
+    const c=this.pos(),grow=rmEase(Math.min(1,q/this.hitRatio));
+    const seg=[[-.72,-.72,.72,.72],[.72,-.72,-.72,.72],[0,-.88,0,.82],[0,-.08,-.92,.35],[0,-.08,.92,.35]];
+    for(const [x0,y0,x1,y1] of seg){
+      const a={x:c.x+x0*s*grow,y:c.y+y0*s*grow},b={x:c.x+x1*s*grow,y:c.y+y1*s*grow};
+      pxLine(g,a.x,a.y,b.x,b.y,s*.16,P[3]); pxLine(g,a.x,a.y,b.x,b.y,s*.09,P[1]);
+    }
+    for(let i=0;i<n;i++){
+      const k=seg[i%seg.length],v=hash3(i,4,8),x=c.x+rmLerp(k[0],k[2],v)*s*grow,y=c.y+rmLerp(k[1],k[3],v)*s*grow;
+      rmFlame(g,x,y,s*.13,P[2],P[0],Math.sin(i)*2);
+    }
+    if(this.hit) pxRing(g,this.t.x,this.t.y,s*1.08,s*.72,4,P[2]);
+  }
+}
+
+/* アクアジェット：使用者を包む水滴型の流線殻が突進する。 */
+class AquaJetMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const p=this.pos(),s=(this.sp.size||38)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||16,6);
+    const ca=Math.cos(this.ang),sa=Math.sin(this.ang),nx=-sa,ny=ca;
+    rmPoly(g,[[p.x+ca*s*1.3,p.y+sa*s*1.3],[p.x-ca*s*.55+nx*s*.72,p.y-sa*s*.55+ny*s*.72],
+      [p.x-ca*s*1.55,p.y-sa*s*1.55],[p.x-ca*s*.55-nx*s*.72,p.y-sa*s*.55-ny*s*.72]],P[3]);
+    rmPoly(g,[[p.x+ca*s,p.y+sa*s],[p.x-ca*s*.45+nx*s*.48,p.y-sa*s*.45+ny*s*.48],
+      [p.x-ca*s*1.15,p.y-sa*s*1.15],[p.x-ca*s*.45-nx*s*.48,p.y-sa*s*.45-ny*s*.48]],P[1]);
+    pxDisc(g,p.x+ca*s*.18,p.y+sa*s*.18,s*.28,P[0]);
+    for(let i=0;i<n;i++){
+      const lag=(i+1)/n*s*3.2,side=(hash3(i,7,11)-.5)*s*1.2;
+      pxDisc(g,p.x-ca*lag+nx*side,p.y-sa*lag+ny*side,s*(.06+.07*hash3(i,3,9)),P[1]);
+    }
+    if(this.hit) for(let i=0;i<n;i++){
+      const a=Math.PI+(i/(n-1)-.5)*2.2;
+      pxLine(g,this.t.x,this.t.y,this.t.x+Math.cos(a)*s*1.5,this.t.y+Math.sin(a)*s*1.5,2,P[1]);
+    }
+  }
+}
+
+/* ドリルライナー：土層の円錐が複数の螺旋刃に分かれて回転する。 */
+class DrillRunMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const p=this.pos(),s=(this.sp.size||45)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||9,4),a=this.ang;
+    const ca=Math.cos(a),sa=Math.sin(a),nx=-sa,ny=ca;
+    for(let i=n-1;i>=0;i--){
+      const z=i/(n-1||1),cx=p.x-ca*s*z*1.65,cy=p.y-sa*s*z*1.65;
+      const rr=s*(.62*z+.08),spin=this.time*15+i*.9;
+      const ox=nx*Math.cos(spin)*rr,oy=ny*Math.cos(spin)*rr;
+      pxLine(g,cx+ox,cy+oy,p.x+ca*s*1.05,p.y+sa*s*1.05,Math.max(1,s*.07),P[1+i%3]);
+      pxDisc(g,cx+ox,cy+oy,s*.09,P[0]);
+    }
+    rmPoly(g,[[p.x+ca*s*1.35,p.y+sa*s*1.35],[p.x-ca*s*.45+nx*s*.52,p.y-sa*s*.45+ny*s*.52],
+      [p.x-ca*s*.45-nx*s*.52,p.y-sa*s*.45-ny*s*.52]],P[3]);
+    pxLine(g,p.x-ca*s*.2,p.y-sa*s*.2,p.x+ca*s*1.15,p.y+sa*s*1.15,2,P[0]);
+  }
+}
+
+/* ブレイブバード：青い猛禽の翼・頭・尾が一体の突進殻になる。 */
+class BraveBirdMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const p=this.pos(),s=(this.sp.size||66)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||12,5),a=this.ang;
+    const ca=Math.cos(a),sa=Math.sin(a),nx=-sa,ny=ca;
+    rmPoly(g,[[p.x+ca*s*1.25,p.y+sa*s*1.25],[p.x+nx*s*.34,p.y+ny*s*.34],[p.x-ca*s*.2,p.y-sa*s*.2]],P[0]);
+    rmPoly(g,[[p.x-ca*s*.05,p.y-sa*s*.05],[p.x-ca*s*.72+nx*s*1.2,p.y-sa*s*.72+ny*s*1.2],
+      [p.x-ca*s*.48+nx*s*.18,p.y-sa*s*.48+ny*s*.18]],P[1]);
+    rmPoly(g,[[p.x-ca*s*.05,p.y-sa*s*.05],[p.x-ca*s*.72-nx*s*1.2,p.y-sa*s*.72-ny*s*1.2],
+      [p.x-ca*s*.48-nx*s*.18,p.y-sa*s*.48-ny*s*.18]],P[2]);
+    rmPoly(g,[[p.x-ca*s*.38,p.y-sa*s*.38],[p.x-ca*s*1.5+nx*s*.38,p.y-sa*s*1.5+ny*s*.38],
+      [p.x-ca*s*1.22,p.y-sa*s*1.22],[p.x-ca*s*1.5-nx*s*.38,p.y-sa*s*1.5-ny*s*.38]],P[3]);
+    for(let i=0;i<n;i++){
+      const lag=s*(1.2+i*.19),side=Math.sin(i*2.4+this.time*10)*s*.42;
+      pxLine(g,p.x-ca*lag+nx*side,p.y-sa*lag+ny*side,p.x-ca*(lag+s*.5)+nx*side,p.y-sa*(lag+s*.5)+ny*side,1,P[i%3]);
+    }
+    if(this.hit) rmStar(g,this.t.x,this.t.y,s*1.2,7,P[0],a);
+  }
+}
+
+/* つばめがえし：燕の軌跡が一度通り過ぎ、反転して戻る必中の二重飛跡。 */
+class AerialAceMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||52)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||10,4);
+    const u=q<this.hitRatio*.55?q/(this.hitRatio*.55):1-(q-this.hitRatio*.55)/(this.hitRatio*.45);
+    const v=q<this.hitRatio*.55?rmClamp(u,0,1):rmClamp(1-u,0,1);
+    const x=rmLerp(this.f.x,this.t.x,v),y=rmLerp(this.f.y,this.t.y,v)-Math.sin(v*Math.PI)*s*.9;
+    const dir=q<this.hitRatio*.55?this.ang:this.ang+Math.PI,ca=Math.cos(dir),sa=Math.sin(dir),nx=-sa,ny=ca;
+    rmPoly(g,[[x+ca*s*.8,y+sa*s*.8],[x-ca*s*.25+nx*s*.62,y-sa*s*.25+ny*s*.62],
+      [x-ca*s*.05,y-sa*s*.05],[x-ca*s*.25-nx*s*.62,y-sa*s*.25-ny*s*.62]],P[0]);
+    for(let i=0;i<n;i++){
+      const t=i/n,xx=rmLerp(this.f.x,this.t.x,t),yy=rmLerp(this.f.y,this.t.y,t)-Math.sin(t*Math.PI)*s*.9*(i%2?1:-.4);
+      pxDisc(g,xx,yy,1+(i%2),P[1+(i%3)]);
+    }
+    if(this.hit){ pxLine(g,this.t.x-s,this.t.y+s*.5,this.t.x+s,this.t.y-s*.5,3,P[0]); pxLine(g,this.t.x+s,this.t.y+s*.5,this.t.x-s,this.t.y-s*.5,1,P[1]); }
+  }
+}
+
+/* シザークロス：左右の昆虫大顎が閉じてXを作る。 */
+class XScissorMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=rmClamp(this.q/this.hitRatio,0,1),s=(this.sp.size||78)*this.sizeMul,P=this.sp.palette,x=this.t.x,y=this.t.y;
+    const close=(1-rmEase(q))*s*.7,n=this.amount(this.sp.amount||9,4);
+    for(const side of [-1,1]){
+      const sx=x+side*(s*.75+close),sy=y-s*.7;
+      const pts=[];
+      for(let i=0;i<=n;i++){
+        const u=i/n,xx=rmLerp(sx,x-side*s*.65,u),yy=rmLerp(sy,y+s*.72,u)+Math.sin(u*Math.PI)*side*s*.18;
+        pts.push({x:xx,y:yy});
+      }
+      for(let i=1;i<pts.length;i++) rmLine(g,pts[i-1],pts[i],s*.10,P[side<0?1:2]);
+      for(let i=2;i<n;i+=2){
+        const p=pts[i],a=Math.atan2(p.y-y,p.x-x)+side*.7;
+        rmPoly(g,[[p.x,p.y],[p.x+Math.cos(a)*s*.28,p.y+Math.sin(a)*s*.28],[p.x+Math.cos(a+side*.55)*s*.12,p.y+Math.sin(a+side*.55)*s*.12]],P[0]);
+      }
+    }
+    if(this.hit) rmDiamond(g,x,y,s*.22,s*.22,P[0]);
+  }
+}
+
+/* つじぎり：夜の水平線が一瞬だけ開き、黒い三日月が通り抜ける。 */
+class NightSlashMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=rmClamp(this.q/this.hitRatio,0,1),s=(this.sp.size||82)*this.sizeMul,P=this.sp.palette,x=this.t.x,y=this.t.y;
+    const sweep=rmLerp(-s*1.4,s*1.4,rmEase(q)),n=this.amount(this.sp.amount||8,3);
+    rmAlpha(g,Math.sin(Math.PI*q),()=>{
+      pxLine(g,x-s*1.55,y,x+s*1.55,y,s*.13,P[2]);
+      pxLine(g,x-s*1.45,y-2,x+s*1.45,y-2,2,P[0]);
+      pxArc(g,x+sweep*.55,y,s*.62,Math.PI*.62,Math.PI*1.38,s*.12,P[1]);
+      pxArc(g,x+sweep*.55+s*.12,y,s*.48,Math.PI*.62,Math.PI*1.38,s*.05,P[0]);
+      for(let i=0;i<n;i++){
+        const xx=x-s*1.3+i/(n-1)*s*2.6;
+        pxLine(g,xx,y-s*.12,xx+Math.sin(i)*s*.22,y-s*(.35+.12*(i%3)),1,P[2]);
+      }
+    });
+    if(this.hit) rmStar(g,x,y,s*.40,4,P[0],Math.PI*.25);
+  }
+}
+
+/* かみくだく：骨質の上下顎と一本ずつ異なる歯が対象を噛み砕く。 */
+class CrunchMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=rmClamp(this.q/this.hitRatio,0,1),s=(this.sp.size||88)*this.sizeMul,P=this.sp.palette,x=this.t.x,y=this.t.y;
+    const gap=(1-rmEase(q))*s*.62,n=this.amount(this.sp.amount||9,5);
+    for(const side of [-1,1]){
+      const yy=y+side*(s*.18+gap);
+      pxArc(g,x,yy,s*.78,side<0?Math.PI*.12:Math.PI*1.12,side<0?Math.PI*.88:Math.PI*1.88,s*.13,P[3]);
+      for(let i=0;i<n;i++){
+        const xx=x-s*.62+i/(n-1)*s*1.24,h=s*(.22+.10*hash3(i,side,41));
+        rmPoly(g,[[xx-s*.08,yy],[xx+s*.08,yy],[xx,yy-side*h]],i%3===0?P[0]:P[1]);
+      }
+    }
+    pxDisc(g,x-s*.38,y-s*.12-gap*.4,s*.07,P[0]); pxDisc(g,x+s*.38,y-s*.12-gap*.4,s*.07,P[0]);
+    if(this.hit){ pxLine(g,x-s*.85,y,x+s*.85,y,4,P[2]); rmRingBurst(g,x,y,s,n,P[1],q); }
+  }
+}
+
+/* メタルクロー：三本の独立した鉤爪が面を抉り、金属片を残す。 */
+class MetalClawMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=rmClamp(this.q/this.hitRatio,0,1),s=(this.sp.size||72)*this.sizeMul,P=this.sp.palette,x=this.t.x,y=this.t.y;
+    const n=this.amount(this.sp.amount||3,3),grow=rmEase(q);
+    for(let i=0;i<n;i++){
+      const off=(i-(n-1)/2)*s*.34,st={x:x-s*.95,y:y+off+s*.36},en={x:x+s*.78,y:y+off-s*.42};
+      const mid={x:rmLerp(st.x,en.x,grow),y:rmLerp(st.y,en.y,grow)-Math.sin(grow*Math.PI)*s*.30};
+      rmLine(g,st,mid,s*.13,P[3]); rmLine(g,{x:st.x+3,y:st.y-2},{x:mid.x+3,y:mid.y-2},s*.05,P[0]);
+      rmDiamond(g,mid.x,mid.y,s*.12,s*.24,P[1]);
+    }
+    if(this.hit){
+      const bits=this.amount(this.sp.shards||10,4);
+      for(let i=0;i<bits;i++){
+        const a=RM_TAU*i/bits,r=s*(.55+.35*hash3(i,6,2));
+        rmDiamond(g,x+Math.cos(a)*r,y+Math.sin(a)*r,s*.07,s*.14,P[1+(i%2)]);
+      }
+    }
+  }
+}
+
+/* かみなりパンチ：稲妻で組んだ拳骨が指から順に締まる。 */
+class ThunderPunchMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=rmClamp(this.q/this.hitRatio,0,1),s=(this.sp.size||68)*this.sizeMul,P=this.sp.palette,x=rmLerp(this.f.x,this.t.x,rmEase(q)),y=rmLerp(this.f.y,this.t.y,rmEase(q));
+    const n=this.amount(this.sp.amount||10,4),a=this.ang;
+    pxDisc(g,x,y,s*.42,P[2]); pxDisc(g,x-s*.10,y-s*.12,s*.25,P[0]);
+    for(let i=0;i<4;i++){
+      const ox=(i-1.5)*s*.24,oy=-s*(.38+.05*(i%2));
+      rmPoly(g,[[x+ox-s*.10,y+oy],[x+ox+s*.10,y+oy],[x+ox+s*.13,y+oy+s*.34],[x+ox-s*.13,y+oy+s*.34]],P[i%2?1:3]);
+      pxLine(g,x+ox,y+oy,x+ox,y+oy+s*.25,1,P[0]);
+    }
+    rmPoly(g,[[x-s*.48,y+s*.05],[x-s*.80,y+s*.30],[x-s*.60,y+s*.55],[x-s*.15,y+s*.40]],P[3]);
+    for(let i=0;i<n;i++){
+      const th=RM_TAU*i/n+this.time*7,r=s*(.55+.18*(i%3));
+      rmBolt(g,x+Math.cos(th)*r*.35,y+Math.sin(th)*r*.35,x+Math.cos(th)*r,y+Math.sin(th)*r,3,s*.18,1+(i%2),P[1],i+71);
+    }
+    if(this.hit) rmStar(g,this.t.x,this.t.y,s*1.2,9,P[0],a);
+  }
+}
+
+/* エアスラッシュ：圧縮された空気の羽根が層になって進む。 */
+class AirSlashMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const u=this.travelP,s=(this.sp.size||48)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||7,3);
+    for(let i=0;i<n;i++){
+      const v=rmClamp(u-i*.055,0,1),lane=(i-(n-1)/2)*s*.22;
+      const x=rmLerp(this.f.x,this.t.x,v),y=rmLerp(this.f.y,this.t.y,v)+lane;
+      const ca=Math.cos(this.ang),sa=Math.sin(this.ang),nx=-sa,ny=ca,L=s*(.75+.08*i),W=s*(.34-.02*Math.min(i,5));
+      rmPoly(g,[[x+ca*L,y+sa*L],[x-ca*L*.8+nx*W,y-sa*L*.8+ny*W],[x-ca*L*.45,y-sa*L*.45],
+        [x-ca*L*.8-nx*W,y-sa*L*.8-ny*W]],P[3]);
+      pxLine(g,x-ca*L*.5,y-sa*L*.5,x+ca*L*.82,y+sa*L*.82,1,P[0]);
+    }
+    if(this.hit){
+      for(let i=0;i<n;i++) pxRing(g,this.t.x,this.t.y,s*(.45+i*.15),s*(.14+i*.04),1,P[i%3]);
+    }
+  }
+}
+
+/* サイコカッター：念力結晶が軌道上で組み替わり、一枚の刃になる。 */
+class PsychoCutMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const u=this.travelP,s=(this.sp.size||62)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||9,4);
+    const p=this.pos(),spin=this.time*5;
+    for(let i=0;i<n;i++){
+      const a=spin+i*RM_TAU/n,r=s*(.42+.15*Math.sin(i*3));
+      rmDiamond(g,p.x+Math.cos(a)*r,p.y+Math.sin(a)*r*.55,s*.08,s*.25,P[1+(i%3)]);
+    }
+    const ca=Math.cos(this.ang),sa=Math.sin(this.ang),nx=-sa,ny=ca;
+    rmPoly(g,[[p.x+ca*s,p.y+sa*s],[p.x-ca*s*.75+nx*s*.28,p.y-sa*s*.75+ny*s*.28],
+      [p.x-ca*s*.35,p.y-sa*s*.35],[p.x-ca*s*.75-nx*s*.28,p.y-sa*s*.75-ny*s*.28]],P[2]);
+    pxLine(g,p.x-ca*s*.55,p.y-sa*s*.55,p.x+ca*s*.8,p.y+sa*s*.8,2,P[0]);
+    if(this.hit) for(let i=0;i<3;i++) pxRing(g,this.t.x,this.t.y,s*(.55+i*.2),s*(.32+i*.08),2,P[i]);
+  }
+}
+
+/* げきりん：二色の竜巻が対象を囲み、頭・尾・爪の順に暴れる。 */
+class OutrageMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=rmClamp(this.q/this.hitRatio,0,1),s=(this.sp.size||92)*this.sizeMul,P=this.sp.palette,x=this.t.x,y=this.t.y,n=this.amount(this.sp.amount||16,7);
+    for(let i=0;i<n;i++){
+      const u=i/(n-1),a=this.time*9+u*Math.PI*5,r=s*(.25+.68*u)*(1-.25*q);
+      const xx=x+Math.cos(a)*r,yy=y+(u-.5)*s*1.3+Math.sin(a)*r*.28;
+      pxDisc(g,xx,yy,s*(.08+.07*(1-u)),i%2?P[1]:P[2]);
+      if(i>0){
+        const up=(i-1)/(n-1),aa=this.time*9+up*Math.PI*5,rr=s*(.25+.68*up)*(1-.25*q);
+        pxLine(g,x+Math.cos(aa)*rr,y+(up-.5)*s*1.3+Math.sin(aa)*rr*.28,xx,yy,s*.06,i%2?P[2]:P[3]);
+      }
+    }
+    const headA=this.time*9+Math.PI*5,hx=x+Math.cos(headA)*s*.72,hy=y+s*.65+Math.sin(headA)*s*.20;
+    rmPoly(g,[[hx+s*.28,hy],[hx-s*.18,hy-s*.18],[hx-s*.08,hy],[hx-s*.18,hy+s*.18]],P[0]);
+    for(let i=0;i<4;i++){
+      const a=-.9+i*.6+this.time*2;
+      pxLine(g,x,y,x+Math.cos(a)*s*(.7+.15*i),y+Math.sin(a)*s*(.7+.15*i),2,P[1+(i%3)]);
+    }
+    if(this.hit) rmRingBurst(g,x,y,s*1.25,n,P[0],q*4);
+  }
+}
+
+/* れいとうビーム：六角氷晶が鎖になり、結晶面を連結して凍らせる。 */
+class IceBeamMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const u=Math.min(this.travelP,this.limit||1),s=(this.sp.size||30)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||14,6);
+    const end=this.endPoint();
+    for(let i=0;i<n;i++){
+      const v=i/(n-1)*u,x=rmLerp(this.f.x,this.t.x,v),y=rmLerp(this.f.y,this.t.y,v),r=s*(.22+.08*Math.sin(i*2));
+      const pts=[]; for(let k=0;k<6;k++){ const a=RM_TAU*k/6+this.ang; pts.push([x+Math.cos(a)*r,y+Math.sin(a)*r]); }
+      rmPoly(g,pts,i%3===0?P[1]:P[2]); pxDisc(g,x,y,r*.25,P[0]);
+      if(i>0) pxLine(g,rmLerp(this.f.x,this.t.x,(i-1)/(n-1)*u),rmLerp(this.f.y,this.t.y,(i-1)/(n-1)*u),x,y,2,P[0]);
+    }
+    if(this.hit){
+      for(let k=0;k<6;k++){
+        const a=RM_TAU*k/6; rmDiamond(g,this.t.x+Math.cos(a)*s*.72,this.t.y+Math.sin(a)*s*.72,s*.12,s*.45,P[k%3]);
+      }
+      pxRing(g,end.x,end.y,s,s,2,P[0]);
+    }
+  }
+}
+
+/* ラスターカノン：金属絞りが開き、四角い圧力節を射出する。 */
+class FlashCannonMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||42)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||10,5),u=Math.min(this.travelP,this.limit||1);
+    const charge=rmClamp(q/.18,0,1),a=this.time*5;
+    for(let i=0;i<6;i++){
+      const th=i*RM_TAU/6+a,x=this.f.x+Math.cos(th)*s*(.65-.30*charge),y=this.f.y+Math.sin(th)*s*(.65-.30*charge);
+      rmDiamond(g,x,y,s*.14,s*.30,P[1+(i%3)]);
+    }
+    for(let i=0;i<n;i++){
+      const v=i/(n-1)*u,x=rmLerp(this.f.x,this.t.x,v),y=rmLerp(this.f.y,this.t.y,v),r=s*(.16+.12*Math.sin(v*Math.PI));
+      g.fillStyle=P[3]; g.fillRect(Math.round(x-r),Math.round(y-r),Math.round(r*2),Math.round(r*2));
+      g.fillStyle=P[0]; g.fillRect(Math.round(x-r*.35),Math.round(y-r*.35),Math.max(1,Math.round(r*.7)),Math.max(1,Math.round(r*.7)));
+    }
+    if(this.hit){ for(let i=0;i<4;i++) pxRing(g,this.t.x,this.t.y,s*(.42+i*.2),s*(.42+i*.2),2,P[i]); }
+  }
+}
+
+/* マジカルシャイン：宝石の面が一枚ずつ開き、虹色の光を反射する。 */
+class DazzlingGleamMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||76)*this.sizeMul,P=this.sp.palette,x=this.t.x,y=this.t.y,n=this.amount(this.sp.amount||12,6),a=this.time*1.8;
+    const open=rmEase(rmClamp(q/this.hitRatio,0,1));
+    for(let i=0;i<n;i++){
+      const th=i*RM_TAU/n+a,r=s*(.22+.82*open),w=s*(.12+.05*(i%3));
+      rmPoly(g,[[x+Math.cos(th)*r,y+Math.sin(th)*r],[x+Math.cos(th-.12)*(r-w*2),y+Math.sin(th-.12)*(r-w*2)],
+        [x+Math.cos(th+Math.PI)*w*.5,y+Math.sin(th+Math.PI)*w*.5],[x+Math.cos(th+.12)*(r-w*2),y+Math.sin(th+.12)*(r-w*2)]],P[i%P.length]);
+    }
+    rmDiamond(g,x,y,s*.28,s*.44,P[1]); rmDiamond(g,x,y,s*.12,s*.22,P[0]);
+    pxRing(g,x,y,s*.75*open,s*.38*open,2,P[0]);
+    if(this.hit) rmStar(g,x,y,s*1.15,12,'#ffffff',a);
+  }
+}
+
+/* はかいこうせん：橙のエネルギー節を白い中央レールへ束ねる。 */
+class HyperBeamMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||54)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||16,7),u=Math.min(this.travelP,this.limit||1);
+    const ex=rmLerp(this.f.x,this.t.x,u),ey=rmLerp(this.f.y,this.t.y,u),nx=-Math.sin(this.ang),ny=Math.cos(this.ang);
+    for(let i=0;i<n;i++){
+      const v=i/(n-1)*u,x=rmLerp(this.f.x,this.t.x,v),y=rmLerp(this.f.y,this.t.y,v),pulse=.65+.35*Math.sin(this.time*18-i*1.7);
+      pxDisc(g,x+nx*Math.sin(i*2.2)*s*.13,y+ny*Math.sin(i*2.2)*s*.13,s*.25*pulse,P[i%2?2:3]);
+      pxDisc(g,x,y,s*.10,P[0]);
+    }
+    pxLine(g,this.f.x,this.f.y,ex,ey,s*.11,P[0]);
+    for(let k=0;k<4;k++) pxRing(g,this.f.x,this.f.y,s*(.35+k*.18),s*(.18+k*.09),2,P[1+(k%3)]);
+    if(this.hit){ rmStar(g,this.t.x,this.t.y,s*1.5,10,P[1],this.time); pxDisc(g,this.t.x,this.t.y,s*.32,P[0]); }
+  }
+}
+
+/* りゅうのはどう：節を持つ光竜が蛇行し、顎を開いて噛み抜く。 */
+class DragonPulseMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const u=Math.min(this.travelP,this.limit||1),s=(this.sp.size||44)*this.sizeMul,P=this.sp.palette,n=this.amount(this.sp.amount||14,7);
+    let prev=null;
+    for(let i=0;i<n;i++){
+      const v=i/(n-1)*u,wave=Math.sin(v*Math.PI*4-this.time*8)*s*.34*(1-v*.45);
+      const x=rmLerp(this.f.x,this.t.x,v)-Math.sin(this.ang)*wave,y=rmLerp(this.f.y,this.t.y,v)+Math.cos(this.ang)*wave;
+      if(prev) rmLine(g,prev,{x,y},s*(.22-.09*v),i%2?P[2]:P[3]);
+      pxDisc(g,x,y,s*(.13-.04*v),P[1]); prev={x,y};
+    }
+    const h=this.endPoint(),ca=Math.cos(this.ang),sa=Math.sin(this.ang),nx=-sa,ny=ca;
+    rmPoly(g,[[h.x+ca*s*.72,h.y+sa*s*.72],[h.x-ca*s*.12+nx*s*.38,h.y-sa*s*.12+ny*s*.38],
+      [h.x-ca*s*.40,h.y-sa*s*.40],[h.x-ca*s*.12-nx*s*.38,h.y-sa*s*.12-ny*s*.38]],P[2]);
+    pxDisc(g,h.x+nx*s*.16,h.y+ny*s*.16,s*.06,P[0]);
+    for(const side of [-1,1]) pxLine(g,h.x-ca*s*.05,h.y-sa*s*.05,h.x+ca*s*.48+nx*side*s*.32,h.y+sa*s*.48+ny*side*s*.32,2,P[0]);
+    if(this.hit) rmRingBurst(g,this.t.x,this.t.y,s*1.3,n,P[1],this.time);
+  }
+}
+
+/* りゅうのまい：使用者の周囲を二頭の竜帯が反対向きに舞う。 */
+class DragonDanceMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||86)*this.sizeMul,P=this.sp.palette,x=this.f.x,y=this.f.y,n=this.amount(this.sp.amount||16,8);
+    for(const side of [-1,1]){
+      let prev=null;
+      for(let i=0;i<n;i++){
+        const u=i/(n-1),a=side*(this.time*5+u*Math.PI*3),r=s*(.25+.62*u)*(1-.18*q);
+        const xx=x+Math.cos(a)*r,yy=y+(u-.5)*s*1.25+Math.sin(a)*r*.28;
+        if(prev) rmLine(g,prev,{x:xx,y:yy},s*(.08+.04*(1-u)),side<0?P[1]:P[2]);
+        pxDisc(g,xx,yy,s*.07,P[(i+side+4)%P.length]); prev={x:xx,y:yy};
+      }
+      const a=side*(this.time*5+Math.PI*3),hx=x+Math.cos(a)*s*.75,hy=y+s*.62+Math.sin(a)*s*.20;
+      rmDiamond(g,hx,hy,s*.18,s*.12,P[0]);
+    }
+    pxRing(g,x,y+s*.45,s*(.45+.25*q),s*(.16+.08*q),2,P[1]);
+    rmStar(g,x,y-s*.35,s*.16,4,P[0],this.time);
+  }
+}
+
+/* どくどく：毒腺の滴が髑髏を組み、対象へ垂れて覆う。 */
+class ToxicMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||78)*this.sizeMul,P=this.sp.palette,x=this.t.x,y=this.t.y,n=this.amount(this.sp.amount||13,6);
+    const fall=rmEase(rmClamp(q/this.hitRatio,0,1));
+    pxDisc(g,x,y-s*(.65-.72*fall),s*.48,P[2]);
+    pxDisc(g,x-s*.18,y-s*(.72-.72*fall),s*.12,P[0]); pxDisc(g,x+s*.18,y-s*(.72-.72*fall),s*.12,P[0]);
+    rmPoly(g,[[x-s*.28,y-s*(.45-.72*fall)],[x+s*.28,y-s*(.45-.72*fall)],[x+s*.18,y-s*(.18-.72*fall)],
+      [x+s*.05,y-s*(.31-.72*fall)],[x-s*.05,y-s*(.18-.72*fall)],[x-s*.18,y-s*(.31-.72*fall)]],P[3]);
+    for(let i=0;i<n;i++){
+      const xx=x+(hash3(i,2,5)-.5)*s*1.7,yy=y-s*1.2+((q*1.8+hash3(i,8,3))%1.4)*s*1.25;
+      rmPoly(g,[[xx,yy-s*.18],[xx+s*.11,yy],[xx,yy+s*.14],[xx-s*.11,yy]],P[1+(i%3)]);
+    }
+    if(this.hit){ pxRing(g,x,y+s*.28,s*1.05,s*.28,4,P[2]); pxDisc(g,x,y+s*.2,s*.22,P[0]); }
+  }
+}
+
+/* うずしお：水の螺旋壁が下から上へ細まり、対象を閉じ込める。 */
+class WhirlpoolMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||92)*this.sizeMul,P=this.sp.palette,x=this.t.x,y=this.t.y,n=this.amount(this.sp.amount||18,8);
+    for(let i=0;i<n;i++){
+      const u=i/(n-1),a=this.time*8+u*Math.PI*5,r=s*(.92-.60*u)*(0.78+.22*Math.sin(Math.PI*q));
+      const xx=x+Math.cos(a)*r,yy=y+s*.58-u*s*1.32+Math.sin(a)*r*.20;
+      pxDisc(g,xx,yy,s*(.07+.04*(1-u)),P[1+(i%3)]);
+      if(i){
+        const up=(i-1)/(n-1),aa=this.time*8+up*Math.PI*5,rr=s*(.92-.60*up)*(0.78+.22*Math.sin(Math.PI*q));
+        pxLine(g,x+Math.cos(aa)*rr,y+s*.58-up*s*1.32+Math.sin(aa)*rr*.20,xx,yy,s*.08,P[2+(i%2)]);
+      }
+    }
+    pxRing(g,x,y+s*.55,s*.98,s*.24,3,P[1]); pxRing(g,x,y-s*.68,s*.33,s*.10,2,P[0]);
+    if(this.hit) for(let i=0;i<6;i++) pxLine(g,x,y,x+Math.cos(i*RM_TAU/6)*s*.9,y+Math.sin(i*RM_TAU/6)*s*.55,2,P[0]);
+  }
+}
+
+/* いわなだれ：空中に傾いた岩棚が現れ、異なる岩塊が斜面を転げ落ちる。 */
+class RockSlideMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||54)*this.sizeMul,P=this.sp.palette,x=this.t.x,y=this.t.y,n=this.amount(this.sp.amount||9,4);
+    pxLine(g,x-s*1.6,y-s*1.2,x+s*1.35,y-s*.58,s*.12,P[3]);
+    for(let i=0;i<n;i++){
+      const delay=i/n*.38,u=rmEase(rmClamp((q-delay)/(this.hitRatio-delay),0,1));
+      const sx=x-s*1.35+i/(n-1)*s*2.45,sy=y-s*(1.1-.5*i/(n-1));
+      const ex=x-s*.75+i/(n-1)*s*1.5,ey=y+s*.45;
+      const xx=rmLerp(sx,ex,u),yy=rmLerp(sy,ey,u),r=s*(.22+.15*hash3(i,9,4));
+      const pts=[]; const sides=5+(i%3);
+      for(let k=0;k<sides;k++){ const a=k*RM_TAU/sides+q*8*(i%2?1:-1); pts.push([xx+Math.cos(a)*r,yy+Math.sin(a)*r]); }
+      rmPoly(g,pts,P[2+(i%2)]); pxLine(g,xx-r*.4,yy-r*.2,xx+r*.28,yy-r*.35,1,P[0]);
+    }
+    if(this.hit) pxRing(g,x,y+s*.48,s*1.15,s*.25,3,P[1]);
+  }
+}
+
+/* ストーンエッジ：地中の稜線が対象へ走り、鋭い石柱を順番に押し上げる。 */
+class StoneEdgeMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||48)*this.sizeMul,P=this.sp.palette,x=this.t.x,y=this.t.y,n=this.amount(this.sp.amount||7,4);
+    pxLine(g,x-s*1.45,y+s*.55,x+s*1.45,y+s*.55,4,P[3]);
+    for(let i=0;i<n;i++){
+      const delay=i/n*.48,u=rmEase(rmClamp((q-delay)/Math.max(.08,this.hitRatio-delay),0,1));
+      const xx=x+(i-(n-1)/2)*s*.42,h=s*(.45+.68*hash3(i,4,12))*u,w=s*(.18+.08*(i%3));
+      rmPoly(g,[[xx-w,y+s*.55],[xx+w,y+s*.55],[xx+w*.35,y+s*.55-h*.68],[xx,y+s*.55-h],[xx-w*.4,y+s*.55-h*.55]],P[2+(i%2)]);
+      pxLine(g,xx-w*.25,y+s*.48,xx,y+s*.55-h*.82,1,P[0]);
+    }
+    if(this.hit) for(let i=0;i<n;i++){
+      const a=-Math.PI*.9+i/(n-1)*Math.PI*.8;
+      rmDiamond(g,x+Math.cos(a)*s*1.2,y+Math.sin(a)*s*.6,s*.08,s*.18,P[1]);
+    }
+  }
+}
+
+/* だいちのちから：地脈の輪が収束し、土柱と熱光が脈打って噴き上がる。 */
+class EarthPowerMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||66)*this.sizeMul,P=this.sp.palette,x=this.t.x,y=this.t.y,n=this.amount(this.sp.amount||8,4);
+    const pulse=Math.sin(Math.PI*rmClamp(q/this.hitRatio,0,1));
+    for(let r=0;r<4;r++) pxRing(g,x,y+s*.5,s*(1.35-r*.28)*(1-.5*q),s*(.28-r*.04),2,P[3-r]);
+    for(let i=0;i<n;i++){
+      const a=RM_TAU*i/n+this.time*.7,rr=s*(.25+.75*hash3(i,2,13)),xx=x+Math.cos(a)*rr,base=y+s*.52;
+      const h=s*(.45+.72*hash3(i,6,7))*pulse;
+      rmPoly(g,[[xx-s*.12,base],[xx+s*.12,base],[xx+s*.07,base-h*.72],[xx,base-h],[xx-s*.08,base-h*.62]],i%2?P[2]:P[1]);
+      pxLine(g,xx,base-h*.86,xx,base-h*.18,1,P[0]);
+    }
+    if(this.hit){ pxDisc(g,x,y+s*.18,s*.28,P[0]); rmRingBurst(g,x,y+s*.2,s*1.4,n,P[1],q); }
+  }
+}
+
+/* じしん：ガラス割れではなく、地面のプレートが隆起・沈降して波打つ。 */
+class EarthquakeMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,s=(this.sp.size||92)*this.sizeMul,P=this.sp.palette,w=g.canvas.width,h=g.canvas.height,n=this.amount(this.sp.amount||11,5);
+    const ground=h*.72,amp=s*.24*Math.sin(Math.PI*rmClamp(q/this.hitRatio,0,1));
+    for(let i=0;i<n;i++){
+      const x0=i*w/n,x1=(i+1)*w/n+1,phase=i%2?1:-1,yy=ground+phase*amp*(.45+.55*hash3(i,3,9))*Math.sin(q*18+i);
+      rmPoly(g,[[x0,yy],[x1,ground-phase*amp*.35],[x1,h],[x0,h]],P[3-(i%3)]);
+      pxLine(g,x0,yy,x1,ground-phase*amp*.35,2,P[0]);
+      const cx=x1-2,depth=s*(.18+.35*hash3(i,8,5))*Math.sin(Math.PI*q);
+      rmPoly(g,[[cx-2,ground],[cx+3,ground],[cx+8,ground+depth],[cx-5,ground+depth*.62]],P[3]);
+    }
+    for(let i=0;i<n;i++){
+      const x=hash3(i,19,4)*w,y=ground-4-hash3(i,11,2)*amp*1.2;
+      rmDiamond(g,x,y,s*(.05+.06*(i%3)),s*(.10+.12*(i%2)),P[1+(i%3)]);
+    }
+    if(this.hit){ pxLine(g,0,ground,w,ground,s*.08,P[1]); rmRingBurst(g,this.t.x,ground,s*1.55,n,P[0],q); }
+  }
+}
+
+/* 爆撃：飛行する本体とは別に、爆弾・爆炎・火の粉を全画面へ積み上げる。 */
+class BombingMoveFX extends RebuiltMoveFX{
+  drawMaterial(g){
+    const q=this.q,w=g.canvas.width,h=g.canvas.height,s=(this.sp.size||62)*this.sizeMul,P=this.sp.palette;
+    const bombs=this.amount(this.sp.amount||12,5),flames=this.amount(this.sp.flames||22,9),ground=h*.78;
+    /* 投下弾。個別の軌道と着弾時刻を固定seedで決める。 */
+    for(let i=0;i<bombs;i++){
+      const drop=.08+i/(bombs+2)*.72,life=.20+.08*hash3(i,8,31),u=(q-drop)/life;
+      const x=(.08+.84*hash3(i,13,7))*w,top=-s*(.3+.5*hash3(i,2,19));
+      if(u>=0&&u<1){
+        const yy=rmLerp(top,ground,rmEase(u));
+        rmPoly(g,[[x,yy+s*.42],[x-s*.24,yy],[x,yy-s*.34],[x+s*.24,yy]],P[3]);
+        pxLine(g,x,yy-s*.30,x+Math.sin(i)*s*.25,yy-s*.62,2,P[1]);
+        rmFlame(g,x+Math.sin(i)*s*.25,yy-s*.67,s*.16,P[2],P[0],0);
+      }
+      if(u>=1&&u<1.55){
+        const e=rmClamp((u-1)/.55,0,1),r=s*(.35+1.4*e)*(1-.35*e);
+        rmFlame(g,x,ground,r,P[3],P[1],Math.sin(i)*r*.12);
+        rmStar(g,x,ground,r*.72,7,P[0],i+q*6);
+      }
+    }
+    /* 業火。背景色ではなく、本演出キャンバス上の独立した炎柱。 */
+    const blaze=rmClamp((q-.10)/.28,0,1)*rmClamp((1-q)/.12,0,1);
+    for(let i=0;i<flames;i++){
+      const x=(i+.5)/flames*w+(hash3(i,6,23)-.5)*w/flames*.8;
+      const beat=.68+.32*Math.sin(q*38+i*2.7),r=s*(.45+1.05*hash3(i,9,14))*blaze*beat;
+      rmAlpha(g,.88,()=>rmFlame(g,x,ground+8,r,P[3-(i%2)],P[1],Math.sin(i+q*12)*r*.16));
+      if(i%3===0) rmFlame(g,x+s*.18,ground-r*.72,r*.42,P[2],P[0],-2);
+    }
+    const embers=this.amount(this.sp.embers||42,14);
+    for(let i=0;i<embers;i++){
+      const x=(hash3(i,37,5)*w+q*w*(.18+.22*hash3(i,4,8)))%w;
+      const y=ground-((q*(40+80*hash3(i,3,9))+hash3(i,17,2)*h*.75)%(h*.78));
+      pxDisc(g,x,y,1+(i%3),i%4===0?P[0]:P[1+(i%2)]);
+    }
+    if(this.hit){ rmAlpha(g,1-q,()=>{ rmStar(g,this.t.x,this.t.y,s*2.2,12,P[0],q*10); pxRing(g,this.t.x,this.t.y,s*2.5,s*.72,5,P[1]); }); }
+  }
+}
+
+/* generator名は技名と1対1。制作ツール・分類・検証もこの表を読む。 */
+globalThis.REBUILT_MOVE_META={
+  ember_move:{jp:'ひのこ',desc:'火種の群れと小火口',range:'ranged',size:18,amount:9,duration:.78,hitAt:.76,arc:-16,clashKind:'bullet',palette:['#fff7c0','#ffd23f','#ff721c','#8f190b'],powerVisual:{size:[.80,1.55],amount:[.60,1.85]}},
+  razor_leaf_move:{jp:'はっぱカッター',desc:'旋回する葉刃の扇',range:'melee',size:22,amount:7,duration:.72,hitAt:.70,arc:-20,clashKind:'none',palette:['#f4ffe8','#a9ed5b','#3f9e28','#154d1d'],powerVisual:{size:[.78,1.48],amount:[.58,1.80]}},
+  seed_machine_gun_move:{jp:'タネマシンガン',desc:'莢から連射する硬質種子',range:'ranged',size:12,amount:8,duration:.82,hitAt:.82,arc:-5,clashKind:'bullet',palette:['#f5ffd0','#b2dc4b','#477d22','#20340f'],powerVisual:{size:[.85,1.35],amount:[.55,2.10]}},
+  tri_attack_move:{jp:'トライアタック',desc:'三属性を結ぶ移動三角形',range:'ranged',size:34,amount:3,duration:.92,hitAt:.74,arc:-10,clashKind:'bullet',palette:['#ffffff','#ffcf48','#7bdcff','#9a5cff'],powerVisual:{size:[.74,1.65],amount:[.75,1.65]}},
+  future_sight_move:{jp:'みらいよち',desc:'未来の着弾を告げる時計眼',range:'ranged',size:74,amount:12,duration:1.55,hitAt:.82,arc:0,clashKind:'bullet',palette:['#ffffff','#ffb6dc','#b45cff','#351060'],powerVisual:{size:[.72,1.62],amount:[.60,1.85]}},
+  icicle_spear_move:{jp:'つららばり',desc:'長さの違う連続氷槍',range:'ranged',size:18,amount:6,duration:.82,hitAt:.80,arc:-8,clashKind:'bullet',palette:['#ffffff','#c9f5ff','#62c6ee','#22608c'],powerVisual:{size:[.82,1.42],amount:[.55,2.05]}},
+  focus_blast_move:{jp:'きあいだま',desc:'拳法方位印の圧縮弾',range:'ranged',size:42,amount:8,duration:1.12,hitAt:.76,arc:-24,clashKind:'bullet',palette:['#ffffff','#ffe59a','#e0893d','#67351d'],powerVisual:{size:[.70,1.72],amount:[.62,1.82]}},
+  sludge_bomb_move:{jp:'ヘドロばくだん',desc:'変形する毒塊と飛沫池',range:'ranged',size:31,amount:11,duration:.96,hitAt:.76,arc:-28,clashKind:'bullet',palette:['#fff0ff','#df8cff','#8e35b8','#3e174e'],powerVisual:{size:[.72,1.65],amount:[.60,1.90]}},
+  pin_missile_move:{jp:'ミサイルばり',desc:'翅付き針弾の編隊',range:'ranged',size:14,amount:7,duration:.78,hitAt:.84,arc:-4,clashKind:'bullet',palette:['#fff8d0','#cadb55','#708328','#2e3614'],powerVisual:{size:[.85,1.38],amount:[.50,2.15]}},
+  shadow_ball_move:{jp:'シャドーボール',desc:'影の手を伸ばす吸光核',range:'ranged',size:38,amount:9,duration:1.02,hitAt:.76,arc:-18,clashKind:'bullet',palette:['#f8eaff','#bc84e8','#66369a','#160c2c'],powerVisual:{size:[.70,1.72],amount:[.60,1.90]}},
+  will_o_wisp_move:{jp:'おにび',desc:'互いを追う鬼火群',range:'ranged',size:25,amount:5,duration:1.12,hitAt:.80,arc:-16,clashKind:'bullet',palette:['#ffffff','#8fc9ff','#7761db','#2d185d'],powerVisual:{size:[.78,1.50],amount:[.60,2.00]}},
+  moon_force_move:{jp:'ムーンフォース',desc:'月相と潮汐光の着弾',range:'ranged',size:48,amount:10,duration:1.16,hitAt:.74,arc:-34,clashKind:'bullet',palette:['#ffffff','#ffe2f4','#d485d9','#67306e'],powerVisual:{size:[.70,1.70],amount:[.58,1.90]}},
+  quick_attack_move:{jp:'でんこうせっか',desc:'白い速度殻と連続残像',range:'ranged',size:30,amount:8,duration:.48,hitAt:.82,arc:0,clashKind:'bullet',palette:['#ffffff','#e9f3ff','#9fb7d0','#4a5968'],powerVisual:{size:[.82,1.42],amount:[.60,1.85]}},
+  fire_blast_move:{jp:'だいもんじ',desc:'五本の炎路が描く大文字',range:'ranged',size:74,amount:22,duration:1.18,hitAt:.76,arc:-16,clashKind:'bullet',palette:['#ffffff','#ffd42f','#ff6918','#981c0b'],powerVisual:{size:[.66,1.82],amount:[.52,2.10]}},
+  aqua_jet_move:{jp:'アクアジェット',desc:'使用者を包む水滴型突進殻',range:'ranged',size:38,amount:16,duration:.62,hitAt:.84,arc:-7,clashKind:'bullet',palette:['#ffffff','#c9f8ff','#39bcef','#07568d'],powerVisual:{size:[.76,1.58],amount:[.58,1.90]}},
+  drill_run_move:{jp:'ドリルライナー',desc:'回転する土層円錐',range:'ranged',size:45,amount:9,duration:.74,hitAt:.82,arc:0,clashKind:'bullet',palette:['#fff3d0','#c89b56','#76502d','#302014'],powerVisual:{size:[.74,1.62],amount:[.60,1.90]}},
+  brave_bird_move:{jp:'ブレイブバード',desc:'猛禽を象る翼付き突進殻',range:'ranged',size:66,amount:12,duration:1.02,hitAt:.86,arc:-42,clashKind:'bullet',palette:['#ffffff','#a8e8ff','#2c8fd0','#17436f'],powerVisual:{size:[.67,1.78],amount:[.55,2.00]}},
+  aerial_ace_move:{jp:'つばめがえし',desc:'通過後に反転する燕の飛跡',range:'melee',size:52,amount:10,duration:.88,hitAt:.80,arc:0,clashKind:'none',palette:['#ffffff','#d7f5ff','#6cb8d7','#28536d'],powerVisual:{size:[.76,1.56],amount:[.62,1.85]}},
+  x_scissor_move:{jp:'シザークロス',desc:'左右から閉じる昆虫大顎',range:'melee',size:78,amount:9,duration:.82,hitAt:.74,arc:0,clashKind:'none',palette:['#ffffff','#d9f47a','#70a930','#25451b'],powerVisual:{size:[.72,1.60],amount:[.62,1.85]}},
+  night_slash_move:{jp:'つじぎり',desc:'夜の水平線を走る黒い月刃',range:'melee',size:82,amount:8,duration:.76,hitAt:.72,arc:0,clashKind:'none',palette:['#ffffff','#c8a8ed','#59337d','#12091e'],powerVisual:{size:[.72,1.60],amount:[.62,1.82]}},
+  crunch_move:{jp:'かみくだく',desc:'骨質の上下顎と不揃いな歯',range:'melee',size:88,amount:9,duration:.86,hitAt:.72,arc:0,clashKind:'none',palette:['#ffffff','#dfc797','#7c623e','#2a2119'],powerVisual:{size:[.70,1.68],amount:[.65,1.80]}},
+  metal_claw_move:{jp:'メタルクロー',desc:'三本の鉤爪と金属片',range:'melee',size:72,amount:3,duration:.72,hitAt:.72,arc:0,clashKind:'none',palette:['#ffffff','#dce8f2','#8796a5','#39424c'],powerVisual:{size:[.76,1.55],amount:[.75,1.75]}},
+  thunder_punch_move:{jp:'かみなりパンチ',desc:'稲妻で組んだ拳骨',range:'melee',size:68,amount:10,duration:.78,hitAt:.72,arc:0,clashKind:'none',palette:['#ffffff','#fff28a','#ffc928','#775100'],powerVisual:{size:[.72,1.62],amount:[.60,1.90]}},
+  air_slash_move:{jp:'エアスラッシュ',desc:'層をなす空気圧の羽根',range:'melee',size:48,amount:7,duration:.78,hitAt:.76,arc:-10,clashKind:'none',palette:['#ffffff','#d8f7ff','#80cfe0','#36758b'],powerVisual:{size:[.77,1.53],amount:[.58,1.95]}},
+  psycho_cut_move:{jp:'サイコカッター',desc:'組み替わる念力結晶刃',range:'melee',size:62,amount:9,duration:.76,hitAt:.74,arc:-12,clashKind:'none',palette:['#ffffff','#ffb9e3','#cb54b6','#63245c'],powerVisual:{size:[.74,1.58],amount:[.60,1.88]}},
+  outrage_move:{jp:'げきりん',desc:'二色の竜巻と暴れる竜頭',range:'melee',size:92,amount:16,duration:1.24,hitAt:.78,arc:0,clashKind:'none',palette:['#ffffff','#ff725f','#704ddb','#28145c'],powerVisual:{size:[.65,1.85],amount:[.52,2.10]}},
+  ice_beam_move:{jp:'れいとうビーム',desc:'連結する六角氷晶の鎖',range:'ranged',size:30,amount:14,duration:1.30,hitAt:.48,arc:0,clashKind:'beam',palette:['#ffffff','#d4f8ff','#71d1ef','#256d9b'],powerVisual:{size:[.72,1.65],amount:[.58,1.95]}},
+  flash_cannon_move:{jp:'ラスターカノン',desc:'金属絞りと四角い圧力節',range:'ranged',size:42,amount:10,duration:1.38,hitAt:.48,arc:0,clashKind:'beam',palette:['#ffffff','#e4edf4','#9baab8','#44505c'],powerVisual:{size:[.70,1.70],amount:[.60,1.90]}},
+  dazzling_gleam_move:{jp:'マジカルシャイン',desc:'開く宝石面の虹色反射',range:'ranged',size:76,amount:12,duration:1.12,hitAt:.66,arc:0,clashKind:'beam',palette:['#ffffff','#ffd3ed','#caa8ff','#7659a4'],powerVisual:{size:[.70,1.68],amount:[.55,2.00]}},
+  hyper_beam_move:{jp:'はかいこうせん',desc:'中央レールへ束ねる橙色エネルギー節',range:'ranged',size:54,amount:16,duration:1.72,hitAt:.54,arc:0,clashKind:'beam',palette:['#ffffff','#ffe071','#ff8a20','#8b2a0d'],powerVisual:{size:[.64,1.90],amount:[.50,2.20]}},
+  dragon_pulse_move:{jp:'りゅうのはどう',desc:'蛇行する節持ち光竜',range:'ranged',size:44,amount:14,duration:1.32,hitAt:.52,arc:0,clashKind:'beam',palette:['#ffffff','#cfb6ff','#7256d0','#28155f'],powerVisual:{size:[.68,1.78],amount:[.55,2.05]}},
+  dragon_dance_move:{jp:'りゅうのまい',desc:'反対向きに舞う二頭の竜帯',range:'remote',size:86,amount:16,duration:1.55,hitAt:.78,arc:0,clashKind:'none',palette:['#ffffff','#cc9cff','#7351ca','#2b155f'],powerVisual:{size:[.74,1.60],amount:[.58,1.95]}},
+  toxic_move:{jp:'どくどく',desc:'毒滴が組み上げる髑髏',range:'remote',size:78,amount:13,duration:1.30,hitAt:.76,arc:0,clashKind:'none',palette:['#ffffff','#e8a0ff','#a43bc4','#49145e'],powerVisual:{size:[.72,1.65],amount:[.55,2.00]}},
+  whirlpool_move:{jp:'うずしお',desc:'下から上へ細まる水の螺旋壁',range:'remote',size:92,amount:18,duration:1.46,hitAt:.76,arc:0,clashKind:'none',palette:['#ffffff','#bcefff','#3aafe5','#07517d'],powerVisual:{size:[.68,1.78],amount:[.52,2.10]}},
+  rock_slide_move:{jp:'いわなだれ',desc:'傾いた岩棚を転げる岩塊',range:'remote',size:54,amount:9,duration:1.24,hitAt:.80,arc:0,clashKind:'none',palette:['#fff4d2','#c7a46b','#76583b','#33251a'],powerVisual:{size:[.70,1.72],amount:[.55,2.05]}},
+  stone_edge_move:{jp:'ストーンエッジ',desc:'地中の稜線から押し上がる石柱',range:'remote',size:48,amount:7,duration:1.16,hitAt:.78,arc:0,clashKind:'none',palette:['#fff2cc','#c49b61','#715036','#2f2118'],powerVisual:{size:[.72,1.68],amount:[.55,2.00]}},
+  earth_power_move:{jp:'だいちのちから',desc:'地脈輪から噴く土柱と熱光',range:'remote',size:66,amount:8,duration:1.28,hitAt:.76,arc:0,clashKind:'none',palette:['#ffffff','#ffd878','#b46a32','#552715'],powerVisual:{size:[.68,1.78],amount:[.55,2.05]}},
+  earthquake_move:{jp:'じしん',desc:'隆起・沈降する地面プレート',range:'remote',size:92,amount:11,duration:1.58,hitAt:.76,arc:0,clashKind:'none',palette:['#fff3d5','#cfac72','#775737','#302116'],powerVisual:{size:[.62,1.95],amount:[.50,2.20]}},
+  bombing_move:{jp:'爆撃',desc:'飛行周回中に全画面へ爆弾と業火を重ねる',range:'remote',size:62,amount:12,duration:4.55,hitAt:.94,arc:0,clashKind:'none',flames:22,embers:42,lockTarget:4.55,palette:['#ffffff','#ffd33c','#ff6418','#8e1609'],powerVisual:{size:[.62,2.00],amount:[.50,2.30]}}
+};
+
+globalThis.REBUILT_MOVE_FX={
+  ember_move:EmberMoveFX,razor_leaf_move:RazorLeafMoveFX,seed_machine_gun_move:SeedMachineGunMoveFX,
+  tri_attack_move:TriAttackMoveFX,future_sight_move:FutureSightMoveFX,icicle_spear_move:IcicleSpearMoveFX,
+  focus_blast_move:FocusBlastMoveFX,sludge_bomb_move:SludgeBombMoveFX,pin_missile_move:PinMissileMoveFX,
+  shadow_ball_move:ShadowBallMoveFX,will_o_wisp_move:WillOWispMoveFX,moon_force_move:MoonForceMoveFX,
+  quick_attack_move:QuickAttackMoveFX,fire_blast_move:FireBlastMoveFX,aqua_jet_move:AquaJetMoveFX,
+  drill_run_move:DrillRunMoveFX,brave_bird_move:BraveBirdMoveFX,aerial_ace_move:AerialAceMoveFX,
+  x_scissor_move:XScissorMoveFX,night_slash_move:NightSlashMoveFX,crunch_move:CrunchMoveFX,
+  metal_claw_move:MetalClawMoveFX,thunder_punch_move:ThunderPunchMoveFX,air_slash_move:AirSlashMoveFX,
+  psycho_cut_move:PsychoCutMoveFX,outrage_move:OutrageMoveFX,ice_beam_move:IceBeamMoveFX,
+  flash_cannon_move:FlashCannonMoveFX,dazzling_gleam_move:DazzlingGleamMoveFX,hyper_beam_move:HyperBeamMoveFX,
+  dragon_pulse_move:DragonPulseMoveFX,dragon_dance_move:DragonDanceMoveFX,toxic_move:ToxicMoveFX,
+  whirlpool_move:WhirlpoolMoveFX,rock_slide_move:RockSlideMoveFX,stone_edge_move:StoneEdgeMoveFX,
+  earth_power_move:EarthPowerMoveFX,earthquake_move:EarthquakeMoveFX,bombing_move:BombingMoveFX
+};
+
+for(const [generator,m] of Object.entries(globalThis.REBUILT_MOVE_META)){
+  DEFAULTS[generator]={generator,size:m.size,amount:m.amount,duration:m.duration,hitAt:m.hitAt,
+    arc:m.arc||0,clashKind:m.clashKind||'none',flames:m.flames,embers:m.embers,
+    lockTarget:m.lockTarget,palette:[...m.palette],impact:null,
+    powerVisual:{size:[...m.powerVisual.size],amount:[...m.powerVisual.amount]}};
 }
 
 /* ===== sfx_bank.js — CC0効果音バンク（自動生成・編集しないで） ===== */
@@ -2644,6 +3536,12 @@ var MOVE_RANGE = (function () {
     black_punch:'melee',        // 黒い拳で直接殴る
     black_shot: 'ranged'        // 暗黒弾が空間を進む
   };
+  /* 作り直した技はgeneratorごとに分類を持つ。技データ側のrangeが正だが、
+     制作ツールで新規に複製した直後も同じ分類になるよう登録する。 */
+  if(globalThis.REBUILT_MOVE_META){
+    for(const g of Object.keys(globalThis.REBUILT_MOVE_META))
+      BY_GENERATOR[g]=globalThis.REBUILT_MOVE_META[g].range;
+  }
 
   /* 技の分類を返す。技データに range が明示されとればそっちが勝つ
      （新しいジェネレータを足したときや、例外を作りたいとき用）。 */
@@ -3174,6 +4072,123 @@ function sampleAnim(def,t){
 }
 
 /* =========================================================
+   専用技で既存の attack / charge / jump では表現できない本体の動き。
+   各キー列は対象技のために新しく作り、既存ANIMSの配列を複製しない。
+   ========================================================= */
+Object.assign(ANIMS,{
+  seed_machine_gun_burst:{dur:.82,keys:[
+    K({t:0,sx:1,sy:1,dx:0,dy:0}),K({t:.08,sx:1.24,sy:.78,dx:-8,dy:3}),
+    K({t:.17,sx:.82,sy:1.20,dx:14,dy:-2,ghost:.3}),K({t:.26,sx:1.16,sy:.86,dx:5,dy:1}),
+    K({t:.35,sx:.84,sy:1.17,dx:16,dy:-1}),K({t:.44,sx:1.14,sy:.88,dx:6,dy:1}),
+    K({t:.53,sx:.86,sy:1.14,dx:15,dy:-1}),K({t:.67,sx:1.08,sy:.94,dx:5}),
+    K({t:.82,sx:.96,sy:1.04,dx:2}),K({t:1,sx:1,sy:1,dx:0})
+  ],img:[[0,'normal'],[.08,'attack'],[.76,'normal']]},
+
+  focus_blast_charge:{dur:1.10,keys:[
+    K({t:0,sx:1,sy:1,dx:0,dy:0}),K({t:.12,sx:1.17,sy:.84,dx:-8,dy:4}),
+    K({t:.28,sx:1.28,sy:.76,dx:-12,dy:7,flash:.12}),K({t:.45,sx:1.19,sy:.83,dx:-8,dy:1,rot:-.05}),
+    K({t:.61,sx:.74,sy:1.30,dx:21,dy:-5,flash:.55}),K({t:.72,sx:1.10,sy:.92,dx:13,dy:0}),
+    K({t:.86,sx:.95,sy:1.06,dx:3,dy:-1}),K({t:1,sx:1,sy:1,dx:0,dy:0})
+  ],img:[[0,'normal'],[.20,'attack'],[.78,'normal']]},
+
+  quick_attack_dash:{dur:.48,keys:[
+    K({t:0,sx:1,sy:1,dx:0}),K({t:.09,sx:1.34,sy:.68,dx:-10}),
+    K({t:.19,sx:1.52,sy:.60,dx:48,ghost:1,rot:-.08}),K({t:.34,sx:1.60,sy:.58,dx:112,ghost:1,rot:-.05}),
+    K({t:.52,sx:1.43,sy:.66,dx:154,ghost:1}),K({t:.68,sx:.86,sy:1.15,dx:82,ghost:.6}),
+    K({t:.84,sx:1.10,sy:.91,dx:22}),K({t:1,sx:1,sy:1,dx:0})
+  ],img:[[0,'normal'],[.08,'attack'],[.78,'normal']]},
+
+  aqua_jet_rush:{dur:.62,keys:[
+    K({t:0,sx:1,sy:1,dx:0,dy:0}),K({t:.10,sx:1.22,sy:.76,dx:-8,dy:5}),
+    K({t:.22,sx:1.46,sy:.62,dx:36,dy:-12,ghost:1,rot:-.12}),K({t:.40,sx:1.55,sy:.58,dx:96,dy:-22,ghost:1,rot:-.08}),
+    K({t:.58,sx:1.45,sy:.64,dx:142,dy:-10,ghost:1}),K({t:.73,sx:.82,sy:1.18,dx:84,dy:1}),
+    K({t:.88,sx:1.10,sy:.91,dx:24,dy:-2}),K({t:1,sx:1,sy:1,dx:0,dy:0})
+  ],img:[[0,'normal'],[.10,'attack'],[.82,'normal']]},
+
+  drill_run_spin:{dur:.74,keys:[
+    K({t:0,sx:1,sy:1,dx:0,rot:0}),K({t:.09,sx:1.25,sy:.77,dx:-8,rot:.12}),
+    K({t:.20,sx:1.38,sy:.68,dx:24,rot:-.42,ghost:.6}),K({t:.34,sx:1.42,sy:.64,dx:58,rot:.55,ghost:1}),
+    K({t:.48,sx:1.40,sy:.66,dx:94,rot:-.62,ghost:1}),K({t:.62,sx:1.36,sy:.70,dx:126,rot:.48,ghost:.8}),
+    K({t:.75,sx:.86,sy:1.15,dx:82,rot:-.18}),K({t:.89,sx:1.08,sy:.92,dx:24,rot:.06}),
+    K({t:1,sx:1,sy:1,dx:0,rot:0})
+  ],img:[[0,'normal'],[.08,'attack'],[.84,'normal']]},
+
+  brave_bird_dive:{dur:1.02,keys:[
+    K({t:0,sx:1,sy:1,dx:0,dy:0}),K({t:.07,sx:1.30,sy:.70,dx:-7,dy:6}),
+    K({t:.17,sx:.70,sy:1.36,dx:18,dy:-58,ghost:1,rot:-.18}),K({t:.30,sx:.84,sy:1.20,dx:48,dy:-112,ghost:1,rot:-.28}),
+    K({t:.43,sx:1.06,sy:.93,dx:84,dy:-126,rot:-.36}),K({t:.56,sx:1.38,sy:.66,dx:124,dy:-82,ghost:1,rot:.18}),
+    K({t:.68,sx:1.55,sy:.57,dx:158,dy:-24,ghost:1,rot:.32}),K({t:.77,sx:1.34,sy:.72,dx:146,dy:4,flash:.28}),
+    K({t:.88,sx:.88,sy:1.14,dx:62,dy:-7}),K({t:1,sx:1,sy:1,dx:0,dy:0})
+  ],img:[[0,'normal'],[.07,'attack'],[.83,'normal']]},
+
+  aerial_ace_turn:{dur:.88,keys:[
+    K({t:0,sx:1,sy:1,dx:0,dy:0,rot:0}),K({t:.09,sx:1.25,sy:.76,dx:-8,dy:4}),
+    K({t:.21,sx:1.42,sy:.64,dx:66,dy:-42,rot:-.28,ghost:1}),K({t:.36,sx:1.38,sy:.68,dx:150,dy:-74,rot:-.46,ghost:1}),
+    K({t:.48,sx:.92,sy:1.08,dx:168,dy:-50,rot:-1.05}),K({t:.60,sx:1.34,sy:.70,dx:92,dy:-18,rot:-1.90,ghost:1}),
+    K({t:.73,sx:1.44,sy:.64,dx:32,dy:-6,rot:-2.70,ghost:1}),K({t:.84,sx:.88,sy:1.13,dx:-8,dy:-2,rot:-3.12}),
+    K({t:.93,sx:1.08,sy:.93,dx:-3,dy:0,rot:-.20}),K({t:1,sx:1,sy:1,dx:0,dy:0,rot:0})
+  ],img:[[0,'normal'],[.08,'attack'],[.90,'normal']]},
+
+  thunder_punch_drive:{dur:.78,keys:[
+    K({t:0,sx:1,sy:1,dx:0,dy:0}),K({t:.12,sx:1.28,sy:.72,dx:-12,dy:6,rot:.08}),
+    K({t:.25,sx:.80,sy:1.22,dx:34,dy:-7,flash:.25}),K({t:.36,sx:.66,sy:1.34,dx:78,dy:-3,ghost:1,flash:.65}),
+    K({t:.45,sx:.74,sy:1.28,dx:116,dy:1,flash:1}),K({t:.56,sx:1.20,sy:.80,dx:94,dy:3}),
+    K({t:.72,sx:.92,sy:1.09,dx:48,dy:-2}),K({t:.87,sx:1.07,sy:.94,dx:14}),K({t:1,sx:1,sy:1,dx:0})
+  ],img:[[0,'normal'],[.11,'attack'],[.82,'normal']]},
+
+  outrage_rampage:{dur:1.24,keys:[
+    K({t:0,sx:1,sy:1,dx:0,dy:0,rot:0}),K({t:.08,sx:1.28,sy:.72,dx:-10,dy:5,flash:.15}),
+    K({t:.17,sx:.74,sy:1.28,dx:52,dy:-14,rot:-.18,ghost:1}),K({t:.27,sx:1.30,sy:.70,dx:92,dy:3,rot:.22}),
+    K({t:.37,sx:.72,sy:1.30,dx:126,dy:-10,rot:-.30,ghost:1}),K({t:.47,sx:1.34,sy:.68,dx:84,dy:5,rot:.34}),
+    K({t:.58,sx:.70,sy:1.32,dx:142,dy:-16,rot:-.38,ghost:1}),K({t:.68,sx:1.32,sy:.70,dx:110,dy:4,rot:.28,flash:.35}),
+    K({t:.78,sx:.76,sy:1.24,dx:54,dy:-8,rot:-.20}),K({t:.88,sx:1.18,sy:.84,dx:20,dy:3}),
+    K({t:1,sx:1,sy:1,dx:0,dy:0,rot:0})
+  ],img:[[0,'normal'],[.07,'attack'],[.90,'normal']]},
+
+  hyper_beam_fire:{dur:1.72,keys:[
+    K({t:0,sx:1,sy:1,dx:0,dy:0}),K({t:.10,sx:1.18,sy:.83,dx:-7,dy:3}),
+    K({t:.22,sx:1.30,sy:.72,dx:-12,dy:6,flash:.20}),K({t:.34,sx:.70,sy:1.34,dx:24,dy:-4,flash:.85}),
+    K({t:.52,sx:.76,sy:1.27,dx:30,dy:-3,flash:.32}),K({t:.68,sx:.80,sy:1.22,dx:27,dy:-2}),
+    K({t:.79,sx:1.36,sy:.68,dx:-18,dy:7,rot:.10}),K({t:.88,sx:.90,sy:1.10,dx:-10,dy:-3,rot:-.05}),
+    K({t:1,sx:1,sy:1,dx:0,dy:0})
+  ],img:[[0,'normal'],[.18,'attack'],[.78,'hurt'],[.93,'normal']]},
+
+  dragon_dance_move:{dur:1.55,keys:[
+    K({t:0,sx:1,sy:1,dx:0,dy:0,rot:0}),K({t:.12,sx:.94,sy:1.07,dx:-10,dy:-5,rot:-.15}),
+    K({t:.25,sx:1.08,sy:.94,dx:14,dy:-16,rot:.22}),K({t:.38,sx:.92,sy:1.08,dx:22,dy:-5,rot:.38,ghost:.3}),
+    K({t:.51,sx:1.10,sy:.92,dx:2,dy:2,rot:.08}),K({t:.64,sx:.93,sy:1.07,dx:-20,dy:-8,rot:-.34,ghost:.3}),
+    K({t:.77,sx:1.09,sy:.93,dx:-12,dy:-18,rot:-.18}),K({t:.88,sx:.96,sy:1.04,dx:6,dy:-6,rot:.12}),
+    K({t:1,sx:1,sy:1,dx:0,dy:0,rot:0})
+  ],img:[[0,'normal'],[.18,'attack'],[.88,'normal']]},
+
+  earthquake_stomp:{dur:1.58,keys:[
+    K({t:0,sx:1,sy:1,dx:0,dy:0}),K({t:.12,sx:1.34,sy:.68,dy:8}),
+    K({t:.24,sx:.76,sy:1.30,dy:-52,ghost:.4}),K({t:.40,sx:.94,sy:1.08,dy:-72}),
+    K({t:.52,sx:1.18,sy:.82,dy:-32}),K({t:.60,sx:1.58,sy:.48,dy:9,flash:.60}),
+    K({t:.68,sx:.82,sy:1.20,dy:-13}),K({t:.76,sx:1.28,sy:.72,dy:5}),
+    K({t:.86,sx:.91,sy:1.10,dy:-5}),K({t:1,sx:1,sy:1,dy:0})
+  ],img:[[0,'normal'],[.10,'attack'],[.78,'normal']]},
+
+  bombing_flight:{dur:4.55,keys:[
+    K({t:0,sx:1,sy:1,dx:0,dy:0,rot:0}),K({t:.035,sx:1.30,sy:.70,dx:-8,dy:7}),
+    K({t:.09,sx:.72,sy:1.34,dx:28,dy:-72,rot:-.16,ghost:1}),
+    K({t:.16,sx:.82,sy:1.18,dx:104,dy:-132,rot:-.30,ghost:1}),
+    K({t:.24,sx:.92,sy:1.08,dx:178,dy:-112,rot:.10,ghost:.6}),
+    K({t:.32,sx:1.02,sy:.98,dx:148,dy:-42,rot:.44}),
+    K({t:.40,sx:.94,sy:1.06,dx:62,dy:-76,rot:.18,ghost:.5}),
+    K({t:.48,sx:.86,sy:1.14,dx:-62,dy:-138,rot:-.24,ghost:1}),
+    K({t:.56,sx:.96,sy:1.04,dx:-118,dy:-72,rot:-.48}),
+    K({t:.64,sx:1.04,sy:.96,dx:-42,dy:-26,rot:-.10,ghost:.4}),
+    K({t:.72,sx:.84,sy:1.16,dx:74,dy:-116,rot:.26,ghost:1}),
+    K({t:.80,sx:.92,sy:1.08,dx:164,dy:-76,rot:.50}),
+    K({t:.87,sx:1.08,sy:.92,dx:106,dy:-18,rot:.14,ghost:.4}),
+    K({t:.93,sx:.78,sy:1.24,dx:38,dy:-60,rot:-.18}),
+    K({t:.97,sx:1.32,sy:.68,dx:14,dy:4,rot:.06,flash:.25}),
+    K({t:1,sx:1,sy:1,dx:0,dy:0,rot:0})
+  ],img:[[0,'normal'],[.03,'attack'],[.94,'normal']]}
+});
+
+/* =========================================================
    audio_ui.js — 音の割り当てUI（音ラボ・技ラボで共用）
    ・SoundPicker … カテゴリ別の音選び（試聴つき）
    ・renderTimeline … 技ごとの音タイムライン（構え/発射/着弾 + オフセット秒）
@@ -3437,7 +4452,8 @@ const LABEL={
   'impact.size':'着弾の大きさ','impact.frames':'着弾のコマ数','impact.shards':'着弾の破片',
   strength:'強さ',dur:'長さ',times:'点滅の回数',power:'揺れ幅',color:'色',
   at:'いつ',dir:'線の向き',
-  off:'ずらす',dx:'横の位置',dy:'縦の位置',anchor:'どこを基準に'
+  off:'ずらす',dx:'横の位置',dy:'縦の位置',anchor:'どこを基準に',
+  amount:'本演出の要素数',flames:'炎柱の数',embers:'火の粉の数'
 };
 const SCREEN_JP={flash:'閃光',blink:'背景点滅',tint:'背景に色',darken:'暗転',shake:'画面揺れ',lines:'走査線'};
 const GEN_JP={projectile:'飛び道具',beam:'光線',slash:'斬撃',lightning:'雷',aura:'オーラ',shatter:'空間割れ',
@@ -3475,7 +4491,14 @@ const ANIM_JP={ attack:'突き出す', charge:'力を溜める', jump:'跳ぶ', 
                 dodge:'横へ跳ぶ', zigzag:'往復横跳び', hurt:'のけぞる', knockback:'ふっとぶ',
                 appear:'降りてくる', idle:'動かん',
                 /* 戦闘の「間」に使うのをやめた動き。捨てずにここへ回した（2026-08-19） */
-                hold:'構える', recoil:'白く明滅', big_butt_drop:'尻から急降下' };
+                 hold:'構える', recoil:'白く明滅', big_butt_drop:'尻から急降下' };
+Object.assign(ANIM_JP,{
+  seed_machine_gun_burst:'タネ連射',focus_blast_charge:'気合圧縮',quick_attack_dash:'電光突進',
+  aqua_jet_rush:'水流突進',drill_run_spin:'ドリル回転',brave_bird_dive:'猛禽急降下',
+  aerial_ace_turn:'燕返し旋回',thunder_punch_drive:'雷拳踏み込み',outrage_rampage:'逆鱗乱舞',
+  hyper_beam_fire:'破壊光線反動',dragon_dance_move:'竜舞',earthquake_stomp:'地震踏み落とし',
+  bombing_flight:'爆撃優雅飛行'
+});
 const SCHEMA={
   projectile:[['shape','sel',['orb','shard','ring','bolt']],['size','rng',6,96,1,'px'],
     ['frames','rng',1,12,1,'コマ'],['wobble','rng',0,0.5,0.01],['core','rng',0.1,1.2,0.05],
@@ -3535,6 +4558,20 @@ const SCHEMA={
   black_shot:[['size','rng',12,90,2,'px'],['blocks','rng',3,30,1],['sway','rng',0,24,1,'px'],
     ['travel.speed','rng',80,650,10,'px/s'],['burst','rng',0.15,1.2,0.05,'秒']]
 };
+/* 専用技は構成素材を汎用スキーマへ戻さず、本演出そのものの規模・密度・時間だけを編集する。 */
+if(globalThis.REBUILT_MOVE_META){
+  for(const [g,m] of Object.entries(globalThis.REBUILT_MOVE_META)){
+    GEN_JP[g]=m.jp+'専用'; GEN_DESC[g]=m.desc;
+    SCHEMA[g]=[['size','rng',6,180,2,'px'],['amount','rng',1,64,1],
+      ['duration','rng',.18,6,.01,'秒'],['hitAt','rng',.08,.98,.01]];
+    if(g==='bombing_move') SCHEMA[g].splice(2,0,['flames','rng',6,60,1],['embers','rng',8,100,1]);
+  }
+}
+/* 専用素材は、その技を開いとるときだけ編集候補に見せる。
+   別技の本体やpartsへ選べたら「専用」をUI自身が流用できてしまう。 */
+function mlGeneratorKeys(current){
+  return Object.keys(SCHEMA).filter(k=>!globalThis.REBUILT_MOVE_META||!globalThis.REBUILT_MOVE_META[k]||k===current);
+}
 
 const specGet=(o,p)=>p.split('.').reduce((a,k)=>a&&a[k],o);
 const specSet=(o,p,v)=>{ const ks=p.split('.'); let t=o;
@@ -3641,7 +4678,7 @@ function mlText(host,label,get0,set0,onChange){
 function mlGens(host,ctx){
   mlInjectCSS();
   const gs=document.createElement('div'); gs.className='ml-gens';
-  Object.keys(SCHEMA).forEach(k=>{
+  mlGeneratorKeys(ctx.spec().generator).forEach(k=>{
     const b=document.createElement('button');
     b.textContent=GEN_JP[k]; b.classList.toggle('on',ctx.spec().generator===k);
     b.onclick=()=>{
@@ -3821,7 +4858,7 @@ function mlParts(host,ctx){
 
     /* 種類 */
     const gs=document.createElement('div'); gs.className='ml-gens';
-    Object.keys(SCHEMA).forEach(k=>{
+    mlGeneratorKeys(p.generator).forEach(k=>{
       const b=document.createElement('button'); b.textContent=GEN_JP[k];
       b.classList.toggle('on',p.generator===k);
       b.onclick=()=>{
@@ -4169,7 +5206,7 @@ function mlFrames(host,built){
 }
 
 /* 生成物。手で編集せん。正は data/moves/library.json（tools/gen_starter.js 経由） */
-const STARTER_MOVES = [{"name":"亜空切断","battle":{"type":"ドラゴン","power":20,"cast":0.42,"cooldown":5,"tags":["近距離向き","高威力","とどめ向き","瀕死時危険"]},"audio":[{"id":"warp","at":"cast","off":0,"vol":0.8,"rate":0.8},{"id":"slash2","at":"fire","off":0,"vol":1,"rate":0.85},{"id":"laser_sharp","at":"fire","off":0.06,"vol":0.6,"rate":0.7},{"id":"clash1","at":"impact","off":0,"vol":0.9,"rate":1.3},{"id":"exp_crunch","at":"impact","off":0.1,"vol":0.7,"rate":0.9}],"fx":{"generator":"shatter","size":190,"cracks":26,"jag":0.5,"drift":82,"spin":4,"dust":46,"duration":1.15,"impact":null,"id":"mv2","name":"亜空切断","seed":918273,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"],"screen":{"darken":{"strength":0.62,"dur":0.45,"at":"cast"},"lines":{"color":"#d8a8ff","strength":0.45,"dur":0.4,"at":"cast","dir":"v"},"flash":{"color":"#f4e0ff","strength":0.92,"dur":0.16,"at":"impact"},"shake":{"power":10,"dur":0.42,"at":"impact"},"tint":{"color":"#7a3ad0","strength":0.34,"dur":0.55,"at":"impact"}},"palKey":"闇","parts":[{"generator":"shatter","size":190,"cracks":26,"jag":0.5,"drift":82,"spin":4,"dust":46,"duration":1.15,"impact":null,"id":"shatter_918294","name":"空間割れ","seed":918287,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"],"at":"impact","off":0,"anchor":"to","dx":0,"dy":0},{"generator":"slash","size":204,"arcDeg":210,"thickness":30,"count":1,"interval":0.13,"spread":26,"taper":1.1,"hollow":0,"jitter":0.18,"squash":1,"specks":10,"impact":{"size":12,"frames":7,"shards":8,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"]},"id":"slash_918294","name":"斬撃","seed":52812,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"],"at":"cast","off":0.29,"anchor":"center","dx":-22,"dy":0}]}},{"name":"灼熱弾","battle":{"type":"ほのお","power":26,"cast":0.3,"cooldown":2.4,"tags":["遠距離向き","連発向き","迎撃向き"]},"audio":[{"id":"exp_short","at":"fire","off":0,"vol":0.7,"rate":1.1},{"id":"exp_short","at":"impact","off":0,"vol":0.9,"rate":1}],"fx":{"generator":"projectile","shape":"orb","size":22,"frames":6,"wobble":0.16,"core":0.5,"spin":0.15,"specks":5,"trail":{"type":"flame","length":14,"rate":0.8,"size":0.8},"travel":{"speed":230,"arc":-26,"spin":0},"impact":{"size":56,"frames":9,"shards":14,"palette":["#ffffff","#ffd44a","#ff7a18","#c8260c"]},"id":"shakunetsu","name":"灼熱弾","seed":918273,"palette":["#ffffff","#ffd44a","#ff7a18","#c8260c"],"screen":{"shake":{"power":5,"dur":0.28,"at":"impact"},"tint":{"color":"#ff6a10","strength":0.28,"dur":0.35,"at":"impact"}},"timeScale":1,"motions":[],"parts":[]}},{"name":"ひのこ","battle":{"range":"ranged","type":"ほのお","power":24,"cast":0.25,"cooldown":1.8,"tags":["遠距離向き","連発向き","迎撃向き"]},"audio":[],"fx":{"generator":"projectile","id":"hinoko","name":"ひのこ","seed":918273,"palKey":"炎","shape":"orb","size":18,"frames":6,"wobble":0.2,"core":0.55,"spin":0.2,"specks":6,"trail":{"type":"flame","length":12,"rate":1,"size":0.8},"travel":{"speed":265,"arc":-22,"spin":0},"palette":["#ffffff","#ffd44a","#ff7a18","#c8260c"],"impact":{"size":44,"frames":8,"shards":10,"palette":["#ffffff","#ffd44a","#ff7a18","#c8260c"]},"screen":{"shake":{"power":4,"dur":0.2,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"はっぱカッター","battle":{"range":"melee","type":"くさ","power":26,"cast":0.2,"cooldown":2,"tags":["遠距離向き","連発向き"]},"audio":[],"fx":{"generator":"slash","id":"happa","name":"はっぱカッター","seed":7311,"palKey":"草","size":112,"arcDeg":205,"thickness":7,"taper":1.7,"hollow":0,"jitter":0.26,"squash":0.88,"specks":9,"count":3,"interval":0.1,"spread":36,"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"],"impact":{"size":36,"frames":7,"shards":9,"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"]},"screen":{"lines":{"color":"#d8ffb0","strength":0.3,"dur":0.24,"at":"impact","dir":"v"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"10まんボルト","battle":{"range":"remote","type":"でんき","power":34,"cast":0.5,"cooldown":3.6,"tags":["高威力","回避されやすい"]},"audio":[],"fx":{"generator":"ten_thousand_volt","id":"juuman","name":"10まんボルト","seed":2024,"palKey":"雷","width":108,"height":104,"bolts":8,"steps":6,"hitAt":0.34,"duration":0.82,"palette":["#ffffff","#fff7a0","#ffd21e","#8a5a00"],"impact":null,"powerVisual":{"size":[0.7,1.8],"amount":[0.55,2]},"screen":{"darken":{"strength":0.45,"dur":0.28,"at":"cast"},"blink":{"color":"#fff7a0","strength":0.65,"times":4,"dur":0.45,"at":"impact"},"shake":{"power":8,"dur":0.34,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"１００万ボルト","battle":{"range":"remote","type":"でんき","power":58,"cast":0.85,"cooldown":7,"tags":["高威力","とどめ向き","瀕死時危険","回避されやすい"]},"audio":[],"fx":{"generator":"million_volt","id":"hyakuman","name":"１００万ボルト","seed":2025,"palKey":null,"cage":92,"columns":11,"crowns":14,"steps":7,"hitAt":0.48,"duration":1.14,"palette":["#ffffff","#d9fbff","#8b8cff","#4b126f"],"impact":null,"powerVisual":{"size":[0.8,1.6],"amount":[0.7,1.75]},"screen":{"darken":{"strength":0.62,"dur":0.52,"at":"cast"},"flash":{"color":"#ecf8ff","strength":0.92,"dur":0.18,"at":"impact"},"shake":{"power":17,"dur":0.62,"at":"impact"}},"timeScale":0.92,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":0.85},{"anim":"attack","at":"fire","off":0,"dur":0.62}]}},{"name":"２ボルト","battle":{"range":"ranged","type":"でんき","power":2,"cast":0.05,"cooldown":0.55,"tags":["連発向き","低リスク","迎撃向き"]},"audio":[],"fx":{"generator":"two_volt","id":"twovolt","name":"２ボルト","seed":2026,"palKey":null,"size":8,"dots":4,"hops":5,"hopHeight":7,"travel":{"speed":175,"arc":0},"burst":0.24,"palette":["#fffce6","#d9e79d","#8e9b62","#474a38"],"impact":null,"powerVisual":{"size":[0.85,1.25],"amount":[0.75,1.4]},"screen":{},"timeScale":1.15,"parts":[],"motions":[]}},{"name":"ハイドロポンプ","battle":{"range":"ranged","type":"みず","power":42,"cast":0.7,"cooldown":5.4,"tags":["高威力","とどめ向き","瀕死時危険"]},"audio":[],"fx":{"generator":"hydro_pump","id":"hydro","name":"ハイドロポンプ","seed":5150,"palKey":"水","width":24,"pressure":9,"bubbles":18,"charge":0.45,"fire":0.09,"sustain":0.54,"fade":0.28,"powerVisual":{"size":[0.72,1.75],"amount":[0.65,1.8]},"palette":["#ffffff","#d7fbff","#46c7ff","#063f78"],"screen":{"darken":{"strength":0.4,"dur":0.45,"at":"cast"},"tint":{"color":"#46c7ff","strength":0.26,"dur":0.4,"at":"impact"},"shake":{"power":9,"dur":0.38,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":0.7},{"anim":"attack","at":"fire","off":0,"dur":0.55}]}},{"name":"りゅうのまい","battle":{"range":"remote","type":"ドラゴン","power":6,"cast":0.5,"cooldown":7,"tags":["低リスク"]},"audio":[],"fx":{"generator":"aura","id":"ryuunomai","name":"りゅうのまい","seed":555,"palKey":"闇","size":96,"rings":7,"rise":120,"duration":1.5,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"],"impact":null,"screen":{"tint":{"color":"#7a3ad0","strength":0.22,"dur":0.9,"at":"cast"}},"timeScale":1,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":1.2}]}},{"name":"じしん","battle":{"range":"remote","type":"じめん","power":40,"cast":0.8,"cooldown":6.5,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"shatter","id":"jishin","name":"じしん","seed":31415,"palKey":null,"size":300,"cracks":34,"jag":0.6,"drift":140,"spin":3,"dust":90,"duration":1.3,"palette":["#ffffff","#c0a878","#6a5230","#241a0c"],"impact":null,"screen":{"shake":{"power":22,"dur":0.85,"at":"cast"},"tint":{"color":"#8a6a38","strength":0.26,"dur":0.6,"at":"cast"}},"timeScale":0.9,"parts":[],"motions":[{"anim":"jump","at":"cast","off":0,"dur":0.8}]}},{"name":"タネマシンガン","battle":{"range":"ranged","type":"くさ","power":22,"cast":0.2,"cooldown":2.2,"tags":["遠距離向き","連発向き","低リスク"]},"audio":[],"fx":{"generator":"projectile","id":"tanemachine","name":"タネマシンガン","seed":4242,"palKey":"草","shape":"shard","size":11,"frames":4,"wobble":0.1,"core":0.7,"spin":0.6,"specks":2,"trail":{"type":"none","length":4,"rate":0.4,"size":0.5},"travel":{"speed":430,"arc":-8,"spin":6},"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"],"impact":{"size":24,"frames":6,"shards":5,"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"]},"screen":{},"timeScale":1,"motions":[],"parts":[{"generator":"projectile","name":"2発目","at":"fire","off":0.06,"anchor":"from","dx":0,"dy":-5,"id":"tane2","seed":4243,"palKey":"草","shape":"shard","size":11,"frames":4,"wobble":0.1,"core":0.7,"spin":0.6,"specks":2,"trail":{"type":"none","length":4,"rate":0.4,"size":0.5},"travel":{"speed":430,"arc":-14,"spin":6},"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"],"impact":{"size":24,"frames":6,"shards":5,"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"]},"screen":{}},{"generator":"projectile","name":"3発目","at":"fire","off":0.12,"anchor":"from","dx":0,"dy":4,"id":"tane3","seed":4244,"palKey":"草","shape":"shard","size":11,"frames":4,"wobble":0.1,"core":0.7,"spin":0.6,"specks":2,"trail":{"type":"none","length":4,"rate":0.4,"size":0.5},"travel":{"speed":430,"arc":-2,"spin":6},"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"],"impact":{"size":24,"frames":6,"shards":5,"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"]},"screen":{}},{"generator":"projectile","name":"4発目","at":"fire","off":0.18,"anchor":"from","dx":0,"dy":-2,"id":"tane4","seed":4245,"palKey":"草","shape":"shard","size":11,"frames":4,"wobble":0.1,"core":0.7,"spin":0.6,"specks":2,"trail":{"type":"none","length":4,"rate":0.4,"size":0.5},"travel":{"speed":430,"arc":-18,"spin":6},"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"],"impact":{"size":24,"frames":6,"shards":5,"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"]},"screen":{}},{"generator":"projectile","name":"5発目","at":"fire","off":0.24,"anchor":"from","dx":0,"dy":7,"id":"tane5","seed":4246,"palKey":"草","shape":"shard","size":11,"frames":4,"wobble":0.1,"core":0.7,"spin":0.6,"specks":2,"trail":{"type":"none","length":4,"rate":0.4,"size":0.5},"travel":{"speed":430,"arc":-6,"spin":6},"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"],"impact":{"size":24,"frames":6,"shards":5,"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"]},"screen":{}}]}},{"name":"トライアタック","battle":{"range":"ranged","type":"ノーマル","power":30,"cast":0.35,"cooldown":3.2,"tags":["遠距離向き","迎撃向き"]},"audio":[],"fx":{"generator":"projectile","id":"tri","name":"トライアタック","seed":333,"palKey":"炎","shape":"orb","size":16,"frames":6,"wobble":0.16,"core":0.6,"spin":0.3,"specks":4,"trail":{"type":"flame","length":10,"rate":0.9,"size":0.7},"travel":{"speed":300,"arc":-30,"spin":0},"palette":["#ffffff","#ffd44a","#ff7a18","#c8260c"],"impact":{"size":34,"frames":7,"shards":8,"palette":["#ffffff","#ffd44a","#ff7a18","#c8260c"]},"screen":{"flash":{"color":"#ffffff","strength":0.45,"dur":0.12,"at":"impact"}},"timeScale":1,"motions":[],"parts":[{"generator":"projectile","name":"こおりの弾","at":"fire","off":0.1,"anchor":"from","dx":0,"dy":0,"id":"tri_ice","seed":334,"palKey":"氷","shape":"orb","size":16,"frames":6,"wobble":0.16,"core":0.6,"spin":0.3,"specks":4,"trail":{"type":"smoke","length":10,"rate":0.9,"size":0.7},"travel":{"speed":300,"arc":0,"spin":0},"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"],"impact":{"size":34,"frames":7,"shards":8,"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"]},"screen":{}},{"generator":"projectile","name":"でんきの弾","at":"fire","off":0.2,"anchor":"from","dx":0,"dy":0,"id":"tri_elec","seed":335,"palKey":"雷","shape":"bolt","size":16,"frames":6,"wobble":0.22,"core":0.6,"spin":0.3,"specks":6,"trail":{"type":"spark","length":10,"rate":0.9,"size":0.7},"travel":{"speed":300,"arc":30,"spin":0},"palette":["#ffffff","#fff7a0","#ffd21e","#8a5a00"],"impact":{"size":34,"frames":7,"shards":8,"palette":["#ffffff","#fff7a0","#ffd21e","#8a5a00"]},"screen":{}}]}},{"name":"みらいよち","battle":{"range":"ranged","type":"エスパー","power":38,"cast":0.4,"cooldown":6,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"projectile","id":"miraiyochi","name":"みらいよち","seed":8080,"palKey":"毒","shape":"ring","size":14,"frames":5,"wobble":0.06,"core":0.9,"spin":0.8,"specks":2,"trail":{"type":"none","length":4,"rate":0.3,"size":0.5},"travel":{"speed":200,"arc":-14,"spin":3},"palette":["#f2d8ff","#d08cff","#8e33d6","#3d0a63"],"impact":{"size":20,"frames":5,"shards":3,"palette":["#f2d8ff","#d08cff","#8e33d6","#3d0a63"]},"screen":{"lines":{"color":"#d8a8ff","strength":0.22,"dur":0.3,"at":"impact","dir":"v"}},"timeScale":1,"motions":[],"parts":[{"generator":"shatter","name":"あとから来る本命","at":"impact","off":1.5,"anchor":"to","dx":0,"dy":0,"id":"mirai_hit","seed":8081,"palKey":"毒","size":190,"cracks":24,"jag":0.5,"drift":100,"spin":4,"dust":60,"duration":1.1,"palette":["#f2d8ff","#d08cff","#8e33d6","#3d0a63"],"impact":null,"screen":{"flash":{"color":"#f0d8ff","strength":0.7,"dur":0.16,"at":"cast"},"shake":{"power":12,"dur":0.4,"at":"cast"}}}]}},{"name":"つばめがえし","battle":{"range":"melee","type":"ひこう","power":28,"cast":0.3,"cooldown":2.6,"tags":["近距離向き","低リスク"]},"audio":[],"fx":{"generator":"slash","id":"tsubame","name":"つばめがえし","seed":1212,"palKey":"鋼","size":96,"arcDeg":150,"thickness":9,"taper":2,"hollow":0.15,"jitter":0.1,"squash":0.85,"specks":6,"count":2,"interval":0.14,"spread":20,"palette":["#ffffff","#e6eef6","#9aa9bb","#4a5568"],"impact":{"size":34,"frames":7,"shards":8,"palette":["#ffffff","#e6eef6","#9aa9bb","#4a5568"]},"screen":{"lines":{"color":"#ffffff","strength":0.35,"dur":0.22,"at":"impact","dir":"v"}},"timeScale":1.2,"parts":[],"motions":[{"anim":"zigzag","at":"cast","off":0,"dur":0.55},{"anim":"attack","at":"fire","off":0,"dur":0.22},{"anim":"attack","at":"fire","off":0.16,"dur":0.22}]}},{"name":"れいとうビーム","battle":{"range":"ranged","type":"こおり","power":38,"cast":0.55,"cooldown":4.4,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"beam","id":"reitou","name":"れいとうビーム","seed":6101,"palKey":"氷","width":13,"segments":10,"waver":1.4,"charge":0.35,"fire":0.08,"sustain":0.45,"fade":0.3,"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"],"impact":{"size":58,"frames":9,"shards":14,"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"]},"screen":{"tint":{"color":"#8fd8f7","strength":0.24,"dur":0.45,"at":"impact"},"shake":{"power":5,"dur":0.24,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":0.55}]}},{"name":"つららばり","battle":{"range":"ranged","type":"こおり","power":24,"cast":0.2,"cooldown":2.2,"tags":["遠距離向き","連発向き"]},"audio":[],"fx":{"generator":"projectile","id":"tsurara","name":"つららばり","seed":6102,"palKey":"氷","shape":"shard","size":15,"frames":4,"wobble":0.06,"core":0.85,"spin":0.1,"specks":3,"trail":{"type":"none","length":5,"rate":0.4,"size":0.5},"travel":{"speed":400,"arc":-10,"spin":1},"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"],"impact":{"size":26,"frames":6,"shards":6,"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"]},"screen":{},"timeScale":1,"motions":[],"parts":[{"generator":"projectile","name":"2本目","at":"fire","off":0.07,"anchor":"from","dx":0,"dy":-8,"id":"tsurara2","seed":6103,"palKey":"氷","shape":"shard","size":15,"frames":4,"wobble":0.06,"core":0.85,"spin":0.1,"specks":3,"trail":{"type":"none","length":5,"rate":0.4,"size":0.5},"travel":{"speed":400,"arc":-18,"spin":1},"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"],"impact":{"size":26,"frames":6,"shards":6,"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"]},"screen":{}},{"generator":"projectile","name":"3本目","at":"fire","off":0.14,"anchor":"from","dx":0,"dy":6,"id":"tsurara3","seed":6104,"palKey":"氷","shape":"shard","size":15,"frames":4,"wobble":0.06,"core":0.85,"spin":0.1,"specks":3,"trail":{"type":"none","length":5,"rate":0.4,"size":0.5},"travel":{"speed":400,"arc":-2,"spin":1},"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"],"impact":{"size":26,"frames":6,"shards":6,"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"]},"screen":{}},{"generator":"projectile","name":"4本目","at":"fire","off":0.21,"anchor":"from","dx":0,"dy":-3,"id":"tsurara4","seed":6105,"palKey":"氷","shape":"shard","size":15,"frames":4,"wobble":0.06,"core":0.85,"spin":0.1,"specks":3,"trail":{"type":"none","length":5,"rate":0.4,"size":0.5},"travel":{"speed":400,"arc":-14,"spin":1},"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"],"impact":{"size":26,"frames":6,"shards":6,"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"]},"screen":{}}]}},{"name":"インファイト","battle":{"range":"melee","type":"かくとう","power":44,"cast":0.25,"cooldown":4.8,"tags":["近距離向き","高威力","瀕死時危険"]},"audio":[],"fx":{"generator":"close_combat","id":"infight","name":"インファイト","seed":6201,"palKey":null,"size":112,"hits":8,"interval":0.055,"reach":72,"duration":0.9,"powerVisual":{"size":[0.8,1.45],"amount":[0.65,1.6]},"palette":["#ffffff","#ffe0b0","#e86a38","#5a1710"],"screen":{"shake":{"power":7,"dur":0.42,"at":"impact"}},"timeScale":1.15,"parts":[],"motions":[{"anim":"attack","at":"fire","off":0,"dur":0.18},{"anim":"attack","at":"fire","off":0.16,"dur":0.18},{"anim":"attack","at":"fire","off":0.32,"dur":0.18}]}},{"name":"きあいだま","battle":{"range":"ranged","type":"かくとう","power":40,"cast":0.6,"cooldown":5.2,"tags":["高威力","とどめ向き","回避されやすい"]},"audio":[],"fx":{"generator":"projectile","id":"kiaidama","name":"きあいだま","seed":6202,"palKey":null,"shape":"orb","size":34,"frames":8,"wobble":0.24,"core":0.45,"spin":0.35,"specks":8,"trail":{"type":"flame","length":16,"rate":1.1,"size":1},"travel":{"speed":190,"arc":-34,"spin":0},"palette":["#ffffff","#c8e0ff","#6090f0","#203060"],"impact":{"size":70,"frames":10,"shards":16,"palette":["#ffffff","#c8e0ff","#6090f0","#203060"]},"screen":{"darken":{"strength":0.35,"dur":0.4,"at":"cast"},"flash":{"color":"#e0ecff","strength":0.6,"dur":0.14,"at":"impact"}},"timeScale":1,"motions":[{"anim":"charge","at":"cast","off":0,"dur":0.6}],"parts":[{"generator":"shatter","name":"炸裂","at":"impact","off":0.05,"anchor":"to","dx":0,"dy":0,"id":"kiai_burst","seed":6203,"palKey":null,"size":170,"cracks":22,"jag":0.55,"drift":120,"spin":3.6,"dust":55,"duration":0.95,"palette":["#ffffff","#c8e0ff","#6090f0","#203060"],"impact":null,"screen":{"shake":{"power":11,"dur":0.4,"at":"cast"}}}]}},{"name":"ヘドロばくだん","battle":{"range":"ranged","type":"どく","power":32,"cast":0.35,"cooldown":3.4,"tags":["遠距離向き","迎撃向き"]},"audio":[],"fx":{"generator":"projectile","id":"hedoro","name":"ヘドロばくだん","seed":6301,"palKey":"毒","shape":"orb","size":26,"frames":6,"wobble":0.34,"core":0.5,"spin":0.15,"specks":7,"trail":{"type":"smoke","length":14,"rate":1,"size":0.9},"travel":{"speed":235,"arc":-36,"spin":0},"palette":["#f2d8ff","#d08cff","#8e33d6","#3d0a63"],"impact":{"size":62,"frames":9,"shards":14,"palette":["#f2d8ff","#d08cff","#8e33d6","#3d0a63"]},"screen":{"tint":{"color":"#8e33d6","strength":0.24,"dur":0.45,"at":"impact"},"shake":{"power":6,"dur":0.26,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"どくどく","battle":{"range":"remote","type":"どく","power":8,"cast":0.4,"cooldown":6,"tags":["低リスク"]},"audio":[],"fx":{"generator":"aura","id":"dokudoku","name":"どくどく","seed":6302,"palKey":"毒","size":104,"rings":3,"rise":44,"duration":2.2,"palette":["#f2d8ff","#d08cff","#8e33d6","#3d0a63"],"impact":null,"screen":{"tint":{"color":"#8e33d6","strength":0.3,"dur":1.2,"at":"cast"}},"timeScale":1,"motions":[],"parts":[{"generator":"aura","name":"相手にまとわりつく","at":"fire","off":0.25,"anchor":"to","dx":0,"dy":0,"id":"doku_on","seed":6303,"palKey":"毒","size":96,"rings":5,"rise":38,"duration":1.9,"palette":["#f2d8ff","#d08cff","#8e33d6","#3d0a63"],"impact":null,"screen":{}}]}},{"name":"シザークロス","battle":{"range":"melee","type":"むし","power":30,"cast":0.25,"cooldown":2.8,"tags":["近距離向き","低リスク"]},"audio":[],"fx":{"generator":"slash","id":"scissor","name":"シザークロス","seed":6401,"palKey":"草","size":104,"arcDeg":190,"thickness":10,"taper":1.5,"hollow":0,"jitter":0.12,"squash":0.95,"specks":8,"count":2,"interval":0.11,"spread":0,"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"],"impact":{"size":38,"frames":7,"shards":9,"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"]},"screen":{"lines":{"color":"#d8ffb0","strength":0.32,"dur":0.22,"at":"impact","dir":"v"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"ミサイルばり","battle":{"range":"ranged","type":"むし","power":20,"cast":0.18,"cooldown":2,"tags":["遠距離向き","連発向き","低リスク"]},"audio":[],"fx":{"generator":"projectile","id":"missile","name":"ミサイルばり","seed":6402,"palKey":"草","shape":"shard","size":9,"frames":3,"wobble":0.08,"core":0.8,"spin":0.4,"specks":1,"trail":{"type":"none","length":3,"rate":0.3,"size":0.4},"travel":{"speed":470,"arc":-6,"spin":8},"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"],"impact":{"size":20,"frames":5,"shards":4,"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"]},"screen":{},"timeScale":1,"motions":[],"parts":[{"generator":"projectile","name":"2本目","at":"fire","off":0.05,"anchor":"from","dx":0,"dy":-6,"id":"mis2","seed":6403,"palKey":"草","shape":"shard","size":9,"frames":3,"wobble":0.08,"core":0.8,"spin":0.4,"specks":1,"trail":{"type":"none","length":3,"rate":0.3,"size":0.4},"travel":{"speed":470,"arc":-12,"spin":8},"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"],"impact":{"size":20,"frames":5,"shards":4,"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"]},"screen":{}},{"generator":"projectile","name":"3本目","at":"fire","off":0.1,"anchor":"from","dx":0,"dy":5,"id":"mis3","seed":6404,"palKey":"草","shape":"shard","size":9,"frames":3,"wobble":0.08,"core":0.8,"spin":0.4,"specks":1,"trail":{"type":"none","length":3,"rate":0.3,"size":0.4},"travel":{"speed":470,"arc":0,"spin":8},"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"],"impact":{"size":20,"frames":5,"shards":4,"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"]},"screen":{}},{"generator":"projectile","name":"4本目","at":"fire","off":0.15,"anchor":"from","dx":0,"dy":-2,"id":"mis4","seed":6405,"palKey":"草","shape":"shard","size":9,"frames":3,"wobble":0.08,"core":0.8,"spin":0.4,"specks":1,"trail":{"type":"none","length":3,"rate":0.3,"size":0.4},"travel":{"speed":470,"arc":-16,"spin":8},"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"],"impact":{"size":20,"frames":5,"shards":4,"palette":["#f0ffd8","#b8e986","#5aa832","#1f5a18"]},"screen":{}}]}},{"name":"いわなだれ","battle":{"range":"remote","type":"いわ","power":36,"cast":0.5,"cooldown":4.2,"tags":["高威力","回避されやすい"]},"audio":[],"fx":{"generator":"lightning","id":"iwanadare","name":"いわなだれ","seed":6501,"palKey":null,"width":20,"jag":0.14,"branches":0,"segments":2,"duration":0.45,"fromSky":true,"palette":["#e8dcc8","#bfa584","#7a6244","#2c2214"],"impact":{"size":52,"frames":8,"shards":14,"palette":["#e8dcc8","#bfa584","#7a6244","#2c2214"]},"screen":{"shake":{"power":10,"dur":0.55,"at":"impact"}},"timeScale":1,"motions":[],"parts":[{"generator":"lightning","name":"2つ目の岩","at":"impact","off":0.12,"anchor":"to","dx":-34,"dy":0,"id":"iwa2","seed":6502,"palKey":null,"width":17,"jag":0.14,"branches":0,"segments":2,"duration":0.45,"fromSky":true,"palette":["#e8dcc8","#bfa584","#7a6244","#2c2214"],"impact":{"size":44,"frames":8,"shards":12,"palette":["#e8dcc8","#bfa584","#7a6244","#2c2214"]},"screen":{}},{"generator":"lightning","name":"3つ目の岩","at":"impact","off":0.26,"anchor":"to","dx":30,"dy":0,"id":"iwa3","seed":6503,"palKey":null,"width":18,"jag":0.14,"branches":0,"segments":2,"duration":0.45,"fromSky":true,"palette":["#e8dcc8","#bfa584","#7a6244","#2c2214"],"impact":{"size":48,"frames":8,"shards":12,"palette":["#e8dcc8","#bfa584","#7a6244","#2c2214"]},"screen":{"shake":{"power":8,"dur":0.3,"at":"cast"}}}]}},{"name":"ストーンエッジ","battle":{"range":"remote","type":"いわ","power":38,"cast":0.45,"cooldown":4.6,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"lightning","id":"stoneedge","name":"ストーンエッジ","seed":6504,"palKey":null,"width":9,"jag":0.18,"branches":0,"segments":2,"duration":0.55,"fromSky":false,"palette":["#efe6d6","#c3b79f","#7d7160","#2a2418"],"impact":{"size":46,"frames":8,"shards":14,"palette":["#efe6d6","#c3b79f","#7d7160","#2a2418"]},"screen":{"shake":{"power":9,"dur":0.36,"at":"impact"}},"timeScale":1,"motions":[],"parts":[{"generator":"lightning","name":"追う石柱","at":"impact","off":0.1,"anchor":"to","dx":22,"dy":0,"id":"stone2","seed":6505,"palKey":null,"width":7,"jag":0.18,"branches":0,"segments":2,"duration":0.5,"fromSky":false,"palette":["#efe6d6","#c3b79f","#7d7160","#2a2418"],"impact":{"size":38,"frames":7,"shards":10,"palette":["#efe6d6","#c3b79f","#7d7160","#2a2418"]},"screen":{}}]}},{"name":"シャドーボール","battle":{"range":"ranged","type":"ゴースト","power":34,"cast":0.4,"cooldown":3.6,"tags":["遠距離向き","高威力"]},"audio":[],"fx":{"generator":"projectile","id":"shadowball","name":"シャドーボール","seed":6601,"palKey":"闇","shape":"orb","size":28,"frames":7,"wobble":0.3,"core":0.35,"spin":0.5,"specks":6,"trail":{"type":"smoke","length":18,"rate":1.2,"size":1},"travel":{"speed":225,"arc":-26,"spin":2},"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"],"impact":{"size":60,"frames":9,"shards":14,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"]},"screen":{"darken":{"strength":0.32,"dur":0.35,"at":"impact"},"shake":{"power":6,"dur":0.28,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"おにび","battle":{"range":"ranged","type":"ゴースト","power":12,"cast":0.3,"cooldown":3,"tags":["遠距離向き","低リスク"]},"audio":[],"fx":{"generator":"projectile","id":"onibi","name":"おにび","seed":6602,"palKey":null,"shape":"orb","size":14,"frames":8,"wobble":0.48,"core":0.4,"spin":0.9,"specks":5,"trail":{"type":"flame","length":16,"rate":0.7,"size":0.6},"travel":{"speed":120,"arc":-46,"spin":0},"palette":["#ffffff","#c8ffe8","#40c090","#104030"],"impact":{"size":34,"frames":8,"shards":6,"palette":["#ffffff","#c8ffe8","#40c090","#104030"]},"screen":{"tint":{"color":"#40c090","strength":0.2,"dur":0.5,"at":"impact"}},"timeScale":0.85,"parts":[],"motions":[]}},{"name":"つじぎり","battle":{"range":"melee","type":"あく","power":30,"cast":0.2,"cooldown":2.4,"tags":["近距離向き","とどめ向き"]},"audio":[],"fx":{"generator":"slash","id":"tsujigiri","name":"つじぎり","seed":6701,"palKey":"闇","size":170,"arcDeg":120,"thickness":8,"taper":2.4,"hollow":0.3,"jitter":0.08,"squash":0.72,"specks":10,"count":1,"interval":0.1,"spread":0,"palette":["#ffffff","#e0d0ff","#7a4ad0","#1a0a38"],"impact":{"size":42,"frames":7,"shards":10,"palette":["#ffffff","#e0d0ff","#7a4ad0","#1a0a38"]},"screen":{"darken":{"strength":0.42,"dur":0.22,"at":"cast"},"lines":{"color":"#d8a8ff","strength":0.4,"dur":0.2,"at":"impact","dir":"v"}},"timeScale":1.7,"parts":[],"motions":[{"anim":"dodge","at":"cast","off":0,"dur":0.3},{"anim":"attack","at":"fire","off":0,"dur":0.16}]}},{"name":"かみくだく","battle":{"range":"melee","type":"あく","power":38,"cast":0.3,"cooldown":3.8,"tags":["近距離向き","高威力"]},"audio":[],"fx":{"generator":"slash","id":"kamikudaku","name":"かみくだく","seed":6702,"palKey":"闇","size":88,"arcDeg":110,"thickness":18,"taper":1,"hollow":0.42,"jitter":0.2,"squash":1.15,"specks":8,"count":2,"interval":0.09,"spread":8,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"],"impact":{"size":40,"frames":7,"shards":10,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"]},"screen":{"shake":{"power":8,"dur":0.3,"at":"impact"}},"timeScale":1,"motions":[],"parts":[{"generator":"shatter","name":"噛み砕く","at":"impact","off":0.08,"anchor":"to","dx":0,"dy":0,"id":"kami_break","seed":6703,"palKey":"闇","size":140,"cracks":20,"jag":0.6,"drift":110,"spin":4.2,"dust":48,"duration":0.9,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"],"impact":null,"screen":{}}]}},{"name":"ブラックキック","battle":{"range":"melee","type":"あく","power":36,"cast":0.24,"cooldown":3,"tags":["近距離向き","高威力"]},"audio":[],"fx":{"generator":"black_kick","id":"blackkick","name":"ブラックキック","seed":6711,"palKey":null,"size":76,"lift":56,"echoes":4,"hitAt":0.32,"duration":0.78,"palette":["#f8ecff","#a46ee0","#4a256f","#09050f"],"impact":null,"powerVisual":{"size":[0.78,1.55],"amount":[0.7,1.65]},"screen":{"darken":{"strength":0.4,"dur":0.2,"at":"cast"},"shake":{"power":9,"dur":0.34,"at":"impact"}},"timeScale":1.12,"parts":[],"motions":[{"anim":"dodge","at":"cast","off":0,"dur":0.26},{"anim":"attack","at":"fire","off":0,"dur":0.34}]}},{"name":"ブラックパンチ","battle":{"range":"melee","type":"あく","power":40,"cast":0.28,"cooldown":3.5,"tags":["近距離向き","高威力","とどめ向き"]},"audio":[],"fx":{"generator":"black_punch","id":"blackpunch","name":"ブラックパンチ","seed":6712,"palKey":null,"size":74,"lift":32,"rings":5,"hitAt":0.3,"duration":0.76,"palette":["#fff3ff","#8d62d2","#351b5e","#07040d"],"impact":null,"powerVisual":{"size":[0.75,1.65],"amount":[0.7,1.6]},"screen":{"darken":{"strength":0.44,"dur":0.24,"at":"cast"},"shake":{"power":11,"dur":0.4,"at":"impact"}},"timeScale":1.08,"parts":[],"motions":[{"anim":"attack","at":"fire","off":0,"dur":0.46}]}},{"name":"ブラックショット","battle":{"range":"ranged","type":"あく","power":34,"cast":0.36,"cooldown":3.8,"tags":["遠距離向き","迎撃向き","高威力"]},"audio":[],"fx":{"generator":"black_shot","id":"blackshot","name":"ブラックショット","seed":6713,"palKey":null,"size":36,"blocks":13,"sway":7,"travel":{"speed":330,"arc":0},"burst":0.48,"palette":["#f5eaff","#8f62d9","#321852","#050309"],"impact":null,"powerVisual":{"size":[0.7,1.7],"amount":[0.6,1.9]},"screen":{"darken":{"strength":0.46,"dur":0.3,"at":"cast"},"tint":{"color":"#2d1249","strength":0.26,"dur":0.42,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"attack","at":"fire","off":0,"dur":0.48}]}},{"name":"ラスターカノン","battle":{"range":"ranged","type":"はがね","power":40,"cast":0.6,"cooldown":4.8,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"beam","id":"lustercannon","name":"ラスターカノン","seed":6801,"palKey":"鋼","width":19,"segments":9,"waver":0.8,"charge":0.4,"fire":0.07,"sustain":0.42,"fade":0.22,"palette":["#ffffff","#e6eef6","#9aa9bb","#4a5568"],"impact":{"size":64,"frames":9,"shards":15,"palette":["#ffffff","#e6eef6","#9aa9bb","#4a5568"]},"screen":{"flash":{"color":"#ffffff","strength":0.55,"dur":0.14,"at":"impact"},"shake":{"power":7,"dur":0.3,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":0.6}]}},{"name":"メタルクロー","battle":{"range":"melee","type":"はがね","power":26,"cast":0.2,"cooldown":2.2,"tags":["近距離向き","低リスク","連発向き"]},"audio":[],"fx":{"generator":"slash","id":"metalclaw","name":"メタルクロー","seed":6802,"palKey":"鋼","size":92,"arcDeg":165,"thickness":6,"taper":1.9,"hollow":0,"jitter":0.1,"squash":0.9,"specks":7,"count":3,"interval":0.08,"spread":14,"palette":["#ffffff","#e6eef6","#9aa9bb","#4a5568"],"impact":{"size":30,"frames":6,"shards":7,"palette":["#ffffff","#e6eef6","#9aa9bb","#4a5568"]},"screen":{"lines":{"color":"#ffffff","strength":0.28,"dur":0.2,"at":"impact","dir":"v"}},"timeScale":1.1,"parts":[],"motions":[]}},{"name":"ムーンフォース","battle":{"range":"ranged","type":"フェアリー","power":38,"cast":0.5,"cooldown":4.6,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"projectile","id":"moonforce","name":"ムーンフォース","seed":6901,"palKey":null,"shape":"orb","size":30,"frames":7,"wobble":0.14,"core":0.6,"spin":0.2,"specks":9,"trail":{"type":"spark","length":14,"rate":0.9,"size":0.8},"travel":{"speed":205,"arc":-30,"spin":0},"palette":["#ffffff","#ffd8f0","#f090c8","#803058"],"impact":{"size":68,"frames":10,"shards":16,"palette":["#ffffff","#ffd8f0","#f090c8","#803058"]},"screen":{"tint":{"color":"#f090c8","strength":0.26,"dur":0.5,"at":"impact"},"flash":{"color":"#fff0f8","strength":0.5,"dur":0.14,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":0.5}]}},{"name":"マジカルシャイン","battle":{"range":"ranged","type":"フェアリー","power":34,"cast":0.45,"cooldown":4,"tags":["遠距離向き","高威力"]},"audio":[],"fx":{"generator":"beam","id":"magicalshine","name":"マジカルシャイン","seed":6902,"palKey":null,"width":26,"segments":8,"waver":1,"charge":0.3,"fire":0.06,"sustain":0.36,"fade":0.28,"palette":["#ffffff","#fff0fa","#ffb8e0","#a04878"],"impact":{"size":60,"frames":9,"shards":12,"palette":["#ffffff","#fff0fa","#ffb8e0","#a04878"]},"screen":{"flash":{"color":"#ffffff","strength":0.7,"dur":0.18,"at":"impact"},"tint":{"color":"#ffb8e0","strength":0.22,"dur":0.4,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"でんこうせっか","battle":{"range":"ranged","type":"ノーマル","power":20,"cast":0.1,"cooldown":1.4,"tags":["近距離向き","連発向き","低リスク"]},"audio":[],"fx":{"generator":"projectile","id":"denkou","name":"でんこうせっか","seed":7001,"palKey":"鋼","shape":"bolt","size":13,"frames":3,"wobble":0.06,"core":0.9,"spin":0,"specks":3,"trail":{"type":"spark","length":22,"rate":1.6,"size":0.6},"travel":{"speed":640,"arc":-4,"spin":0},"palette":["#ffffff","#e6eef6","#9aa9bb","#4a5568"],"impact":{"size":26,"frames":6,"shards":6,"palette":["#ffffff","#e6eef6","#9aa9bb","#4a5568"]},"screen":{"lines":{"color":"#ffffff","strength":0.22,"dur":0.14,"at":"fire","dir":"v"}},"timeScale":1.5,"parts":[],"motions":[{"anim":"zigzag","at":"cast","off":0,"dur":0.26},{"anim":"attack","at":"fire","off":0,"dur":0.14}]}},{"name":"はかいこうせん","battle":{"range":"ranged","type":"ノーマル","power":52,"cast":1,"cooldown":8,"tags":["高威力","とどめ向き","瀕死時危険"]},"audio":[],"fx":{"generator":"beam","id":"hakai","name":"はかいこうせん","seed":7002,"palKey":"雷","width":34,"segments":8,"waver":0.6,"charge":0.7,"fire":0.12,"sustain":0.62,"fade":0.34,"palette":["#ffffff","#fff7a0","#ffd21e","#8a5a00"],"impact":{"size":92,"frames":11,"shards":20,"palette":["#ffffff","#fff7a0","#ffd21e","#8a5a00"]},"screen":{"darken":{"strength":0.62,"dur":0.7,"at":"cast"},"lines":{"color":"#fff7a0","strength":0.35,"dur":0.6,"at":"cast","dir":"v"},"flash":{"color":"#ffffff","strength":0.95,"dur":0.2,"at":"impact"},"shake":{"power":16,"dur":0.6,"at":"impact"}},"timeScale":0.85,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":1},{"anim":"attack","at":"fire","off":0,"dur":0.7},{"anim":"hurt","at":"impact","off":0.3,"dur":0.9}]}},{"name":"ビック尻ドロップ","battle":{"range":"melee","type":"ノーマル","power":42,"cast":0.5,"cooldown":5,"tags":["近距離向き","高威力"]},"audio":[],"fx":{"generator":"big_butt_drop","id":"bigbuttdrop","name":"ビック尻ドロップ","seed":7003,"palKey":null,"size":122,"dropHeight":92,"dropAt":0.56,"dust":24,"duration":1.08,"powerVisual":{"size":[0.75,1.55],"amount":[0.6,1.8]},"palette":["#fff7e8","#ffbf78","#ec6f69","#6d2735"],"impact":null,"screen":{"flash":{"color":"#fff0d0","strength":0.62,"dur":0.14,"at":"impact"},"shake":{"power":14,"dur":0.56,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"big_butt_drop","at":"cast","off":0,"dur":1.65}]}},{"name":"かえんほうしゃ","battle":{"range":"ranged","type":"ほのお","power":36,"cast":0.45,"cooldown":4,"tags":["遠距離向き","高威力"]},"audio":[],"fx":{"generator":"flamethrower","id":"kaen","name":"かえんほうしゃ","seed":7011,"palKey":"炎","width":27,"particles":52,"flameSpread":36,"charge":0.25,"fire":0.12,"sustain":0.62,"fade":0.34,"powerVisual":{"size":[0.65,2],"amount":[0.55,2.2]},"palette":["#fffbe8","#ffd34f","#ff6b12","#8c1708"],"screen":{"tint":{"color":"#ff6a10","strength":0.28,"dur":0.5,"at":"impact"},"shake":{"power":6,"dur":0.3,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"attack","at":"fire","off":0,"dur":0.8}]}},{"name":"だいもんじ","battle":{"range":"ranged","type":"ほのお","power":44,"cast":0.6,"cooldown":5.6,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"projectile","id":"daimonji","name":"だいもんじ","seed":7012,"palKey":"炎","shape":"orb","size":36,"frames":8,"wobble":0.3,"core":0.42,"spin":0.25,"specks":12,"trail":{"type":"flame","length":20,"rate":1.3,"size":1.1},"travel":{"speed":215,"arc":-38,"spin":0},"palette":["#ffffff","#ffd44a","#ff7a18","#c8260c"],"impact":{"size":86,"frames":11,"shards":18,"palette":["#ffffff","#ffd44a","#ff7a18","#c8260c"]},"screen":{"darken":{"strength":0.3,"dur":0.4,"at":"cast"},"flash":{"color":"#ffd08a","strength":0.7,"dur":0.16,"at":"impact"},"shake":{"power":12,"dur":0.45,"at":"impact"}},"timeScale":1,"motions":[{"anim":"charge","at":"cast","off":0,"dur":0.6}],"parts":[{"generator":"shatter","name":"炎の炸裂","at":"impact","off":0.06,"anchor":"to","dx":0,"dy":0,"id":"dai_burst","seed":7013,"palKey":"炎","size":200,"cracks":26,"jag":0.62,"drift":150,"spin":3.2,"dust":70,"duration":1.05,"palette":["#ffffff","#ffd44a","#ff7a18","#c8260c"],"impact":null,"screen":{}}]}},{"name":"アクアジェット","battle":{"range":"ranged","type":"みず","power":24,"cast":0.12,"cooldown":1.6,"tags":["近距離向き","連発向き","低リスク"]},"audio":[],"fx":{"generator":"projectile","id":"aquajet","name":"アクアジェット","seed":7021,"palKey":"水","shape":"bolt","size":20,"frames":5,"wobble":0.12,"core":0.6,"spin":0,"specks":4,"trail":{"type":"smoke","length":24,"rate":1.5,"size":0.9},"travel":{"speed":560,"arc":-8,"spin":0},"palette":["#ffffff","#b6ecff","#3fa9f5","#0b4c9c"],"impact":{"size":40,"frames":7,"shards":9,"palette":["#ffffff","#b6ecff","#3fa9f5","#0b4c9c"]},"screen":{},"timeScale":1.3,"parts":[],"motions":[{"anim":"attack","at":"fire","off":0,"dur":0.18}]}},{"name":"うずしお","battle":{"range":"remote","type":"みず","power":16,"cast":0.35,"cooldown":4.4,"tags":["遠距離向き","低リスク"]},"audio":[],"fx":{"generator":"aura","id":"uzushio","name":"うずしお","seed":7022,"palKey":"水","size":120,"rings":9,"rise":34,"duration":2.3,"palette":["#ffffff","#b6ecff","#3fa9f5","#0b4c9c"],"impact":null,"screen":{"tint":{"color":"#3fa9f5","strength":0.2,"dur":1.1,"at":"cast"}},"timeScale":1,"motions":[],"parts":[{"generator":"aura","name":"相手を巻き込む渦","at":"fire","off":0.2,"anchor":"to","dx":0,"dy":0,"id":"uzu_on","seed":7023,"palKey":"水","size":110,"rings":7,"rise":28,"duration":2,"palette":["#ffffff","#b6ecff","#3fa9f5","#0b4c9c"],"impact":null,"screen":{}}]}},{"name":"ソーラービーム","battle":{"range":"ranged","type":"くさ","power":52,"cast":1.05,"cooldown":6.2,"tags":["遠距離向き","高威力","とどめ向き","回避されやすい"]},"audio":[],"fx":{"generator":"solar_beam","id":"solarbeam","name":"ソーラービーム","seed":7081,"palKey":null,"width":52,"sunRays":14,"leaves":24,"charge":1.05,"fire":0.14,"sustain":0.68,"fade":0.36,"powerVisual":{"size":[0.72,1.65],"amount":[0.6,1.9]},"palette":["#ffffdf","#ddff70","#62c94a","#17682c"],"impact":null,"screen":{"darken":{"strength":0.38,"dur":0.72,"at":"cast"},"flash":{"color":"#f4ffd0","strength":0.86,"dur":0.18,"at":"impact"},"shake":{"power":12,"dur":0.48,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":1.05},{"anim":"attack","at":"fire","off":0,"dur":0.68}]}},{"name":"エレキボール","battle":{"range":"ranged","type":"でんき","power":30,"cast":0.35,"cooldown":3,"tags":["遠距離向き","迎撃向き"]},"audio":[],"fx":{"generator":"electro_ball","id":"elekiball","name":"エレキボール","seed":7031,"palKey":"雷","size":32,"orbitals":5,"bolts":7,"voltage":4,"travel":{"speed":290,"arc":-24},"burst":0.48,"powerVisual":{"size":[0.75,1.6],"amount":[0.6,1.75]},"palette":["#ffffff","#fff7a0","#ffd21e","#8a5a00"],"impact":null,"screen":{"blink":{"color":"#fff7a0","strength":0.45,"times":3,"dur":0.3,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"かみなりパンチ","battle":{"range":"melee","type":"でんき","power":32,"cast":0.22,"cooldown":2.8,"tags":["近距離向き","低リスク"]},"audio":[],"fx":{"generator":"slash","id":"kaminaripunch","name":"かみなりパンチ","seed":7032,"palKey":"雷","size":78,"arcDeg":100,"thickness":20,"taper":0.9,"hollow":0.2,"jitter":0.3,"squash":1.1,"specks":14,"count":1,"interval":0.1,"spread":0,"palette":["#ffffff","#fff7a0","#ffd21e","#8a5a00"],"impact":{"size":44,"frames":8,"shards":12,"palette":["#ffffff","#fff7a0","#ffd21e","#8a5a00"]},"screen":{"shake":{"power":7,"dur":0.26,"at":"impact"}},"timeScale":1.2,"motions":[{"anim":"attack","at":"fire","off":0,"dur":0.2}],"parts":[{"generator":"lightning","name":"拳の雷","at":"impact","off":0.02,"anchor":"to","dx":0,"dy":0,"id":"kp_bolt","seed":7033,"palKey":"雷","width":8,"jag":0.75,"branches":5,"segments":4,"duration":0.35,"fromSky":false,"palette":["#ffffff","#fff7a0","#ffd21e","#8a5a00"],"impact":{"size":36,"frames":7,"shards":8,"palette":["#ffffff","#fff7a0","#ffd21e","#8a5a00"]},"screen":{}}]}},{"name":"ドリルライナー","battle":{"range":"ranged","type":"じめん","power":34,"cast":0.25,"cooldown":3,"tags":["近距離向き","低リスク"]},"audio":[],"fx":{"generator":"projectile","id":"drillliner","name":"ドリルライナー","seed":7041,"palKey":null,"shape":"bolt","size":26,"frames":6,"wobble":0.1,"core":0.7,"spin":0,"specks":8,"trail":{"type":"smoke","length":16,"rate":1.1,"size":0.9},"travel":{"speed":480,"arc":-6,"spin":12},"palette":["#ffffff","#e6eef6","#9aa9bb","#4a5568"],"impact":{"size":52,"frames":8,"shards":14,"palette":["#efe6d6","#c3b79f","#7d7160","#2a2418"]},"screen":{"shake":{"power":6,"dur":0.24,"at":"impact"}},"timeScale":1.2,"parts":[],"motions":[{"anim":"attack","at":"fire","off":0,"dur":0.22}]}},{"name":"だいちのちから","battle":{"range":"remote","type":"じめん","power":38,"cast":0.5,"cooldown":4.6,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"lightning","id":"daichi","name":"だいちのちから","seed":7042,"palKey":null,"width":22,"jag":0.22,"branches":2,"segments":3,"duration":0.55,"fromSky":false,"palette":["#f4e8c8","#d8a860","#8a5a20","#301c08"],"impact":{"size":64,"frames":9,"shards":16,"palette":["#f4e8c8","#d8a860","#8a5a20","#301c08"]},"screen":{"tint":{"color":"#c08840","strength":0.24,"dur":0.45,"at":"impact"},"shake":{"power":13,"dur":0.5,"at":"impact"}},"timeScale":1,"motions":[{"anim":"charge","at":"cast","off":0,"dur":0.5}],"parts":[{"generator":"shatter","name":"地割れ","at":"impact","off":0.04,"anchor":"to","dx":0,"dy":6,"id":"daichi_crack","seed":7043,"palKey":null,"size":180,"cracks":18,"jag":0.55,"drift":90,"spin":2,"dust":80,"duration":1,"palette":["#f4e8c8","#d8a860","#8a5a20","#301c08"],"impact":null,"screen":{}}]}},{"name":"エアスラッシュ","battle":{"range":"melee","type":"ひこう","power":30,"cast":0.28,"cooldown":2.8,"tags":["遠距離向き","連発向き"]},"audio":[],"fx":{"generator":"slash","id":"airslash","name":"エアスラッシュ","seed":7051,"palKey":"氷","size":130,"arcDeg":230,"thickness":5,"taper":2.2,"hollow":0.35,"jitter":0.06,"squash":0.8,"specks":5,"count":1,"interval":0.1,"spread":0,"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"],"impact":{"size":34,"frames":7,"shards":8,"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"]},"screen":{"lines":{"color":"#dff2ff","strength":0.3,"dur":0.2,"at":"impact","dir":"v"}},"timeScale":1.3,"motions":[],"parts":[{"generator":"shatter","name":"空気が裂ける","at":"impact","off":0.03,"anchor":"to","dx":0,"dy":0,"id":"air_rip","seed":7052,"palKey":"氷","size":120,"cracks":14,"jag":0.4,"drift":130,"spin":5,"dust":26,"duration":0.7,"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"],"impact":null,"screen":{}}]}},{"name":"ブレイブバード","battle":{"range":"ranged","type":"ひこう","power":46,"cast":0.4,"cooldown":5.4,"tags":["近距離向き","高威力","瀕死時危険"]},"audio":[],"fx":{"generator":"projectile","id":"bravebird","name":"ブレイブバード","seed":7053,"palKey":"氷","shape":"bolt","size":30,"frames":6,"wobble":0.14,"core":0.55,"spin":0,"specks":10,"trail":{"type":"spark","length":26,"rate":1.6,"size":1},"travel":{"speed":520,"arc":-16,"spin":0},"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"],"impact":{"size":70,"frames":10,"shards":16,"palette":["#ffffff","#ddf6ff","#8fd8f7","#2f7fae"]},"screen":{"lines":{"color":"#ffffff","strength":0.32,"dur":0.26,"at":"fire","dir":"v"},"shake":{"power":11,"dur":0.4,"at":"impact"}},"timeScale":1.15,"parts":[],"motions":[{"anim":"fly","at":"cast","off":0,"dur":0.9},{"anim":"attack","at":"fire","off":0,"dur":0.3},{"anim":"hurt","at":"impact","off":0.1,"dur":0.6}]}},{"name":"サイコキネシス","battle":{"range":"remote","type":"エスパー","power":36,"cast":0.45,"cooldown":4.2,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"psychokinesis","id":"psychokinesis","name":"サイコキネシス","seed":7061,"palKey":"毒","fieldSize":116,"grips":10,"debris":24,"warp":10,"squeeze":0.4,"duration":1.1,"powerVisual":{"size":[0.7,1.6],"amount":[0.6,1.8]},"palette":["#f2d8ff","#d08cff","#8e33d6","#3d0a63"],"impact":null,"screen":{"darken":{"strength":0.34,"dur":0.45,"at":"cast"},"tint":{"color":"#8e33d6","strength":0.26,"dur":0.55,"at":"cast"},"shake":{"power":9,"dur":0.45,"at":"cast"}},"timeScale":0.95,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":0.7}]}},{"name":"サイコカッター","battle":{"range":"melee","type":"エスパー","power":26,"cast":0.18,"cooldown":2.2,"tags":["遠距離向き","連発向き","低リスク"]},"audio":[],"fx":{"generator":"slash","id":"psychocutter","name":"サイコカッター","seed":7062,"palKey":"毒","size":100,"arcDeg":180,"thickness":6,"taper":2,"hollow":0.25,"jitter":0.08,"squash":0.85,"specks":6,"count":2,"interval":0.09,"spread":16,"palette":["#f2d8ff","#d08cff","#8e33d6","#3d0a63"],"impact":{"size":32,"frames":6,"shards":7,"palette":["#f2d8ff","#d08cff","#8e33d6","#3d0a63"]},"screen":{"lines":{"color":"#d8a8ff","strength":0.26,"dur":0.18,"at":"impact","dir":"v"}},"timeScale":1.4,"parts":[],"motions":[]}},{"name":"りゅうのはどう","battle":{"range":"ranged","type":"ドラゴン","power":38,"cast":0.45,"cooldown":4.4,"tags":["遠距離向き","高威力"]},"audio":[],"fx":{"generator":"beam","id":"ryuunohadou","name":"りゅうのはどう","seed":7071,"palKey":"闇","width":30,"segments":11,"waver":2.4,"charge":0.3,"fire":0.1,"sustain":0.46,"fade":0.3,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"],"impact":{"size":74,"frames":10,"shards":16,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"]},"screen":{"darken":{"strength":0.34,"dur":0.4,"at":"cast"},"tint":{"color":"#7a3ad0","strength":0.26,"dur":0.45,"at":"impact"},"shake":{"power":10,"dur":0.38,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":0.45},{"anim":"attack","at":"fire","off":0,"dur":0.55}]}},{"name":"ときのほうこう","battle":{"range":"ranged","type":"ドラゴン","power":62,"cast":1.05,"cooldown":8.2,"tags":["遠距離向き","高威力","とどめ向き","瀕死時危険","回避されやすい"]},"audio":[],"fx":{"generator":"roar_time","id":"tokihoukou","name":"ときのほうこう","seed":7073,"palKey":null,"width":46,"timeRings":11,"warp":9,"charge":0.82,"fire":0.16,"sustain":0.78,"fade":0.42,"palette":["#ffffff","#d8f3ff","#9a78f0","#241052"],"screen":{"darken":{"strength":0.62,"dur":0.82,"at":"cast"},"lines":{"color":"#b8d8ff","strength":0.44,"dur":0.62,"at":"impact","dir":"v"},"flash":{"color":"#eee8ff","strength":0.82,"dur":0.2,"at":"impact"},"shake":{"power":16,"dur":0.7,"at":"impact"}},"timeScale":0.92,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":1.05},{"anim":"attack","at":"fire","off":0,"dur":0.68},{"anim":"recoil","at":"impact","off":0.12,"dur":0.9}]}},{"name":"げきりん","battle":{"range":"melee","type":"ドラゴン","power":50,"cast":0.3,"cooldown":6.2,"tags":["近距離向き","高威力","瀕死時危険"]},"audio":[],"fx":{"generator":"slash","id":"gekirin","name":"げきりん","seed":7072,"palKey":"闇","size":96,"arcDeg":200,"thickness":14,"taper":1.3,"hollow":0.1,"jitter":0.4,"squash":1,"specks":16,"count":6,"interval":0.06,"spread":58,"palette":["#ffffff","#e0c0ff","#8a3ce0","#1a0430"],"impact":{"size":42,"frames":7,"shards":11,"palette":["#ffffff","#e0c0ff","#8a3ce0","#1a0430"]},"screen":{"darken":{"strength":0.4,"dur":0.3,"at":"cast"},"blink":{"color":"#d8a8ff","strength":0.4,"times":4,"dur":0.5,"at":"impact"},"shake":{"power":14,"dur":0.6,"at":"impact"}},"timeScale":1.2,"parts":[],"motions":[{"anim":"zigzag","at":"cast","off":0,"dur":0.4},{"anim":"attack","at":"fire","off":0,"dur":0.16},{"anim":"attack","at":"fire","off":0.14,"dur":0.16},{"anim":"attack","at":"fire","off":0.28,"dur":0.16}]}}];
+const STARTER_MOVES = [{"name":"亜空切断","battle":{"type":"ドラゴン","power":20,"cast":0.42,"cooldown":5,"tags":["近距離向き","高威力","とどめ向き","瀕死時危険"]},"audio":[{"id":"warp","at":"cast","off":0,"vol":0.8,"rate":0.8},{"id":"slash2","at":"fire","off":0,"vol":1,"rate":0.85},{"id":"laser_sharp","at":"fire","off":0.06,"vol":0.6,"rate":0.7},{"id":"clash1","at":"impact","off":0,"vol":0.9,"rate":1.3},{"id":"exp_crunch","at":"impact","off":0.1,"vol":0.7,"rate":0.9}],"fx":{"generator":"shatter","size":190,"cracks":26,"jag":0.5,"drift":82,"spin":4,"dust":46,"duration":1.15,"impact":null,"id":"mv2","name":"亜空切断","seed":918273,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"],"screen":{"darken":{"strength":0.62,"dur":0.45,"at":"cast"},"lines":{"color":"#d8a8ff","strength":0.45,"dur":0.4,"at":"cast","dir":"v"},"flash":{"color":"#f4e0ff","strength":0.92,"dur":0.16,"at":"impact"},"shake":{"power":10,"dur":0.42,"at":"impact"},"tint":{"color":"#7a3ad0","strength":0.34,"dur":0.55,"at":"impact"}},"palKey":"闇","parts":[{"generator":"shatter","size":190,"cracks":26,"jag":0.5,"drift":82,"spin":4,"dust":46,"duration":1.15,"impact":null,"id":"shatter_918294","name":"空間割れ","seed":918287,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"],"at":"impact","off":0,"anchor":"to","dx":0,"dy":0},{"generator":"slash","size":204,"arcDeg":210,"thickness":30,"count":1,"interval":0.13,"spread":26,"taper":1.1,"hollow":0,"jitter":0.18,"squash":1,"specks":10,"impact":{"size":12,"frames":7,"shards":8,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"]},"id":"slash_918294","name":"斬撃","seed":52812,"palette":["#e0d0ff","#9b7ad6","#5227a0","#160a30"],"at":"cast","off":0.29,"anchor":"center","dx":-22,"dy":0}]}},{"name":"灼熱弾","battle":{"type":"ほのお","power":26,"cast":0.3,"cooldown":2.4,"tags":["遠距離向き","連発向き","迎撃向き"]},"audio":[{"id":"exp_short","at":"fire","off":0,"vol":0.7,"rate":1.1},{"id":"exp_short","at":"impact","off":0,"vol":0.9,"rate":1}],"fx":{"generator":"projectile","shape":"orb","size":22,"frames":6,"wobble":0.16,"core":0.5,"spin":0.15,"specks":5,"trail":{"type":"flame","length":14,"rate":0.8,"size":0.8},"travel":{"speed":230,"arc":-26,"spin":0},"impact":{"size":56,"frames":9,"shards":14,"palette":["#ffffff","#ffd44a","#ff7a18","#c8260c"]},"id":"shakunetsu","name":"灼熱弾","seed":918273,"palette":["#ffffff","#ffd44a","#ff7a18","#c8260c"],"screen":{"shake":{"power":5,"dur":0.28,"at":"impact"},"tint":{"color":"#ff6a10","strength":0.28,"dur":0.35,"at":"impact"}},"timeScale":1,"motions":[],"parts":[]}},{"name":"ひのこ","battle":{"range":"ranged","type":"ほのお","power":24,"cast":0.25,"cooldown":1.8,"tags":["遠距離向き","連発向き","迎撃向き"]},"audio":[],"fx":{"generator":"ember_move","id":"hinoko","name":"ひのこ","seed":918273,"palKey":null,"size":18,"amount":9,"duration":0.78,"hitAt":0.76,"arc":-16,"clashKind":"bullet","palette":["#fff7c0","#ffd23f","#ff721c","#8f190b"],"impact":null,"powerVisual":{"size":[0.8,1.55],"amount":[0.6,1.85]},"screen":{"shake":{"power":4,"dur":0.2,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"はっぱカッター","battle":{"range":"melee","type":"くさ","power":26,"cast":0.2,"cooldown":2,"tags":["遠距離向き","連発向き"]},"audio":[],"fx":{"generator":"razor_leaf_move","id":"happa","name":"はっぱカッター","seed":7311,"palKey":null,"size":22,"amount":7,"duration":0.72,"hitAt":0.7,"arc":-20,"clashKind":"none","palette":["#f4ffe8","#a9ed5b","#3f9e28","#154d1d"],"impact":null,"powerVisual":{"size":[0.78,1.48],"amount":[0.58,1.8]},"screen":{"lines":{"color":"#d8ffb0","strength":0.3,"dur":0.24,"at":"impact","dir":"v"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"10まんボルト","battle":{"range":"remote","type":"でんき","power":34,"cast":0.5,"cooldown":3.6,"tags":["高威力","回避されやすい"]},"audio":[],"fx":{"generator":"ten_thousand_volt","id":"juuman","name":"10まんボルト","seed":2024,"palKey":"雷","width":108,"height":104,"bolts":8,"steps":6,"hitAt":0.34,"duration":0.82,"palette":["#ffffff","#fff7a0","#ffd21e","#8a5a00"],"impact":null,"powerVisual":{"size":[0.7,1.8],"amount":[0.55,2]},"screen":{"darken":{"strength":0.45,"dur":0.28,"at":"cast"},"blink":{"color":"#fff7a0","strength":0.65,"times":4,"dur":0.45,"at":"impact"},"shake":{"power":8,"dur":0.34,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"１００万ボルト","battle":{"range":"remote","type":"でんき","power":58,"cast":0.85,"cooldown":7,"tags":["高威力","とどめ向き","瀕死時危険","回避されやすい"]},"audio":[],"fx":{"generator":"million_volt","id":"hyakuman","name":"１００万ボルト","seed":2025,"palKey":null,"cage":92,"columns":11,"crowns":14,"steps":7,"hitAt":0.48,"duration":1.14,"palette":["#ffffff","#d9fbff","#8b8cff","#4b126f"],"impact":null,"powerVisual":{"size":[0.8,1.6],"amount":[0.7,1.75]},"screen":{"darken":{"strength":0.62,"dur":0.52,"at":"cast"},"flash":{"color":"#ecf8ff","strength":0.92,"dur":0.18,"at":"impact"},"shake":{"power":17,"dur":0.62,"at":"impact"}},"timeScale":0.92,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":0.85},{"anim":"attack","at":"fire","off":0,"dur":0.62}]}},{"name":"２ボルト","battle":{"range":"ranged","type":"でんき","power":2,"cast":0.05,"cooldown":0.55,"tags":["連発向き","低リスク","迎撃向き"]},"audio":[],"fx":{"generator":"two_volt","id":"twovolt","name":"２ボルト","seed":2026,"palKey":null,"size":8,"dots":4,"hops":5,"hopHeight":7,"travel":{"speed":175,"arc":0},"burst":0.24,"palette":["#fffce6","#d9e79d","#8e9b62","#474a38"],"impact":null,"powerVisual":{"size":[0.85,1.25],"amount":[0.75,1.4]},"screen":{},"timeScale":1.15,"parts":[],"motions":[]}},{"name":"ハイドロポンプ","battle":{"range":"ranged","type":"みず","power":42,"cast":0.7,"cooldown":5.4,"tags":["高威力","とどめ向き","瀕死時危険"]},"audio":[],"fx":{"generator":"hydro_pump","id":"hydro","name":"ハイドロポンプ","seed":5150,"palKey":"水","width":24,"pressure":9,"bubbles":18,"charge":0.45,"fire":0.09,"sustain":0.54,"fade":0.28,"powerVisual":{"size":[0.72,1.75],"amount":[0.65,1.8]},"palette":["#ffffff","#d7fbff","#46c7ff","#063f78"],"screen":{"darken":{"strength":0.4,"dur":0.45,"at":"cast"},"tint":{"color":"#46c7ff","strength":0.26,"dur":0.4,"at":"impact"},"shake":{"power":9,"dur":0.38,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":0.7},{"anim":"attack","at":"fire","off":0,"dur":0.55}]}},{"name":"りゅうのまい","battle":{"range":"remote","type":"ドラゴン","power":6,"cast":0.5,"cooldown":7,"tags":["低リスク"]},"audio":[],"fx":{"generator":"dragon_dance_move","id":"ryuunomai","name":"りゅうのまい","seed":555,"palKey":null,"size":86,"amount":16,"duration":1.55,"hitAt":0.78,"arc":0,"clashKind":"none","palette":["#ffffff","#cc9cff","#7351ca","#2b155f"],"impact":null,"powerVisual":{"size":[0.74,1.6],"amount":[0.58,1.95]},"screen":{"tint":{"color":"#7a3ad0","strength":0.22,"dur":0.9,"at":"cast"}},"timeScale":1,"parts":[],"motions":[{"anim":"dragon_dance_move","at":"fire","off":0,"dur":1.55}]}},{"name":"じしん","battle":{"range":"remote","type":"じめん","power":40,"cast":0.8,"cooldown":6.5,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"earthquake_move","id":"jishin","name":"じしん","seed":31415,"palKey":null,"size":92,"amount":11,"duration":1.58,"hitAt":0.76,"arc":0,"clashKind":"none","palette":["#fff3d5","#cfac72","#775737","#302116"],"impact":null,"powerVisual":{"size":[0.62,1.95],"amount":[0.5,2.2]},"screen":{"shake":{"power":22,"dur":0.85,"at":"cast"},"tint":{"color":"#8a6a38","strength":0.26,"dur":0.6,"at":"cast"}},"timeScale":0.9,"parts":[],"motions":[{"anim":"earthquake_stomp","at":"fire","off":0,"dur":1.58}]}},{"name":"タネマシンガン","battle":{"range":"ranged","type":"くさ","power":22,"cast":0.2,"cooldown":2.2,"tags":["遠距離向き","連発向き","低リスク"]},"audio":[],"fx":{"generator":"seed_machine_gun_move","id":"tanemachine","name":"タネマシンガン","seed":4242,"palKey":null,"size":12,"amount":8,"duration":0.82,"hitAt":0.82,"arc":-5,"clashKind":"bullet","palette":["#f5ffd0","#b2dc4b","#477d22","#20340f"],"impact":null,"powerVisual":{"size":[0.85,1.35],"amount":[0.55,2.1]},"screen":{},"timeScale":1,"parts":[],"motions":[{"anim":"seed_machine_gun_burst","at":"fire","off":0,"dur":0.82}]}},{"name":"トライアタック","battle":{"range":"ranged","type":"ノーマル","power":30,"cast":0.35,"cooldown":3.2,"tags":["遠距離向き","迎撃向き"]},"audio":[],"fx":{"generator":"tri_attack_move","id":"tri","name":"トライアタック","seed":333,"palKey":null,"size":34,"amount":3,"duration":0.92,"hitAt":0.74,"arc":-10,"clashKind":"bullet","palette":["#ffffff","#ffcf48","#7bdcff","#9a5cff"],"impact":null,"powerVisual":{"size":[0.74,1.65],"amount":[0.75,1.65]},"screen":{"flash":{"color":"#ffffff","strength":0.45,"dur":0.12,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"みらいよち","battle":{"range":"ranged","type":"エスパー","power":38,"cast":0.4,"cooldown":6,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"future_sight_move","id":"miraiyochi","name":"みらいよち","seed":8080,"palKey":null,"size":74,"amount":12,"duration":1.55,"hitAt":0.82,"arc":0,"clashKind":"bullet","palette":["#ffffff","#ffb6dc","#b45cff","#351060"],"impact":null,"powerVisual":{"size":[0.72,1.62],"amount":[0.6,1.85]},"screen":{"lines":{"color":"#d8a8ff","strength":0.22,"dur":0.3,"at":"impact","dir":"v"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"つばめがえし","battle":{"range":"melee","type":"ひこう","power":28,"cast":0.3,"cooldown":2.6,"tags":["近距離向き","低リスク"]},"audio":[],"fx":{"generator":"aerial_ace_move","id":"tsubame","name":"つばめがえし","seed":1212,"palKey":null,"size":52,"amount":10,"duration":0.88,"hitAt":0.8,"arc":0,"clashKind":"none","palette":["#ffffff","#d7f5ff","#6cb8d7","#28536d"],"impact":null,"powerVisual":{"size":[0.76,1.56],"amount":[0.62,1.85]},"screen":{"lines":{"color":"#ffffff","strength":0.35,"dur":0.22,"at":"impact","dir":"v"}},"timeScale":1.2,"parts":[],"motions":[{"anim":"aerial_ace_turn","at":"fire","off":0,"dur":0.88}]}},{"name":"れいとうビーム","battle":{"range":"ranged","type":"こおり","power":38,"cast":0.55,"cooldown":4.4,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"ice_beam_move","id":"reitou","name":"れいとうビーム","seed":6101,"palKey":null,"size":30,"amount":14,"duration":1.3,"hitAt":0.48,"arc":0,"clashKind":"beam","palette":["#ffffff","#d4f8ff","#71d1ef","#256d9b"],"impact":null,"powerVisual":{"size":[0.72,1.65],"amount":[0.58,1.95]},"screen":{"tint":{"color":"#8fd8f7","strength":0.24,"dur":0.45,"at":"impact"},"shake":{"power":5,"dur":0.24,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"つららばり","battle":{"range":"ranged","type":"こおり","power":24,"cast":0.2,"cooldown":2.2,"tags":["遠距離向き","連発向き"]},"audio":[],"fx":{"generator":"icicle_spear_move","id":"tsurara","name":"つららばり","seed":6102,"palKey":null,"size":18,"amount":6,"duration":0.82,"hitAt":0.8,"arc":-8,"clashKind":"bullet","palette":["#ffffff","#c9f5ff","#62c6ee","#22608c"],"impact":null,"powerVisual":{"size":[0.82,1.42],"amount":[0.55,2.05]},"screen":{},"timeScale":1,"parts":[],"motions":[]}},{"name":"インファイト","battle":{"range":"melee","type":"かくとう","power":44,"cast":0.25,"cooldown":4.8,"tags":["近距離向き","高威力","瀕死時危険"]},"audio":[],"fx":{"generator":"close_combat","id":"infight","name":"インファイト","seed":6201,"palKey":null,"size":112,"hits":8,"interval":0.055,"reach":72,"duration":0.9,"powerVisual":{"size":[0.8,1.45],"amount":[0.65,1.6]},"palette":["#ffffff","#ffe0b0","#e86a38","#5a1710"],"screen":{"shake":{"power":7,"dur":0.42,"at":"impact"}},"timeScale":1.15,"parts":[],"motions":[{"anim":"attack","at":"fire","off":0,"dur":0.18},{"anim":"attack","at":"fire","off":0.16,"dur":0.18},{"anim":"attack","at":"fire","off":0.32,"dur":0.18}]}},{"name":"きあいだま","battle":{"range":"ranged","type":"かくとう","power":40,"cast":0.6,"cooldown":5.2,"tags":["高威力","とどめ向き","回避されやすい"]},"audio":[],"fx":{"generator":"focus_blast_move","id":"kiaidama","name":"きあいだま","seed":6202,"palKey":null,"size":42,"amount":8,"duration":1.12,"hitAt":0.76,"arc":-24,"clashKind":"bullet","palette":["#ffffff","#ffe59a","#e0893d","#67351d"],"impact":null,"powerVisual":{"size":[0.7,1.72],"amount":[0.62,1.82]},"screen":{"darken":{"strength":0.35,"dur":0.4,"at":"cast"},"flash":{"color":"#e0ecff","strength":0.6,"dur":0.14,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"focus_blast_charge","at":"cast","off":0,"dur":0.6}]}},{"name":"ヘドロばくだん","battle":{"range":"ranged","type":"どく","power":32,"cast":0.35,"cooldown":3.4,"tags":["遠距離向き","迎撃向き"]},"audio":[],"fx":{"generator":"sludge_bomb_move","id":"hedoro","name":"ヘドロばくだん","seed":6301,"palKey":null,"size":31,"amount":11,"duration":0.96,"hitAt":0.76,"arc":-28,"clashKind":"bullet","palette":["#fff0ff","#df8cff","#8e35b8","#3e174e"],"impact":null,"powerVisual":{"size":[0.72,1.65],"amount":[0.6,1.9]},"screen":{"tint":{"color":"#8e33d6","strength":0.24,"dur":0.45,"at":"impact"},"shake":{"power":6,"dur":0.26,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"どくどく","battle":{"range":"remote","type":"どく","power":8,"cast":0.4,"cooldown":6,"tags":["低リスク"]},"audio":[],"fx":{"generator":"toxic_move","id":"dokudoku","name":"どくどく","seed":6302,"palKey":null,"size":78,"amount":13,"duration":1.3,"hitAt":0.76,"arc":0,"clashKind":"none","palette":["#ffffff","#e8a0ff","#a43bc4","#49145e"],"impact":null,"powerVisual":{"size":[0.72,1.65],"amount":[0.55,2]},"screen":{"tint":{"color":"#8e33d6","strength":0.3,"dur":1.2,"at":"cast"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"シザークロス","battle":{"range":"melee","type":"むし","power":30,"cast":0.25,"cooldown":2.8,"tags":["近距離向き","低リスク"]},"audio":[],"fx":{"generator":"x_scissor_move","id":"scissor","name":"シザークロス","seed":6401,"palKey":null,"size":78,"amount":9,"duration":0.82,"hitAt":0.74,"arc":0,"clashKind":"none","palette":["#ffffff","#d9f47a","#70a930","#25451b"],"impact":null,"powerVisual":{"size":[0.72,1.6],"amount":[0.62,1.85]},"screen":{"lines":{"color":"#d8ffb0","strength":0.32,"dur":0.22,"at":"impact","dir":"v"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"ミサイルばり","battle":{"range":"ranged","type":"むし","power":20,"cast":0.18,"cooldown":2,"tags":["遠距離向き","連発向き","低リスク"]},"audio":[],"fx":{"generator":"pin_missile_move","id":"missile","name":"ミサイルばり","seed":6402,"palKey":null,"size":14,"amount":7,"duration":0.78,"hitAt":0.84,"arc":-4,"clashKind":"bullet","palette":["#fff8d0","#cadb55","#708328","#2e3614"],"impact":null,"powerVisual":{"size":[0.85,1.38],"amount":[0.5,2.15]},"screen":{},"timeScale":1,"parts":[],"motions":[]}},{"name":"いわなだれ","battle":{"range":"remote","type":"いわ","power":36,"cast":0.5,"cooldown":4.2,"tags":["高威力","回避されやすい"]},"audio":[],"fx":{"generator":"rock_slide_move","id":"iwanadare","name":"いわなだれ","seed":6501,"palKey":null,"size":54,"amount":9,"duration":1.24,"hitAt":0.8,"arc":0,"clashKind":"none","palette":["#fff4d2","#c7a46b","#76583b","#33251a"],"impact":null,"powerVisual":{"size":[0.7,1.72],"amount":[0.55,2.05]},"screen":{"shake":{"power":10,"dur":0.55,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"ストーンエッジ","battle":{"range":"remote","type":"いわ","power":38,"cast":0.45,"cooldown":4.6,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"stone_edge_move","id":"stoneedge","name":"ストーンエッジ","seed":6504,"palKey":null,"size":48,"amount":7,"duration":1.16,"hitAt":0.78,"arc":0,"clashKind":"none","palette":["#fff2cc","#c49b61","#715036","#2f2118"],"impact":null,"powerVisual":{"size":[0.72,1.68],"amount":[0.55,2]},"screen":{"shake":{"power":9,"dur":0.36,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"シャドーボール","battle":{"range":"ranged","type":"ゴースト","power":34,"cast":0.4,"cooldown":3.6,"tags":["遠距離向き","高威力"]},"audio":[],"fx":{"generator":"shadow_ball_move","id":"shadowball","name":"シャドーボール","seed":6601,"palKey":null,"size":38,"amount":9,"duration":1.02,"hitAt":0.76,"arc":-18,"clashKind":"bullet","palette":["#f8eaff","#bc84e8","#66369a","#160c2c"],"impact":null,"powerVisual":{"size":[0.7,1.72],"amount":[0.6,1.9]},"screen":{"darken":{"strength":0.32,"dur":0.35,"at":"impact"},"shake":{"power":6,"dur":0.28,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"おにび","battle":{"range":"ranged","type":"ゴースト","power":12,"cast":0.3,"cooldown":3,"tags":["遠距離向き","低リスク"]},"audio":[],"fx":{"generator":"will_o_wisp_move","id":"onibi","name":"おにび","seed":6602,"palKey":null,"size":25,"amount":5,"duration":1.12,"hitAt":0.8,"arc":-16,"clashKind":"bullet","palette":["#ffffff","#8fc9ff","#7761db","#2d185d"],"impact":null,"powerVisual":{"size":[0.78,1.5],"amount":[0.6,2]},"screen":{"tint":{"color":"#40c090","strength":0.2,"dur":0.5,"at":"impact"}},"timeScale":0.85,"parts":[],"motions":[]}},{"name":"つじぎり","battle":{"range":"melee","type":"あく","power":30,"cast":0.2,"cooldown":2.4,"tags":["近距離向き","とどめ向き"]},"audio":[],"fx":{"generator":"night_slash_move","id":"tsujigiri","name":"つじぎり","seed":6701,"palKey":null,"size":82,"amount":8,"duration":0.76,"hitAt":0.72,"arc":0,"clashKind":"none","palette":["#ffffff","#c8a8ed","#59337d","#12091e"],"impact":null,"powerVisual":{"size":[0.72,1.6],"amount":[0.62,1.82]},"screen":{"darken":{"strength":0.42,"dur":0.22,"at":"cast"},"lines":{"color":"#d8a8ff","strength":0.4,"dur":0.2,"at":"impact","dir":"v"}},"timeScale":1.7,"parts":[],"motions":[]}},{"name":"かみくだく","battle":{"range":"melee","type":"あく","power":38,"cast":0.3,"cooldown":3.8,"tags":["近距離向き","高威力"]},"audio":[],"fx":{"generator":"crunch_move","id":"kamikudaku","name":"かみくだく","seed":6702,"palKey":null,"size":88,"amount":9,"duration":0.86,"hitAt":0.72,"arc":0,"clashKind":"none","palette":["#ffffff","#dfc797","#7c623e","#2a2119"],"impact":null,"powerVisual":{"size":[0.7,1.68],"amount":[0.65,1.8]},"screen":{"shake":{"power":8,"dur":0.3,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"ブラックキック","battle":{"range":"melee","type":"あく","power":36,"cast":0.24,"cooldown":3,"tags":["近距離向き","高威力"]},"audio":[],"fx":{"generator":"black_kick","id":"blackkick","name":"ブラックキック","seed":6711,"palKey":null,"size":76,"lift":56,"echoes":4,"hitAt":0.32,"duration":0.78,"palette":["#f8ecff","#a46ee0","#4a256f","#09050f"],"impact":null,"powerVisual":{"size":[0.78,1.55],"amount":[0.7,1.65]},"screen":{"darken":{"strength":0.4,"dur":0.2,"at":"cast"},"shake":{"power":9,"dur":0.34,"at":"impact"}},"timeScale":1.12,"parts":[],"motions":[{"anim":"dodge","at":"cast","off":0,"dur":0.26},{"anim":"attack","at":"fire","off":0,"dur":0.34}]}},{"name":"ブラックパンチ","battle":{"range":"melee","type":"あく","power":40,"cast":0.28,"cooldown":3.5,"tags":["近距離向き","高威力","とどめ向き"]},"audio":[],"fx":{"generator":"black_punch","id":"blackpunch","name":"ブラックパンチ","seed":6712,"palKey":null,"size":74,"lift":32,"rings":5,"hitAt":0.3,"duration":0.76,"palette":["#fff3ff","#8d62d2","#351b5e","#07040d"],"impact":null,"powerVisual":{"size":[0.75,1.65],"amount":[0.7,1.6]},"screen":{"darken":{"strength":0.44,"dur":0.24,"at":"cast"},"shake":{"power":11,"dur":0.4,"at":"impact"}},"timeScale":1.08,"parts":[],"motions":[{"anim":"attack","at":"fire","off":0,"dur":0.46}]}},{"name":"ブラックショット","battle":{"range":"ranged","type":"あく","power":34,"cast":0.36,"cooldown":3.8,"tags":["遠距離向き","迎撃向き","高威力"]},"audio":[],"fx":{"generator":"black_shot","id":"blackshot","name":"ブラックショット","seed":6713,"palKey":null,"size":36,"blocks":13,"sway":7,"travel":{"speed":330,"arc":0},"burst":0.48,"palette":["#f5eaff","#8f62d9","#321852","#050309"],"impact":null,"powerVisual":{"size":[0.7,1.7],"amount":[0.6,1.9]},"screen":{"darken":{"strength":0.46,"dur":0.3,"at":"cast"},"tint":{"color":"#2d1249","strength":0.26,"dur":0.42,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"attack","at":"fire","off":0,"dur":0.48}]}},{"name":"ラスターカノン","battle":{"range":"ranged","type":"はがね","power":40,"cast":0.6,"cooldown":4.8,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"flash_cannon_move","id":"lustercannon","name":"ラスターカノン","seed":6801,"palKey":null,"size":42,"amount":10,"duration":1.38,"hitAt":0.48,"arc":0,"clashKind":"beam","palette":["#ffffff","#e4edf4","#9baab8","#44505c"],"impact":null,"powerVisual":{"size":[0.7,1.7],"amount":[0.6,1.9]},"screen":{"flash":{"color":"#ffffff","strength":0.55,"dur":0.14,"at":"impact"},"shake":{"power":7,"dur":0.3,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"メタルクロー","battle":{"range":"melee","type":"はがね","power":26,"cast":0.2,"cooldown":2.2,"tags":["近距離向き","低リスク","連発向き"]},"audio":[],"fx":{"generator":"metal_claw_move","id":"metalclaw","name":"メタルクロー","seed":6802,"palKey":null,"size":72,"amount":3,"duration":0.72,"hitAt":0.72,"arc":0,"clashKind":"none","palette":["#ffffff","#dce8f2","#8796a5","#39424c"],"impact":null,"powerVisual":{"size":[0.76,1.55],"amount":[0.75,1.75]},"screen":{"lines":{"color":"#ffffff","strength":0.28,"dur":0.2,"at":"impact","dir":"v"}},"timeScale":1.1,"parts":[],"motions":[]}},{"name":"ムーンフォース","battle":{"range":"ranged","type":"フェアリー","power":38,"cast":0.5,"cooldown":4.6,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"moon_force_move","id":"moonforce","name":"ムーンフォース","seed":6901,"palKey":null,"size":48,"amount":10,"duration":1.16,"hitAt":0.74,"arc":-34,"clashKind":"bullet","palette":["#ffffff","#ffe2f4","#d485d9","#67306e"],"impact":null,"powerVisual":{"size":[0.7,1.7],"amount":[0.58,1.9]},"screen":{"tint":{"color":"#f090c8","strength":0.26,"dur":0.5,"at":"impact"},"flash":{"color":"#fff0f8","strength":0.5,"dur":0.14,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"マジカルシャイン","battle":{"range":"ranged","type":"フェアリー","power":34,"cast":0.45,"cooldown":4,"tags":["遠距離向き","高威力"]},"audio":[],"fx":{"generator":"dazzling_gleam_move","id":"magicalshine","name":"マジカルシャイン","seed":6902,"palKey":null,"size":76,"amount":12,"duration":1.12,"hitAt":0.66,"arc":0,"clashKind":"beam","palette":["#ffffff","#ffd3ed","#caa8ff","#7659a4"],"impact":null,"powerVisual":{"size":[0.7,1.68],"amount":[0.55,2]},"screen":{"flash":{"color":"#ffffff","strength":0.7,"dur":0.18,"at":"impact"},"tint":{"color":"#ffb8e0","strength":0.22,"dur":0.4,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"でんこうせっか","battle":{"range":"ranged","type":"ノーマル","power":20,"cast":0.1,"cooldown":1.4,"tags":["近距離向き","連発向き","低リスク"]},"audio":[],"fx":{"generator":"quick_attack_move","id":"denkou","name":"でんこうせっか","seed":7001,"palKey":null,"size":30,"amount":8,"duration":0.48,"hitAt":0.82,"arc":0,"clashKind":"bullet","palette":["#ffffff","#e9f3ff","#9fb7d0","#4a5968"],"impact":null,"powerVisual":{"size":[0.82,1.42],"amount":[0.6,1.85]},"screen":{"lines":{"color":"#ffffff","strength":0.22,"dur":0.14,"at":"fire","dir":"v"}},"timeScale":1.5,"parts":[],"motions":[{"anim":"quick_attack_dash","at":"fire","off":0,"dur":0.48}]}},{"name":"はかいこうせん","battle":{"range":"ranged","type":"ノーマル","power":52,"cast":1,"cooldown":8,"tags":["高威力","とどめ向き","瀕死時危険"]},"audio":[],"fx":{"generator":"hyper_beam_move","id":"hakai","name":"はかいこうせん","seed":7002,"palKey":null,"size":54,"amount":16,"duration":1.72,"hitAt":0.54,"arc":0,"clashKind":"beam","palette":["#ffffff","#ffe071","#ff8a20","#8b2a0d"],"impact":null,"powerVisual":{"size":[0.64,1.9],"amount":[0.5,2.2]},"screen":{"darken":{"strength":0.62,"dur":0.7,"at":"cast"},"lines":{"color":"#fff7a0","strength":0.35,"dur":0.6,"at":"cast","dir":"v"},"flash":{"color":"#ffffff","strength":0.95,"dur":0.2,"at":"impact"},"shake":{"power":16,"dur":0.6,"at":"impact"}},"timeScale":0.85,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":1},{"anim":"hyper_beam_fire","at":"fire","off":0,"dur":1.72}]}},{"name":"ビック尻ドロップ","battle":{"range":"melee","type":"ノーマル","power":42,"cast":0.5,"cooldown":5,"tags":["近距離向き","高威力"]},"audio":[],"fx":{"generator":"big_butt_drop","id":"bigbuttdrop","name":"ビック尻ドロップ","seed":7003,"palKey":null,"size":122,"dropHeight":92,"dropAt":0.56,"dust":24,"duration":1.08,"powerVisual":{"size":[0.75,1.55],"amount":[0.6,1.8]},"palette":["#fff7e8","#ffbf78","#ec6f69","#6d2735"],"impact":null,"screen":{"flash":{"color":"#fff0d0","strength":0.62,"dur":0.14,"at":"impact"},"shake":{"power":14,"dur":0.56,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"big_butt_drop","at":"cast","off":0,"dur":1.65}]}},{"name":"かえんほうしゃ","battle":{"range":"ranged","type":"ほのお","power":36,"cast":0.45,"cooldown":4,"tags":["遠距離向き","高威力"]},"audio":[],"fx":{"generator":"flamethrower","id":"kaen","name":"かえんほうしゃ","seed":7011,"palKey":"炎","width":27,"particles":52,"flameSpread":36,"charge":0.25,"fire":0.12,"sustain":0.62,"fade":0.34,"powerVisual":{"size":[0.65,2],"amount":[0.55,2.2]},"palette":["#fffbe8","#ffd34f","#ff6b12","#8c1708"],"screen":{"tint":{"color":"#ff6a10","strength":0.28,"dur":0.5,"at":"impact"},"shake":{"power":6,"dur":0.3,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"attack","at":"fire","off":0,"dur":0.8}]}},{"name":"だいもんじ","battle":{"range":"ranged","type":"ほのお","power":44,"cast":0.6,"cooldown":5.6,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"fire_blast_move","id":"daimonji","name":"だいもんじ","seed":7012,"palKey":null,"size":74,"amount":22,"duration":1.18,"hitAt":0.76,"arc":-16,"clashKind":"bullet","palette":["#ffffff","#ffd42f","#ff6918","#981c0b"],"impact":null,"powerVisual":{"size":[0.66,1.82],"amount":[0.52,2.1]},"screen":{"darken":{"strength":0.3,"dur":0.4,"at":"cast"},"flash":{"color":"#ffd08a","strength":0.7,"dur":0.16,"at":"impact"},"shake":{"power":12,"dur":0.45,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"アクアジェット","battle":{"range":"ranged","type":"みず","power":24,"cast":0.12,"cooldown":1.6,"tags":["近距離向き","連発向き","低リスク"]},"audio":[],"fx":{"generator":"aqua_jet_move","id":"aquajet","name":"アクアジェット","seed":7021,"palKey":null,"size":38,"amount":16,"duration":0.62,"hitAt":0.84,"arc":-7,"clashKind":"bullet","palette":["#ffffff","#c9f8ff","#39bcef","#07568d"],"impact":null,"powerVisual":{"size":[0.76,1.58],"amount":[0.58,1.9]},"screen":{},"timeScale":1.3,"parts":[],"motions":[{"anim":"aqua_jet_rush","at":"fire","off":0,"dur":0.62}]}},{"name":"うずしお","battle":{"range":"remote","type":"みず","power":16,"cast":0.35,"cooldown":4.4,"tags":["遠距離向き","低リスク"]},"audio":[],"fx":{"generator":"whirlpool_move","id":"uzushio","name":"うずしお","seed":7022,"palKey":null,"size":92,"amount":18,"duration":1.46,"hitAt":0.76,"arc":0,"clashKind":"none","palette":["#ffffff","#bcefff","#3aafe5","#07517d"],"impact":null,"powerVisual":{"size":[0.68,1.78],"amount":[0.52,2.1]},"screen":{"tint":{"color":"#3fa9f5","strength":0.2,"dur":1.1,"at":"cast"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"ソーラービーム","battle":{"range":"ranged","type":"くさ","power":52,"cast":1.05,"cooldown":6.2,"tags":["遠距離向き","高威力","とどめ向き","回避されやすい"]},"audio":[],"fx":{"generator":"solar_beam","id":"solarbeam","name":"ソーラービーム","seed":7081,"palKey":null,"width":52,"sunRays":14,"leaves":24,"charge":1.05,"fire":0.14,"sustain":0.68,"fade":0.36,"powerVisual":{"size":[0.72,1.65],"amount":[0.6,1.9]},"palette":["#ffffdf","#ddff70","#62c94a","#17682c"],"impact":null,"screen":{"darken":{"strength":0.38,"dur":0.72,"at":"cast"},"flash":{"color":"#f4ffd0","strength":0.86,"dur":0.18,"at":"impact"},"shake":{"power":12,"dur":0.48,"at":"impact"}},"timeScale":1,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":1.05},{"anim":"attack","at":"fire","off":0,"dur":0.68}]}},{"name":"エレキボール","battle":{"range":"ranged","type":"でんき","power":30,"cast":0.35,"cooldown":3,"tags":["遠距離向き","迎撃向き"]},"audio":[],"fx":{"generator":"electro_ball","id":"elekiball","name":"エレキボール","seed":7031,"palKey":"雷","size":32,"orbitals":5,"bolts":7,"voltage":4,"travel":{"speed":290,"arc":-24},"burst":0.48,"powerVisual":{"size":[0.75,1.6],"amount":[0.6,1.75]},"palette":["#ffffff","#fff7a0","#ffd21e","#8a5a00"],"impact":null,"screen":{"blink":{"color":"#fff7a0","strength":0.45,"times":3,"dur":0.3,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"かみなりパンチ","battle":{"range":"melee","type":"でんき","power":32,"cast":0.22,"cooldown":2.8,"tags":["近距離向き","低リスク"]},"audio":[],"fx":{"generator":"thunder_punch_move","id":"kaminaripunch","name":"かみなりパンチ","seed":7032,"palKey":null,"size":68,"amount":10,"duration":0.78,"hitAt":0.72,"arc":0,"clashKind":"none","palette":["#ffffff","#fff28a","#ffc928","#775100"],"impact":null,"powerVisual":{"size":[0.72,1.62],"amount":[0.6,1.9]},"screen":{"shake":{"power":7,"dur":0.26,"at":"impact"}},"timeScale":1.2,"parts":[],"motions":[{"anim":"thunder_punch_drive","at":"fire","off":0,"dur":0.78}]}},{"name":"ドリルライナー","battle":{"range":"ranged","type":"じめん","power":34,"cast":0.25,"cooldown":3,"tags":["近距離向き","低リスク"]},"audio":[],"fx":{"generator":"drill_run_move","id":"drillliner","name":"ドリルライナー","seed":7041,"palKey":null,"size":45,"amount":9,"duration":0.74,"hitAt":0.82,"arc":0,"clashKind":"bullet","palette":["#fff3d0","#c89b56","#76502d","#302014"],"impact":null,"powerVisual":{"size":[0.74,1.62],"amount":[0.6,1.9]},"screen":{"shake":{"power":6,"dur":0.24,"at":"impact"}},"timeScale":1.2,"parts":[],"motions":[{"anim":"drill_run_spin","at":"fire","off":0,"dur":0.74}]}},{"name":"だいちのちから","battle":{"range":"remote","type":"じめん","power":38,"cast":0.5,"cooldown":4.6,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"earth_power_move","id":"daichi","name":"だいちのちから","seed":7042,"palKey":null,"size":66,"amount":8,"duration":1.28,"hitAt":0.76,"arc":0,"clashKind":"none","palette":["#ffffff","#ffd878","#b46a32","#552715"],"impact":null,"powerVisual":{"size":[0.68,1.78],"amount":[0.55,2.05]},"screen":{"tint":{"color":"#c08840","strength":0.24,"dur":0.45,"at":"impact"},"shake":{"power":13,"dur":0.5,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"エアスラッシュ","battle":{"range":"melee","type":"ひこう","power":30,"cast":0.28,"cooldown":2.8,"tags":["遠距離向き","連発向き"]},"audio":[],"fx":{"generator":"air_slash_move","id":"airslash","name":"エアスラッシュ","seed":7051,"palKey":null,"size":48,"amount":7,"duration":0.78,"hitAt":0.76,"arc":-10,"clashKind":"none","palette":["#ffffff","#d8f7ff","#80cfe0","#36758b"],"impact":null,"powerVisual":{"size":[0.77,1.53],"amount":[0.58,1.95]},"screen":{"lines":{"color":"#dff2ff","strength":0.3,"dur":0.2,"at":"impact","dir":"v"}},"timeScale":1.3,"parts":[],"motions":[]}},{"name":"ブレイブバード","battle":{"range":"ranged","type":"ひこう","power":46,"cast":0.4,"cooldown":5.4,"tags":["近距離向き","高威力","瀕死時危険"]},"audio":[],"fx":{"generator":"brave_bird_move","id":"bravebird","name":"ブレイブバード","seed":7053,"palKey":null,"size":66,"amount":12,"duration":1.02,"hitAt":0.86,"arc":-42,"clashKind":"bullet","palette":["#ffffff","#a8e8ff","#2c8fd0","#17436f"],"impact":null,"powerVisual":{"size":[0.67,1.78],"amount":[0.55,2]},"screen":{"lines":{"color":"#ffffff","strength":0.32,"dur":0.26,"at":"fire","dir":"v"},"shake":{"power":11,"dur":0.4,"at":"impact"}},"timeScale":1.15,"parts":[],"motions":[{"anim":"brave_bird_dive","at":"fire","off":0,"dur":1.02}]}},{"name":"サイコキネシス","battle":{"range":"remote","type":"エスパー","power":36,"cast":0.45,"cooldown":4.2,"tags":["高威力","とどめ向き"]},"audio":[],"fx":{"generator":"psychokinesis","id":"psychokinesis","name":"サイコキネシス","seed":7061,"palKey":"毒","fieldSize":116,"grips":10,"debris":24,"warp":10,"squeeze":0.4,"duration":1.1,"powerVisual":{"size":[0.7,1.6],"amount":[0.6,1.8]},"palette":["#f2d8ff","#d08cff","#8e33d6","#3d0a63"],"impact":null,"screen":{"darken":{"strength":0.34,"dur":0.45,"at":"cast"},"tint":{"color":"#8e33d6","strength":0.26,"dur":0.55,"at":"cast"},"shake":{"power":9,"dur":0.45,"at":"cast"}},"timeScale":0.95,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":0.7}]}},{"name":"サイコカッター","battle":{"range":"melee","type":"エスパー","power":26,"cast":0.18,"cooldown":2.2,"tags":["遠距離向き","連発向き","低リスク"]},"audio":[],"fx":{"generator":"psycho_cut_move","id":"psychocutter","name":"サイコカッター","seed":7062,"palKey":null,"size":62,"amount":9,"duration":0.76,"hitAt":0.74,"arc":-12,"clashKind":"none","palette":["#ffffff","#ffb9e3","#cb54b6","#63245c"],"impact":null,"powerVisual":{"size":[0.74,1.58],"amount":[0.6,1.88]},"screen":{"lines":{"color":"#d8a8ff","strength":0.26,"dur":0.18,"at":"impact","dir":"v"}},"timeScale":1.4,"parts":[],"motions":[]}},{"name":"りゅうのはどう","battle":{"range":"ranged","type":"ドラゴン","power":38,"cast":0.45,"cooldown":4.4,"tags":["遠距離向き","高威力"]},"audio":[],"fx":{"generator":"dragon_pulse_move","id":"ryuunohadou","name":"りゅうのはどう","seed":7071,"palKey":null,"size":44,"amount":14,"duration":1.32,"hitAt":0.52,"arc":0,"clashKind":"beam","palette":["#ffffff","#cfb6ff","#7256d0","#28155f"],"impact":null,"powerVisual":{"size":[0.68,1.78],"amount":[0.55,2.05]},"screen":{"darken":{"strength":0.34,"dur":0.4,"at":"cast"},"tint":{"color":"#7a3ad0","strength":0.26,"dur":0.45,"at":"impact"},"shake":{"power":10,"dur":0.38,"at":"impact"}},"timeScale":1,"parts":[],"motions":[]}},{"name":"ときのほうこう","battle":{"range":"ranged","type":"ドラゴン","power":62,"cast":1.05,"cooldown":8.2,"tags":["遠距離向き","高威力","とどめ向き","瀕死時危険","回避されやすい"]},"audio":[],"fx":{"generator":"roar_time","id":"tokihoukou","name":"ときのほうこう","seed":7073,"palKey":null,"width":46,"timeRings":11,"warp":9,"charge":0.82,"fire":0.16,"sustain":0.78,"fade":0.42,"palette":["#ffffff","#d8f3ff","#9a78f0","#241052"],"screen":{"darken":{"strength":0.62,"dur":0.82,"at":"cast"},"lines":{"color":"#b8d8ff","strength":0.44,"dur":0.62,"at":"impact","dir":"v"},"flash":{"color":"#eee8ff","strength":0.82,"dur":0.2,"at":"impact"},"shake":{"power":16,"dur":0.7,"at":"impact"}},"timeScale":0.92,"parts":[],"motions":[{"anim":"charge","at":"cast","off":0,"dur":1.05},{"anim":"attack","at":"fire","off":0,"dur":0.68},{"anim":"recoil","at":"impact","off":0.12,"dur":0.9}]}},{"name":"げきりん","battle":{"range":"melee","type":"ドラゴン","power":50,"cast":0.3,"cooldown":6.2,"tags":["近距離向き","高威力","瀕死時危険"]},"audio":[],"fx":{"generator":"outrage_move","id":"gekirin","name":"げきりん","seed":7072,"palKey":null,"size":92,"amount":16,"duration":1.24,"hitAt":0.78,"arc":0,"clashKind":"none","palette":["#ffffff","#ff725f","#704ddb","#28145c"],"impact":null,"powerVisual":{"size":[0.65,1.85],"amount":[0.52,2.1]},"screen":{"darken":{"strength":0.4,"dur":0.3,"at":"cast"},"blink":{"color":"#d8a8ff","strength":0.4,"times":4,"dur":0.5,"at":"impact"},"shake":{"power":14,"dur":0.6,"at":"impact"}},"timeScale":1.2,"parts":[],"motions":[{"anim":"outrage_rampage","at":"fire","off":0,"dur":1.24}]}},{"name":"爆撃","battle":{"range":"remote","type":"ほのお","power":54,"cast":0.45,"cooldown":9,"tags":["高威力","とどめ向き","瀕死時危険","回避されにくい"]},"audio":[],"fx":{"generator":"bombing_move","id":"bombing","name":"爆撃","seed":82021,"palKey":null,"size":62,"amount":12,"duration":4.55,"hitAt":0.94,"arc":0,"clashKind":"none","palette":["#ffffff","#ffd33c","#ff6418","#8e1609"],"impact":null,"powerVisual":{"size":[0.62,2],"amount":[0.5,2.3]},"screen":{},"timeScale":1,"parts":[],"motions":[{"anim":"bombing_flight","at":"fire","off":0,"dur":4.55}],"flames":22,"embers":42,"lockTarget":4.55}},{"name":"爆撃","battle":{"type":"ほのお","power":54,"cast":0.45,"cooldown":9,"tags":["高威力","とどめ向き","瀕死時危険","回避されにくい"]},"audio":[],"fx":{"generator":"bombing_move","id":"mv1","name":"爆撃","seed":82021,"palKey":null,"size":62,"amount":12,"duration":4.55,"hitAt":0.94,"arc":0,"clashKind":"none","palette":["#ffffff","#ffd33c","#ff6418","#8e1609"],"impact":null,"powerVisual":{"size":[0.62,2],"amount":[0.5,2.3]},"screen":{},"timeScale":1,"parts":[],"motions":[{"anim":"bombing_flight","at":"cast","off":0,"dur":4.55}],"flames":60,"embers":42,"lockTarget":4.55}}];
 
 
 /* =========================================================
@@ -5420,7 +6457,8 @@ function syncCustom(){
     if(!c.fx) c.fx=makeSpec('projectile',918273,c.name||'技','炎');
     c.fx.id=c.id; c.fx.name=c.name;
     MOVES[c.id]={id:c.id,name:c.name,type:c.type,power:c.power,cast:c.cast,
-                 cooldown:c.cooldown,fx:c.fx,tags:c.tags||[],custom:true};
+                 cooldown:c.cooldown,fx:c.fx,tags:c.tags||[],custom:true,
+                 kind:c.kind,effect:c.effect};
     /* 内蔵技の上書きは、音まで四皇モン側に抱えん。
        音は音ラボと共有の AUDIO_CFG が正。ここで上書きすると鴨川の設定を壊す。 */
     if(isBuiltinId(c.id)) c.audio=null;
@@ -5628,9 +6666,11 @@ function buildMoveLib(){
     rec:()=>{
       if(!editMove) return null;
       const c=editMove;
+      const battle={type:c.type,power:c.power,cast:c.cast,cooldown:c.cooldown,
+                    tags:(c.tags||[]).slice(),kind:c.kind};
+      if(c.kind==='support') battle.effect=c.effect;
       return { name:c.name, fx:JSON.parse(JSON.stringify(c.fx)),
-               battle:{type:c.type,power:c.power,cast:c.cast,cooldown:c.cooldown,
-                       tags:(c.tags||[]).slice()},
+               battle:battle,
                audio:JSON.parse(JSON.stringify(audioListOf(c))) };
     },
     load:(rec,k)=>{
@@ -5639,6 +6679,7 @@ function buildMoveLib(){
       const c={ id:nextMoveId(), name:rec.name||k, type:b.type||'ノーマル',
                 power:b.power!=null?b.power:26, cast:b.cast!=null?b.cast:0.3,
                 cooldown:b.cooldown!=null?b.cooldown:2.4, tags:b.tags||[],
+                kind:b.kind, effect:b.effect,
                 fx:(rec.fx&&rec.fx.generator)?rec.fx:makeSpec('projectile',918273,rec.name||k,'炎'),
                 audio:Array.isArray(rec.audio)?rec.audio:[] };
       mon.customMoves.push(c);
@@ -5697,7 +6738,54 @@ function buildMoveEditor(){
   ts.onchange=()=>{ c.type=ts.value; ts.style.borderLeft='6px solid '+(TYPES[c.type]||'#2c3442');
     mvRebuild(); };
   b.appendChild(td);
-  slider(b,'威力',      ()=>c.power,   v=>{c.power=v;   mvRebuild();},1,80,1);
+  /* 攻撃／補助 切替。onchange は必ず buildMoveEditor()（全体作り直し）を呼ぶ ――
+     mvRebuild() は $('mvBase') を触らんけん、それやと 威力/効果 の出し分けが
+     閉じて開き直すまで切り替わらん（plan-check B8）。 */
+  const kd=document.createElement('div'); kd.className='ctl';
+  kd.innerHTML='<label>攻撃／補助</label><select id="mvKind">'+
+    '<option value="attack">攻撃</option><option value="support">補助</option></select>';
+  const ks=kd.querySelector('select');
+  ks.value=isSupportMove(c)?'support':'attack';
+  ks.onchange=()=>{
+    if(ks.value==='support'){
+      c.kind='support'; c.power=0;
+      if(!c.effect) c.effect={stat:'atk',delta:20,dur:15,target:'self'};
+    }else{
+      c.kind=undefined;
+    }
+    buildMoveEditor();
+  };
+  b.appendChild(kd);
+  if(!isSupportMove(c)){
+    slider(b,'威力', ()=>c.power, v=>{c.power=v; mvRebuild();},1,80,1);
+  }else{
+    if(!c.effect) c.effect={stat:'atk',delta:20,dur:15,target:'self'};
+    const adv=document.createElement('div'); adv.className='hint'; adv.style.margin='0 0 6px';
+    adv.textContent='強く・長く効かせな、殴った方が得になる（目安：delta×durがだいたい250を超える'+
+      'くらいから、cast/CDが軽い技ほど有利）';
+    b.appendChild(adv);
+    const sd=document.createElement('div'); sd.className='ctl';
+    sd.innerHTML='<label>効果</label><select id="mvEffStat">'+
+      ['atk','def','eva','spd'].map(k=>`<option value="${k}">${STAT_JP[k]}</option>`).join('')+
+      '</select>';
+    const ss=sd.querySelector('select'); ss.value=c.effect.stat;
+    ss.onchange=()=>{ c.effect.stat=ss.value; buildMoveEditor(); };  // spd注記の出し分けがあるけん全体作り直し
+    b.appendChild(sd);
+    slider(b,'変化量',()=>c.effect.delta,v=>{c.effect.delta=v; mvRebuild();},-25,25,1);
+    slider(b,'持続',  ()=>c.effect.dur,  v=>{c.effect.dur=v;   mvRebuild();},3,20,0.5,v=>v.toFixed(1)+'s');
+    const gd=document.createElement('div'); gd.className='ctl';
+    gd.innerHTML='<label>対象</label><select id="mvEffTarget">'+
+      '<option value="self">自分</option><option value="foe">相手</option></select>';
+    const gs=gd.querySelector('select'); gs.value=(c.effect.target==='foe')?'foe':'self';
+    gs.onchange=()=>{ c.effect.target=gs.value; mvRebuild(); };
+    b.appendChild(gd);
+    if(c.effect.stat==='spd'){
+      const spdNote=document.createElement('div'); spdNote.className='hint'; spdNote.id='mvSpdNote';
+      spdNote.style.margin='0 0 6px';
+      spdNote.textContent='素早さは次に撃つ技から効く（今チャージ中の技には効かん）';
+      b.appendChild(spdNote);
+    }
+  }
   slider(b,'溜め',      ()=>c.cast,    v=>{c.cast=v;    mvRebuild();},0,1.5,0.02,v=>v.toFixed(2)+'s');
   slider(b,'クールダウン',()=>c.cooldown,v=>{c.cooldown=v;mvRebuild();},0.5,10,0.1,v=>v.toFixed(1)+'s');
   mlTimeScale(b,mvCtx);
@@ -5749,7 +6837,7 @@ function fxBuiltOf(id){
 function fireMove(id){
   const m=MOVES[id]; if(!m||!m.fx){ return; }
   const sp=m.fx;
-  const self=(sp.generator==='aura');      // 技ラボと同じ扱いにする
+  const self=isSupportMove(m);             // battle.tpl.html と同じ isSupportMove() を使う（plan-check W2）
   const FROM={x:LAY_A.cx, y:LAY_A.platY-46};
   const TO  ={x:LAY_E.cx, y:LAY_E.platY-32};
   const pts={from:FROM, to:(self?FROM:TO), center:{x:W/2,y:104}};
@@ -5882,7 +6970,27 @@ function normalizeMon(o){
   m.customMoves=Array.isArray(o.customMoves)?o.customMoves.filter(c=>c&&c.id):[];
   for(const c of m.customMoves){
     c.name=c.name||c.id; c.type=c.type||'ノーマル';
-    c.power=+c.power||20; c.cast=+c.cast||0.3; c.cooldown=+c.cooldown||2.4;
+    /* +0||20 は 0 を「無い」扱いして 20 に戻してしまう ―― 補助技の power:0/cast:0 を
+       毎回の読込（自動保存・スロット・JSON読込どれも normalizeMon 経由）で殺す
+       (plan-check B5)。0 は finite やけん、Number.isFinite なら生き残る。 */
+    c.power=Number.isFinite(+c.power)?+c.power:20;
+    c.cast=Number.isFinite(+c.cast)?+c.cast:0.3;
+    c.cooldown=Number.isFinite(+c.cooldown)?+c.cooldown:2.4;
+    /* kind/effect のサニタイズ。stat の妥当性判定はここで二重にせん ――
+       hp/int 等の無効値もそのまま通し、applySupportEffect（battle側）だけを
+       「無効stat=no-op」の唯一の権威にする（この改訂の核心の判断）。 */
+    c.kind=(c.kind==='support')?'support':undefined;
+    if(c.kind==='support'){
+      const e=(c.effect&&typeof c.effect==='object')?c.effect:{};
+      c.effect={
+        stat:e.stat,
+        delta:Math.max(-25,Math.min(25,Number.isFinite(+e.delta)?+e.delta:20)),
+        dur:Math.max(3,Math.min(20,Number.isFinite(+e.dur)?+e.dur:15)),
+        target:(e.target==='foe')?'foe':'self'
+      };
+    }else{
+      delete c.effect;
+    }
     if(!Array.isArray(c.audio)) c.audio=[];
     if(!c.fx||!c.fx.generator) c.fx=makeSpec('projectile',918273,c.name,'炎');
     c.fx.timeScale=Math.max(0.25,Math.min(3,+c.fx.timeScale||1));
