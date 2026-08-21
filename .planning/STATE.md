@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: 補助技を入れる
 status: in_progress
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-08-21T13:36:03.859Z"
+stopped_at: 03-03-PLAN.md Task 1 完了、Task 2/3 は にーくら判断待ちで停止
+last_updated: "2026-08-21T14:03:39.000Z"
 last_activity: 2026-08-21
-last_activity_desc: Phase 3 Plan 02完了。すなかけ・斎藤尻隠れ の2本に専用generator・専用FXクラスを新造して棚に載せ、tools/verify_rebuilt_moves.jsの「39」決め打ちをSUPPORT_NAMES/ALLからの導出へ変えた（41 generator/class）
-state_head: 9243b80f34ec11a992da5092ae575b84e52baa8a
+last_activity_desc: Phase 3 Plan 03 Task 1完了（MOVE-01網羅assert格上げ＋発動回数ゲート、5本とも較正2シードの少なくとも片方で発動）。Task 2着手前の事前チェックでnode tools/verify_cost.jsが本プラン変更と無関係な原因で赤と判明、プランの明示指示どおり実装を止めてにーくらへ報告（cost.js/config.jsonは無変更）
+state_head: 2cf4134bda60203768896ef92a29a0fee8b3384b
 progress:
   total_phases: 4
   completed_phases: 0
@@ -27,13 +27,17 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Phase: 03 (補助技を入れる), Plan 2 of 3 — COMPLETE
-Status: 03-02 完了。すなかけ・斎藤尻隠れ の2本に専用generator・専用FXクラス（SandAttackMoveFX/SaitoButtHideMoveFX）
-を新造して棚へ載せ、tools/verify_rebuilt_moves.js の「39」決め打ちを SUPPORT_NAMES/ALL からの導出に変えた（41
-generator/class）。補助技5本が atk/def/eva/spd と self/foe の両方を通った。次は 03-03（コストと発動回数ゲート）
-Last activity: 2026-08-21 — 03-02（すなかけ・斎藤尻隠れの専用FX新造・非流用ゲートの恒久化）完了
+Phase: 03 (補助技を入れる), Plan 3 of 3 — Task 1 完了、Task 2/3 停止（にーくら判断待ち）
+Status: 03-03 Task 1（MOVE-01網羅assert＋発動回数ゲート）完了・commit 2cf4134。
+5本とも較正2シード(31337/90210)の少なくとも片方で発動（りゅうのまい1/4・どくどく3/2・
+うずしお5/6・すなかけ5/6・斎藤尻隠れ5/1）、梯子（段上げ）も降り口も発動せず。
+Task 2（CostCalculatorへ補助技の値段付け）着手前の必須事前チェックで
+`node tools/verify_cost.js` が本プランの変更と無関係な原因で既に赤と判明したため、
+プランの明示指示（「直さずに止めてにーくらへ報告する」）どおり src/cost.js に一切触れず停止。
+詳細は 03-03-SUMMARY.md の「Task 2/3 停止の報告」節。
+Last activity: 2026-08-21 — 03-03 Task 1完了・Task 2/3停止
 
-Progress: [███████░░░] 67%（2/3 プラン・このフェーズ）
+Progress: [████████░░] 80%（Task 1/3 タスク・このプラン。3プラン目のうち完了扱いはまだ2）
 
 ## 前のマイルストーン（反動と間）
 
@@ -87,9 +91,22 @@ Progress: [███████░░░] 67%（2/3 プラン・このフェー
 
 ## Session
 
-**Last session:** 2026-08-21T13:34:12.784Z
-**Stopped at:** Completed 03-02-PLAN.md
-**Resume file:** None
+**Last session:** 2026-08-21T14:03:39.000Z
+**Stopped at:** 03-03-PLAN.md Task 1 完了、Task 2/3 は にーくら判断待ちで停止
+**Resume file:** .planning/phases/03-five-support-moves/03-03-SUMMARY.md（「Task 2/3 停止の報告」節）
+
+## Blockers
+
+- **[Phase 03-03] `node tools/verify_cost.js` が Task 2 着手前の事前チェックで既に赤。**
+  原因は本プランの変更やない —— `data/monsters/BAZERGIUS.json`/`PALKIA.json` の技配列が
+  commit `a544b64`（Phase 3 着手前、Codexの「技棚・個体データを専用generatorに合わせる」
+  データ移行）で2本→3本へ増え、`K.moveExtra` の寄与が変わったため
+  （`tools/fixtures/cost-baseline.json` は2026-08-19生成・移行より前）。
+  プランの明示指示（`03-03-PLAN.md` <context> と Task 2 手順0）により、
+  赤の状態で `src/cost.js` へ触ることも `cost-baseline.json` を焼き直すことも禁じられとる。
+  **にーくらの判断待ち**：(a) 保存個体の技配列を意図した状態へ戻す (b) 現状を正として
+  `node tools/cost_baseline.js` で基準値を焼き直す、のどちらかを にーくら が選んでから
+  Task 2/3 を再開する。詳細は 03-03-SUMMARY.md。
 
 ## Decisions
 
@@ -101,3 +118,5 @@ Progress: [███████░░░] 67%（2/3 プラン・このフェー
 - [Phase 03-01]: うずしおの配線検査は「撃った瞬間に相手の反動が縮む」を期待せず、foe.buffs.spd（delta負・until未来）とstatOf(foe,'spd')の低下の2点で「次の技から効く」ことを示した — f.cd確定タイミングの都合で前者をassertすると必ず落ちる
 - [Phase 03-02]: すなかけの基準点はthis.t(相手位置)・斎藤尻隠れはthis.f(使用者位置)。渦・炎・葉・稲妻・rmRingBurstとビック尻ドロップの語彙(落下・砂煙・衝撃輪)は避け、絵の骨格を既存技と分離した
 - [Phase 03-02]: tools/verify_rebuilt_moves.jsの件数assertは39を41へ書き換えず、SUPPORT_NAMES定数とALL=[...names,...SUPPORT_NAMES]からの導出へ変えた。次に専用技を足しても手直し不要な恒久形にした
+- [Phase 03-03]: 段1をMOVE-01網羅assert（件数>=5・stat4種・target2種）へ格上げし、段4の実走行ブロックに発動回数を根拠にしたok(...)を初めて追加した — 03-01/03-02は記録専用のまま、合否を持つのはこの段だけ（03-PLAN-CHECK.md B2の設計どおり）
+- [Phase 03-03]: Task 2着手前の事前チェック（プラン明示指示）でnode tools/verify_cost.jsが既に赤と判明。原因はPhase3開始前のCodexデータ移行（BAZERGIUS/PALKIAの技配列が2→3本）で、支援技のpower:0化とは無関係。「直さずに止めてにーくらへ報告する」の指示どおりsrc/cost.js・cost-baseline.jsonのどちらにも触れず停止した — 基準値を焼き直して通す手は明示的に禁じられとる
