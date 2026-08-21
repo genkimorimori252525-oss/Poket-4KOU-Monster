@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 02.1
 current_phase_name: 補助技 (INSERTED)
 status: executing
-stopped_at: Completed 02.1-01-PLAN.md
-last_updated: "2026-08-21T06:51:34.873Z"
+stopped_at: Completed 02.1-02-PLAN.md
+last_updated: "2026-08-21T07:24:29.579Z"
 last_activity: 2026-08-21
-last_activity_desc: Phase 02.1 execution started
-state_head: adc38b461d1f6ec60471b0c49a03efcbb6832840
+last_activity_desc: 02.1-02（技クリエーターの補助技UI）完了
+state_head: c2dee263fee5bce7e4b8d35d0aed51ab38f19412
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 8
   percent: 25
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Phase: 02.1 (補助技 (INSERTED)), Plan 1 of 3 — EXECUTING
-Status: 02.1-01 完了。次は 02.1-02（制作ツールUI）
-Last activity: 2026-08-21 — 02.1-01（statOf/isSupportMove/buffValue）完了
+Phase: 02.1 (補助技 (INSERTED)), Plan 2 of 3 — EXECUTING
+Status: 02.1-02 完了。次は 02.1-03（verify_support.js の determinismTest 拡張・verify:support 登録）
+Last activity: 2026-08-21 — 02.1-02（技クリエーターの攻撃/補助トグル・効果入力・normalizeMonのpower:0保存）完了
 
-Progress: [███████░░░] 70%（1/3 プラン・このフェーズ）
+Progress: [████████░░] 80%（2/3 プラン・このフェーズ）
 
 ## 前のマイルストーン（反動と間）
 
@@ -77,9 +77,15 @@ Progress: [███████░░░] 70%（1/3 プラン・このフェー
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 02.1 P01 | 38min | 3 tasks | 4 files |
+| Phase 02.1 P02 | 35min | 2 tasks | 2 files |
 
 ## Session
 
-**Last session:** 2026-08-21T06:51:34.664Z
-**Stopped at:** Completed 02.1-01-PLAN.md
+**Last session:** 2026-08-21T07:23:57.525Z
+**Stopped at:** Completed 02.1-02-PLAN.md
 **Resume file:** None
+
+## Decisions
+
+- [Phase 02.1]: 攻撃/補助トグルはonchangeでbuildMoveEditor()（全体作り直し）を呼ぶ — mvRebuild()はmvBaseを触らんため、切替直後に威力/効果が出し分けられない（plan-check B8）
+- [Phase 02.1]: normalizeMon()はpower/cast/cooldownをNumber.isFiniteガードへ変更し、statは無効値でも書き換えずapplySupportEffectを唯一の権威にする — +c.power||20は0を無い扱いして支援技のpower:0/cast:0を毎回蘇らせていた（plan-check B5）。stat妥当性の二重判定は分岐を作るので避けた
