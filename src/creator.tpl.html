@@ -90,6 +90,110 @@
   #slotList .mv.picked{outline:1px solid #7ad6a0;background:#12261c;}
   #top.mini .bar button,#top.mini .bar select{padding:5px 4px;font-size:10px;}
   .sec{scroll-margin-top:250px;}
+
+
+  /* Creator workspace: novice clarity and developer precision. Preview stays shared. */
+  body.ws-beginner{
+    --bg:#f0f6f5;--panel:#ffffff;--line:#c7d8db;--text:#233743;
+    --dim:#596f7b;--accent:#af5a18;--mk:#167557;
+    background:var(--bg);color:var(--text);min-height:100vh;
+  }
+  body.ws-developer{
+    --bg:#0a121e;--panel:#132033;--line:#354962;--text:#e5f2ff;
+    --dim:#a6b7ce;--accent:#dfbc79;--mk:#6bd3be;
+    background:var(--bg);color:var(--text);min-height:100vh;
+  }
+  .ws-switcher{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) 40px;gap:4px;
+    margin:7px 0 6px;align-items:stretch;}
+  .ws-switcher button{min-width:0;min-height:40px;padding:8px 2px;font-size:11px;
+    background:var(--panel);border-color:var(--line);color:var(--dim);
+    border-radius:6px;font-weight:600;}
+  .ws-switcher button[aria-selected=true]{background:var(--mk);color:#071d18;
+    border-color:var(--mk);}
+  .ws-switcher #wsModeToggle{font-size:17px;line-height:1;padding:5px;}
+  .ws-switcher #wsModeToggle[aria-expanded=true]{outline:2px solid var(--accent);outline-offset:-2px;}
+  .ws-page[hidden],#wsSettings[hidden]{display:none!important;}
+  #wsSettings{position:absolute;right:0;top:100%;z-index:90;width:min(330px,100%);
+    padding:13px;background:var(--panel);border:2px solid var(--mk);
+    border-radius:8px;box-shadow:0 10px 30px #0008;line-height:1.6;}
+  #wsSettings .ws-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px;}
+  #wsSettings .ws-mode-row button{min-height:44px;background:var(--bg);
+    border-color:var(--line);color:var(--text);font-size:12px;}
+  #wsSettings .ws-mode-row button[aria-pressed=true]{border-color:var(--mk);
+    background:var(--mk);color:#102721;}
+  .ws-mode-note{margin:9px 0 0;font-size:11px;line-height:1.75;color:var(--dim);}
+  .ws-page{padding-top:3px;}
+  .ws-page-intro{border:1px solid var(--line);border-radius:6px;
+    background:var(--panel);padding:11px 12px;margin:2px 0 9px;color:var(--dim);
+    font-size:11px;line-height:1.8;}
+  .ws-page-intro strong{color:var(--text);font-size:12px;}
+  .ws-dev-panel{display:none;background:#101c2d;color:#d4e6ff;border:1px solid #46698c;
+    border-left:3px solid #68d5c3;border-radius:6px;padding:10px 12px;
+    margin:3px 0 10px;font-family:ui-monospace,Consolas,"MS Gothic",monospace;
+    font-size:11px;line-height:1.7;overflow-wrap:anywhere;}
+  .ws-dev-panel strong{color:#85e4d5;}
+  .ws-dev-panel .ws-dev-facts{white-space:pre-wrap;color:#c6d6ea;}
+  .ws-developer .ws-dev-panel{display:block;}
+  .ws-beginner .ws-advanced-only{display:none!important;}
+  .ws-precision{display:none;flex:0 0 100%;align-items:center;gap:7px;
+    padding:4px 0 1px 0;margin-top:1px;}
+  .ws-developer .ws-precision{display:flex;}
+  .ws-has-precision{flex-wrap:wrap;}
+  .ws-precision label{width:auto!important;min-width:0!important;flex:none!important;
+    color:var(--dim);font-size:11px;}
+  .ws-precision input{height:34px;max-width:86px;min-width:0;flex:1;
+    background:var(--bg);color:var(--text);border:1px solid var(--line);
+    border-radius:5px;text-align:center;font:12px ui-monospace,monospace;padding:5px;}
+  .ws-developer .ws-precision input{border-color:#6a849d;}
+  .ws-beginner .sec{box-shadow:0 1px 4px #1d3d4812;border-radius:7px;}
+  .ws-beginner .sec>h2{color:#176c57;font-size:13px;}
+  .ws-beginner .sec.fx>h2{color:#ae581c;}
+  .ws-beginner .ctl select,.ws-beginner .ctl input:not([type=range]),
+  .ws-beginner .ml-ctl select,.ws-beginner .ml-ctl input:not([type=range]),
+  .ws-beginner textarea,.ws-beginner .aui-ph,.ws-beginner .aui-name{
+    background:#f8fbfc;border-color:#b4cbd0;color:#233743;}
+  .ws-beginner button:not(.on):not(.go):not(.warnbtn):not([aria-selected=true]){
+    background:#e7f1f0;border-color:#b8d0d1;color:#254856;}
+  .ws-beginner button.go{background:#d5f5e4;border-color:#85c6a7;color:#155b47;}
+  .ws-beginner .mv,.ws-beginner .tab,.ws-beginner .step,
+  .ws-beginner .ml-box,.ws-beginner .aui-card{background:#f8fbfc;border-color:#d0dcdf;color:#233743;}
+  .ws-beginner .mv.on{background:#d6f4e5;border-color:#5eb48a;}
+  .ws-beginner .mv .nm,.ws-beginner .ml-box .ml-ctl label{color:#214251!important;}
+  .ws-beginner .ml-gens button.on,.ws-beginner .ml-pre button.on,
+  .ws-beginner .ml-ctl button.on{background:#b9f0db!important;border-color:#439b74!important;color:#123c2b!important;}
+  .ws-beginner .cost{background:#e2f2eb;border-color:#b7d6c5;color:#205b47;}
+  .ws-beginner .cost b{color:#125c44;}
+  .ws-beginner .ws-switcher button[aria-selected=true],
+  .ws-beginner #wsSettings .ws-mode-row button[aria-pressed=true]{color:#ffffff;}
+  .ws-beginner .ml-ctl label,.ws-beginner .ctl label,
+  .ws-beginner .mv .st,.ws-beginner .aui-row label{color:#49616e;}
+  .ws-beginner .ml-ctl .v,.ws-beginner .aui-row .v{color:#955119;}
+  .ws-beginner #slotList .mv.picked{outline:2px solid #278368;background:#d9f3e5;}
+  .ws-beginner .sec [style*="color:#7ad6a0"]{color:#176d53!important;}
+  .ws-beginner .sec [style*="color:#f0a020"]{color:#9c5315!important;}
+  .ws-beginner .sec [style*="color:#e08080"]{color:#aa383d!important;}
+
+  .ws-beginner #top{background:var(--bg);}
+  .ws-beginner .hint,.ws-beginner .ml-hint{color:#536b76;}
+  .ws-developer #top{background:var(--bg);}
+  .ws-developer .sec{border-color:#405773;border-radius:6px;}
+  .ws-developer .sec>h2{font-size:12px;letter-spacing:.06em;}
+  .ws-developer .sec.fx>h2{color:#e8c083;}
+  .ws-developer .cost{background:#11293a;border-color:#41788a;color:#b8edee;}
+  .ws-developer .ml-box,.ws-developer .aui-card{background:#15243a;border-color:#3e526f;}
+  .ws-developer .ml-ctl input:not([type=range]),.ws-developer .ml-ctl select,
+  .ws-developer .ctl input:not([type=range]),.ws-developer .ctl select{
+    background:#0c1828;border-color:#46617d;color:#e6efff;}
+  .ws-developer .ws-page-intro{background:#16263a;border-color:#435a78;color:#b1c9df;}
+  .ws-developer #wsModeToggle{color:#8ee0cc;}
+  @media(max-width:420px){
+    .ws-switcher{grid-template-columns:repeat(5,minmax(0,1fr)) 36px;gap:3px;}
+    .ws-switcher button{font-size:10px;padding:7px 1px;min-height:40px;}
+    .ws-precision{gap:5px;flex-wrap:wrap;}
+    .ws-precision input{max-width:78px;}
+    #top.mini #stage canvas{height:23vh;min-height:100px;max-height:162px;}
+  }
+
 </style>
 </head>
 <body>
@@ -128,6 +232,23 @@
   <div class="sceneBar" id="sceneBar">
     <button id="sceneSkip">とばす</button>
     <button id="sceneClose" class="go">とじる</button>
+  </div>
+
+  <div class="ws-switcher" id="workspaceTabs" role="tablist" aria-label="制作する項目">
+    <button type="button" role="tab" data-workspace-button="base">基本</button>
+    <button type="button" role="tab" data-workspace-button="appearance">見た目</button>
+    <button type="button" role="tab" data-workspace-button="motion">動き・声</button>
+    <button type="button" role="tab" data-workspace-button="moves">技</button>
+    <button type="button" role="tab" data-workspace-button="save">保存</button>
+    <button type="button" id="wsModeToggle" title="制作モードを変える" aria-label="制作モードを変える" aria-expanded="false">⚙</button>
+  </div>
+  <div id="wsSettings" hidden>
+    <strong>制作モード</strong>
+    <div class="ws-mode-row">
+      <button type="button" data-workspace-mode="beginner" aria-pressed="false">かんたん</button>
+      <button type="button" data-workspace-mode="developer" aria-pressed="false">開発者</button>
+    </div>
+    <p class="ws-mode-note">開発者では全タブで正確な数値を直接入力できる。各調整項目は1〜100段階でも指定可能（元の秒・pxなどの値域は維持）。技の素材・モーション・JSONも開く。切替で技や写真の設定は消えない。</p>
   </div>
 </div>
 
@@ -354,6 +475,211 @@
    （過去に previewKey を後ろで宣言して TDZ エラーを踏んどる）
    ========================================================= */
 const $=id=>document.getElementById(id);
+
+/* =========================================================
+   0.5. 人間向け制作ワークスペース
+   UI設定は個体JSONに混ぜず別キー。戦闘計算・専用FXには触らない。
+   ========================================================= */
+const WS_PREF_KEY='shioumon_ui_workspace_v1';
+const WS_LAYOUT={
+  base:{title:'基本',description:'名前・タイプ・ステータス・性格・プレビュー相手',
+        sections:['baseCtl','statCtl','perCtl','foeCtl']},
+  appearance:{title:'見た目',description:'立ち絵5種類・表示サイズ・影',
+        sections:['slotTabs','shadowCtl']},
+  motion:{title:'動き・声',description:'鳴き声・召喚・着地モーション',
+        sections:['cryCtl','sumCtl']},
+  moves:{title:'技',description:'覚えられる技・装備・技クリエーター',
+        sections:['moveList','equipList','secMove']},
+  save:{title:'保存',description:'名前付き保存・JSON・草むらへの放流・初期化',
+        sections:['autoState','json','relCheck','btnReset']}
+};
+let wsCurrentTab='base', wsCurrentMode='beginner', wsReady=false, wsObserver=null;
+const wsPages={};
+function wsStoreMode(){
+  try{localStorage.setItem(WS_PREF_KEY,JSON.stringify({mode:wsCurrentMode}));}
+  catch(e){console.warn('[workspace] mode preference unavailable',e.name);}
+}
+function wsCloseSettings(){
+  $('wsSettings').hidden=true;
+  $('wsModeToggle').setAttribute('aria-expanded','false');
+}
+function wsShowTab(tab){
+  if(!wsPages[tab]) return;
+  wsCurrentTab=tab;
+  /* Tab changes on a small screen must leave room for editing beneath the sticky preview. */
+  if(tab!=='base' && $('top') && !$('top').classList.contains('mini'))setMini(true);
+  for(const k of Object.keys(wsPages)) wsPages[k].hidden=(k!==tab);
+  document.querySelectorAll('[data-workspace-button]').forEach(b=>{
+    const active=b.dataset.workspaceButton===tab;
+    b.setAttribute('aria-selected',String(active));
+    b.tabIndex=active?0:-1;
+  });
+  wsCloseSettings();
+  wsRefreshInfo();
+}
+function wsMode(mode,save){
+  wsCurrentMode=(mode==='developer'?'developer':'beginner');
+  document.body.classList.toggle('ws-developer',wsCurrentMode==='developer');
+  document.body.classList.toggle('ws-beginner',wsCurrentMode==='beginner');
+  document.querySelectorAll('[data-workspace-mode]').forEach(b=>
+    b.setAttribute('aria-pressed',String(b.dataset.workspaceMode===wsCurrentMode)));
+  const modeButton=$('wsModeToggle');
+  modeButton.textContent=wsCurrentMode==='developer'?'DEV':'⚙';
+  modeButton.title=wsCurrentMode==='developer'?'開発者モード：変更する':'制作モードを変える';
+  if(save) wsStoreMode();
+  if(wsCurrentMode==='developer') wsEnhanceControls();
+  wsRefreshInfo();
+}
+function wsEnhanceControls(){
+  if(!wsReady||wsCurrentMode!=='developer') return;
+  for(const r of document.querySelectorAll('#workspacePages input[type=range]')){
+    if(r.dataset.wsEnhanced==='1') continue;
+    const low=Number(r.min),high=Number(r.max);
+    if(!Number.isFinite(low)||!Number.isFinite(high)||high<=low) continue;
+    const step=Number(r.step);
+    const host=r.parentElement;
+    if(!host) continue;
+    r.dataset.wsEnhanced='1';
+    host.classList.add('ws-has-precision');
+    const extra=document.createElement('div');
+    extra.className='ws-precision';
+    extra.innerHTML='<label>実数値</label><input class="ws-exact" type="number" step="any" aria-label="元の単位で数値を直接入力">'+
+      '<label>1〜100</label><input class="ws-normalized" type="number" min="1" max="100" step="1" aria-label="最小1から最大100の位置指定">';
+    const exact=extra.querySelector('.ws-exact');
+    const normalized=extra.querySelector('.ws-normalized');
+    exact.min=String(low); exact.max=String(high);
+    const sync=()=>{
+      const n=Math.min(high,Math.max(low,Number(r.value)));
+      exact.value=String(n);
+      normalized.value=String(Math.round(1+99*(n-low)/(high-low)));
+    };
+    const apply=n=>{
+      if(!Number.isFinite(n)) return;
+      const bounded=Math.min(high,Math.max(low,n));
+      let next=bounded;
+      if(Number.isFinite(step)&&step>0){
+        next=low+Math.round((bounded-low)/step)*step;
+        next=Math.min(high,Math.max(low,Number(next.toFixed(7))));
+      }
+      r.value=String(next);
+      r.dispatchEvent(new Event('input',{bubbles:true}));
+      sync();
+    };
+    exact.addEventListener('change',()=>{
+      if(exact.value===''){sync();return;}
+      apply(Number(exact.value));
+    });
+    normalized.addEventListener('change',()=>{
+      if(normalized.value===''){sync();return;}
+      const scale=Math.min(100,Math.max(1,Math.round(Number(normalized.value))));
+      apply(low+(scale-1)/99*(high-low));
+    });
+    r.addEventListener('input',sync);
+    host.appendChild(extra);
+    sync();
+  }
+}
+function wsRefreshInfo(){
+  if(!wsReady||wsCurrentMode!=='developer') return;
+  const k=wsCurrentTab;
+  let data='';
+  if(k==='base'){
+    data='ID: '+mon.id+'\n能力値: '+Object.values(mon.stats).join(' / ')+
+      '\n性格値: '+Object.values(mon.per).join(' / ');
+  }else if(k==='appearance'){
+    data='画像: '+SLOT_KEYS.filter(key=>!!imgs[key]).length+'/5'+
+      '\n表示基準: 384×288 / 味方104px・相手80px'+
+      '\n影の透明度: '+(+mon.shadow.alpha).toFixed(2);
+  }else if(k==='motion'){
+    data='cry.id: '+((mon.cry&&mon.cry.id)||'null')+
+      '\nsummon.style: '+(mon.summon&&mon.summon.style)+
+      '\nlanding frames: '+((mon.summon&&mon.summon.land)||[]).length;
+  }else if(k==='moves'){
+    data='customMoves: '+mon.customMoves.length+
+      '\nequipped: '+mon.moves.length+'/4'+
+      '\nediting: '+(editMove?editMove.id+' / '+editMove.fx.generator:'none');
+  }else if(k==='save'){
+    data='storage: origin-scoped localStorage'+
+      '\nsaved slots: '+Object.keys(loadSlots()).length+
+      '\nwild pool: '+loadWild().length+
+      '\n現在の個体データはモード変更で書き換えない';
+  }
+  const node=document.getElementById('wsInfo-'+k);
+  if(node)node.textContent=data;
+}
+function wsInit(){
+  const host=document.createElement('div');host.id='workspacePages';
+  $('costBox').insertAdjacentElement('afterend',host);
+  const used=new Set();
+  for(const [tab,details] of Object.entries(WS_LAYOUT)){
+    const page=document.createElement('section');
+    page.className='ws-page';page.id='wsPage-'+tab;
+    page.setAttribute('role','tabpanel');page.setAttribute('aria-label',details.title);
+    page.hidden=true;
+    const intro=document.createElement('div');intro.className='ws-page-intro';
+    const title=document.createElement('strong');title.textContent=details.title+'の編集';
+    const description=document.createElement('div');description.textContent=details.description;
+    intro.append(title,description);page.appendChild(intro);
+    const info=document.createElement('div');info.className='ws-dev-panel';
+    info.innerHTML='<strong>DEVELOPER / '+details.title+'</strong><div class="ws-dev-facts" id="wsInfo-'+tab+'"></div>';
+    page.appendChild(info);
+    for(const id of details.sections){
+      const node=$(id);
+      const section=node&&(node.classList.contains('sec')?node:node.closest('.sec'));
+      if(!section||used.has(section))throw Error('[workspace] section mapping failed: '+id);
+      used.add(section);page.appendChild(section);
+    }
+    host.appendChild(page);wsPages[tab]=page;
+  }
+  if(used.size!==15)throw Error('[workspace] 15 sections expected: '+used.size);
+  for(const id of ['mvSeed','mvMotion','mvSub','mvScreen','mvFrames']){
+    const node=$(id);
+    if(node)node.classList.add('ws-advanced-only');
+    if(id!=='mvSeed' && node && node.previousElementSibling)
+      node.previousElementSibling.classList.add('ws-advanced-only');
+  }
+  for(const id of ['mvJson','mvJsonLoad']){
+    const node=$(id);if(!node)continue;
+    const group=id==='mvJsonLoad'?node.closest('.bar'):node;
+    group.classList.add('ws-advanced-only');
+    if(id==='mvJson' && node.previousElementSibling)
+      node.previousElementSibling.classList.add('ws-advanced-only');
+  }
+  document.querySelectorAll('[data-workspace-button]').forEach(b=>{
+    b.setAttribute('aria-controls','wsPage-'+b.dataset.workspaceButton);
+    b.onclick=()=>wsShowTab(b.dataset.workspaceButton);
+  });
+  const nav=$('workspaceTabs');
+  nav.addEventListener('keydown',e=>{
+    if(e.key!=='ArrowLeft' && e.key!=='ArrowRight')return;
+    const tabs=Array.from(nav.querySelectorAll('[data-workspace-button]'));
+    const idx=tabs.indexOf(document.activeElement);
+    if(idx<0)return;
+    e.preventDefault();
+    const next=tabs[(idx+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length];
+    wsShowTab(next.dataset.workspaceButton);next.focus();
+  });
+  $('wsModeToggle').onclick=()=>{
+    const panel=$('wsSettings');panel.hidden=!panel.hidden;
+    $('wsModeToggle').setAttribute('aria-expanded',String(!panel.hidden));
+  };
+  document.querySelectorAll('[data-workspace-mode]').forEach(b=>
+    b.onclick=()=>{wsMode(b.dataset.workspaceMode,true);wsCloseSettings();});
+  document.addEventListener('pointerdown',e=>{
+    if(!$('wsSettings').hidden&&!$('wsSettings').contains(e.target)&&
+       !$('wsModeToggle').contains(e.target))wsCloseSettings();
+  });
+  let initial='beginner';
+  try{const v=JSON.parse(localStorage.getItem(WS_PREF_KEY)||'{}');
+      if(v.mode==='developer')initial='developer';}catch(e){}
+  wsReady=true;
+  wsMode(initial,false);wsShowTab('base');
+  wsObserver=new MutationObserver(records=>{
+    if(wsCurrentMode==='developer'&&records.some(x=>x.addedNodes.length))wsEnhanceControls();
+  });
+  wsObserver.observe(host,{childList:true,subtree:true});
+}
+
 const W=384, H=288, FIELD_H=216;
 const LAY_A={cx:120,platY:198,size:104};      // 手前＝味方側（背面）
 const LAY_E={cx:258,platY:111,size:80};       // 奥＝敵側（正面）
@@ -1771,6 +2097,7 @@ function delMove(c){
 }
 function openMove(c){
   editMove=c;
+  wsShowTab('moves');
   $('secMove').classList.remove('closed');
   buildMoveEditor();
   setMini(true);                 // 調整中はプレビューを小さく固定して、絵を見ながら触れるように
@@ -2092,7 +2419,7 @@ function paintReleaseCheck(){
     ? '<b style="color:#f0a020">気になるところ</b><br>・'+w.join('<br>・')
     : '<b style="color:#7ad6a0">準備できとる。</b>放つと野生の四皇モンになる。';
 }
-function refresh(){ paintCost(); paintReleaseCheck(); scheduleSave(); }
+function refresh(){ paintCost(); paintReleaseCheck(); wsRefreshInfo(); scheduleSave(); }
 function scheduleSave(){
   if(saveTimer) clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{ saveTimer=null; const j=JSON.stringify(snapshot(),null,2);
@@ -2442,6 +2769,7 @@ document.querySelectorAll('.sec>h2').forEach(h=>h.onclick=()=>h.parentElement.cl
    7. 起動
    ========================================================= */
 (function(){
+  wsInit();
   auiInjectCSS(); mlInjectCSS();
   audioLoadSaved(); loadSceneSfx(); refreshWildIds();
   let restored=false;

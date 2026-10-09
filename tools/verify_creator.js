@@ -72,6 +72,63 @@ async function setRange(pg, sel, n, v) {
     shadow: !!mon.shadow, cry: !!mon.cry
   }));
 
+
+  /* ---- WSPACE: タブ／開発者モードは個体を変えずに切り替わる ---- */
+  out['0b_制作ワークスペース'] = await pg.evaluate(() => ({
+    tabCount:document.querySelectorAll('[data-workspace-button]').length,
+    pageCount:document.querySelectorAll('#workspacePages>.ws-page').length,
+    originalSections:document.querySelectorAll('#workspacePages .sec').length,
+    beginner:document.body.classList.contains('ws-beginner'),
+    baseOpen:!document.getElementById('wsPage-base').hidden
+  }));
+  ok(out['0b_制作ワークスペース'].tabCount===5,'WSPACE-a: タブが5つない');
+  ok(out['0b_制作ワークスペース'].pageCount===5,'WSPACE-b: 5ページが作られとらん');
+  ok(out['0b_制作ワークスペース'].originalSections===15,
+    'WSPACE-c: 元の15編集セクションが失われた');
+  ok(out['0b_制作ワークスペース'].beginner && out['0b_制作ワークスペース'].baseOpen,
+    'WSPACE-d: 初期状態がかんたん/基本モードやない');
+  const unchangedBeforeMode=await pg.evaluate(()=>JSON.stringify(snapshot()));
+  await pg.click('#wsModeToggle');
+  await pg.click('[data-workspace-mode="developer"]');
+  await pg.waitForTimeout(150);
+  out['0c_開発者の調整'] = await pg.evaluate(() => {
+    const exact=document.querySelector('#statCtl .ws-exact');
+    const level=document.querySelector('#statCtl .ws-normalized');
+    const result={developer:document.body.classList.contains('ws-developer'),
+                  hasExact:!!exact,hasOneToHundred:!!level,
+                  min:level?level.min:null,max:level?level.max:null};
+    if(!exact||!level)return result;
+    exact.value='73';exact.dispatchEvent(new Event('change',{bubbles:true}));
+    result.exactValue=mon.stats.atk;
+    level.value='100';level.dispatchEvent(new Event('change',{bubbles:true}));
+    result.maxValue=mon.stats.atk;
+    exact.value='50';exact.dispatchEvent(new Event('change',{bubbles:true}));
+    result.restored=mon.stats.atk;
+    return result;
+  });
+  ok(out['0c_開発者の調整'].developer && out['0c_開発者の調整'].hasExact,
+    'WSPACE-e: 開発者の直接数値入力が出ない');
+  ok(out['0c_開発者の調整'].hasOneToHundred &&
+     out['0c_開発者の調整'].min==='1' && out['0c_開発者の調整'].max==='100',
+    'WSPACE-f: 全スライダーの1〜100位置指定が作られとらん');
+  ok(out['0c_開発者の調整'].exactValue===73 &&
+     out['0c_開発者の調整'].maxValue===100 &&
+     out['0c_開発者の調整'].restored===50,
+    'WSPACE-g: 精密入力が元のステータスへ反映されとらん');
+  await pg.click('#wsModeToggle');
+  await pg.click('[data-workspace-mode="beginner"]');
+  out['0d_モード切替で個体不変'] = await pg.evaluate(() => ({
+    beginner:document.body.classList.contains('ws-beginner'),
+    precisionHidden:getComputedStyle(document.querySelector('#statCtl .ws-precision')).display==='none',
+    data:JSON.stringify(snapshot())
+  }));
+  ok(out['0d_モード切替で個体不変'].beginner &&
+     out['0d_モード切替で個体不変'].precisionHidden,
+    'WSPACE-h: かんたんモードに精密編集が残った');
+  ok(out['0d_モード切替で個体不変'].data===unchangedBeforeMode,
+    'WSPACE-i: モードを変えるだけで個体データが変わった');
+  await pg.click('[data-workspace-button="appearance"]');
+
   /* ---- 1. 影 ---- */
   await setRange(pg, '#shadowCtl input[type=range]', 0, 1.8);   // 大きさ
   await setRange(pg, '#shadowCtl input[type=range]', 2, 12);    // 横位置
@@ -160,6 +217,7 @@ async function setRange(pg, sel, n, v) {
   await pg.evaluate(() => { mon.summon.style = 'trainer'; buildSummon(); });
 
   /* ---- 2.8 着地モーション（コマ割り＋振動） ---- */
+  await pg.click('[data-workspace-button="motion"]');
   await pg.click('#landTab');
   await pg.waitForTimeout(200);
   await pg.click('#landSample');
@@ -241,6 +299,7 @@ async function setRange(pg, sel, n, v) {
   });
 
   /* ---- 3. 技クリエーター ---- */
+  await pg.click('[data-workspace-button="moves"]');
   await pg.click('#btnNewMove');
   await pg.waitForTimeout(400);
   out['5_新しい技'] = await pg.evaluate(() => ({
@@ -731,6 +790,7 @@ async function setRange(pg, sel, n, v) {
   /* ---- 5b. 鳴き声：ファイル選択 ---- */
   const WAV = path.join(SHOTS, 'cry_test.wav');
   fs.writeFileSync(WAV, makeWav(0.25, 660));
+  await pg.click('[data-workspace-button="motion"]');
   await pg.setInputFiles('#cryFile', WAV);
   await pg.waitForTimeout(1500);
   out['10b_自前の鳴き声'] = await pg.evaluate(() => ({
@@ -815,6 +875,7 @@ async function setRange(pg, sel, n, v) {
   }));
   await pg.evaluate(() => { mon.name = 'うわがきモン'; refresh(); });
   await pg.waitForTimeout(600);
+  await pg.click('[data-workspace-button="save"]');
   await pg.click('#slotOver'); await pg.waitForTimeout(150);
   const 上書き一度目 = await pg.evaluate(() => {
     const sl = JSON.parse(localStorage.getItem('shioumon_creator_slots') || '{}');
@@ -896,6 +957,7 @@ async function setRange(pg, sel, n, v) {
 
 
   /* ---- 7. 草むらへ放つ ---- */
+  await pg.click('[data-workspace-button="save"]');
   await pg.click('#btnRelease');
   await pg.waitForTimeout(1200);
   await pg.screenshot({ path: shot('cr_release_1.png') });
@@ -945,6 +1007,7 @@ async function setRange(pg, sel, n, v) {
      にーくら「試し打ちボタンがスクロールされて、いちいち数値を変えたら
      　　　　　そこまで戻って押す、の作業が面倒」
      ⚠ 撃たれた技は fxs を覗かず fireMove を包んで記録する。玉はすぐ消えるけん数え損ねる。 */
+  await pg.click('[data-workspace-button="moves"]');
   await pg.click('#btnNewMove'); await pg.waitForTimeout(300);
   out['16_試し打ち'] = await pg.evaluate(() => {
     window.__fired = [];
