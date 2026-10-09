@@ -163,6 +163,10 @@
   .ws-beginner .ml-ctl button.on{background:#b9f0db!important;border-color:#439b74!important;color:#123c2b!important;}
   .ws-beginner .cost{background:#e2f2eb;border-color:#b7d6c5;color:#205b47;}
   .ws-beginner .cost b{color:#125c44;}
+  .ws-beginner .ws-switcher button[aria-selected=true],
+  .ws-beginner #wsSettings .ws-mode-row button[aria-pressed=true]{color:#ffffff;}
+  .ws-beginner .ml-ctl label,.ws-beginner .ctl label,
+  .ws-beginner .mv .st,.ws-beginner .aui-row label{color:#49616e;}
   .ws-beginner #top{background:var(--bg);}
   .ws-beginner .hint,.ws-beginner .ml-hint{color:#536b76;}
   .ws-developer #top{background:var(--bg);}
@@ -496,6 +500,8 @@ function wsCloseSettings(){
 function wsShowTab(tab){
   if(!wsPages[tab]) return;
   wsCurrentTab=tab;
+  /* Tab changes on a small screen must leave room for editing beneath the sticky preview. */
+  if(tab!=='base' && $('top') && !$('top').classList.contains('mini'))setMini(true);
   for(const k of Object.keys(wsPages)) wsPages[k].hidden=(k!==tab);
   document.querySelectorAll('[data-workspace-button]').forEach(b=>{
     const active=b.dataset.workspaceButton===tab;
@@ -511,6 +517,9 @@ function wsMode(mode,save){
   document.body.classList.toggle('ws-beginner',wsCurrentMode==='beginner');
   document.querySelectorAll('[data-workspace-mode]').forEach(b=>
     b.setAttribute('aria-pressed',String(b.dataset.workspaceMode===wsCurrentMode)));
+  const modeButton=$('wsModeToggle');
+  modeButton.textContent=wsCurrentMode==='developer'?'DEV':'⚙';
+  modeButton.title=wsCurrentMode==='developer'?'開発者モード：変更する':'制作モードを変える';
   if(save) wsStoreMode();
   if(wsCurrentMode==='developer') wsEnhanceControls();
   wsRefreshInfo();
