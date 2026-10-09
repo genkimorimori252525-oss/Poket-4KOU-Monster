@@ -566,27 +566,31 @@ function wsEnhanceControls(){
 }
 function wsRefreshInfo(){
   if(!wsReady||wsCurrentMode!=='developer') return;
-  const text={
-    base:'ID: '+mon.id+'\n能力値: '+Object.values(mon.stats).join(' / ')+
-      '\n性格値: '+Object.values(mon.per).join(' / '),
-    appearance:'画像: '+SLOT_KEYS.filter(k=>!!imgs[k]).length+'/5'+
+  const k=wsCurrentTab;
+  let data='';
+  if(k==='base'){
+    data='ID: '+mon.id+'\n能力値: '+Object.values(mon.stats).join(' / ')+
+      '\n性格値: '+Object.values(mon.per).join(' / ');
+  }else if(k==='appearance'){
+    data='画像: '+SLOT_KEYS.filter(key=>!!imgs[key]).length+'/5'+
       '\n表示基準: 384×288 / 味方104px・相手80px'+
-      '\n影の透明度: '+(+mon.shadow.alpha).toFixed(2),
-    motion:'cry.id: '+((mon.cry&&mon.cry.id)||'null')+
+      '\n影の透明度: '+(+mon.shadow.alpha).toFixed(2);
+  }else if(k==='motion'){
+    data='cry.id: '+((mon.cry&&mon.cry.id)||'null')+
       '\nsummon.style: '+(mon.summon&&mon.summon.style)+
-      '\nlanding frames: '+((mon.summon&&mon.summon.land)||[]).length,
-    moves:'customMoves: '+mon.customMoves.length+
+      '\nlanding frames: '+((mon.summon&&mon.summon.land)||[]).length;
+  }else if(k==='moves'){
+    data='customMoves: '+mon.customMoves.length+
       '\nequipped: '+mon.moves.length+'/4'+
-      '\nediting: '+(editMove?editMove.id+' / '+editMove.fx.generator:'none'),
-    save:'storage: origin-scoped localStorage'+
+      '\nediting: '+(editMove?editMove.id+' / '+editMove.fx.generator:'none');
+  }else if(k==='save'){
+    data='storage: origin-scoped localStorage'+
       '\nsaved slots: '+Object.keys(loadSlots()).length+
       '\nwild pool: '+loadWild().length+
-      '\n現在の個体データはモード変更で書き換えない'
-  };
-  for(const k of Object.keys(wsPages)){
-    const node=document.getElementById('wsInfo-'+k);
-    if(node)node.textContent=text[k];
+      '\n現在の個体データはモード変更で書き換えない';
   }
+  const node=document.getElementById('wsInfo-'+k);
+  if(node)node.textContent=data;
 }
 function wsInit(){
   const host=document.createElement('div');host.id='workspacePages';
